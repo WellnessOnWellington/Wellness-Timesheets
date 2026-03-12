@@ -555,6 +555,8 @@
   .sr-tab.active { background: var(--burgundy); color: #fff; box-shadow: 0 2px 8px rgba(139,37,53,0.22); }
   #sr-staff-filter.individual-active { background: var(--burgundy); color: #fff; border-color: var(--burgundy); box-shadow: 0 2px 8px rgba(139,37,53,0.22); font-weight: 700; }
   .sr-layout-toggle { display: flex; gap: 0.2rem; background: var(--warm-white); border-radius: 30px; padding: 0.2rem; border: 1.5px solid var(--border); margin-left: auto; }
+  .sr-filters-group { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; transition:opacity 0.2s; }
+  .sr-filters-group.disabled { opacity:0.35; pointer-events:none; }
   .sr-layout-btn { padding: 0.35rem 0.9rem; border-radius: 30px; font-size: 0.76rem; font-weight: 700; cursor: pointer; border: none; font-family: 'Nunito',sans-serif; background: transparent; color: var(--muted); transition: all 0.2s; }
   .sr-layout-btn.active { background: var(--burgundy); color: #fff; box-shadow: 0 2px 8px rgba(139,37,53,0.22); }
 
@@ -750,7 +752,8 @@
       align-items: flex-start;
     }
     .sr-role-tabs { overflow-x: auto; width: 100%; }
-    .sr-tab { padding: 0.35rem 0.75rem; font-size: 0.73rem; white-space: nowrap; }
+    .sr-tab { padding: 0.35rem 0.75rem; font-size: 16px; white-space: nowrap; }
+    #sr-staff-filter { font-size: 16px !important; }
     .sr-layout-toggle { margin-left: 0; }
 
     /* Content padding */
@@ -876,14 +879,16 @@
   </div>
 
   <div class="sr-filters">
-    <div class="sr-role-tabs">
-      <button class="sr-tab active" onclick="srToggleRole('Receptionist',this)">Receptionists</button>
-      <button class="sr-tab active" onclick="srToggleRole('Nurse',this)">Nurses</button>
-      <button class="sr-tab active" onclick="srToggleRole('Manager',this)">Managers</button>
+    <div class="sr-filters-group" id="sr-filters-group">
+      <div class="sr-role-tabs">
+        <button class="sr-tab active" onclick="srToggleRole('Receptionist',this)">Receptionists</button>
+        <button class="sr-tab active" onclick="srToggleRole('Nurse',this)">Nurses</button>
+        <button class="sr-tab active" onclick="srToggleRole('Manager',this)">Managers</button>
+      </div>
+      <select class="form-select" id="sr-staff-filter" onchange="srSelectIndividual()" style="width:auto;padding:0.38rem 0.85rem;font-size:0.78rem;">
+        <option value="">Individual view</option>
+      </select>
     </div>
-    <select class="form-select" id="sr-staff-filter" onchange="srSelectIndividual()" style="width:auto;padding:0.38rem 0.85rem;font-size:0.78rem;">
-      <option value="">Individual view</option>
-    </select>
     <div class="sr-layout-toggle">
       <button class="sr-layout-btn active" id="sr-btn-day" onclick="srSetLayout('day')">By Day</button>
       <button class="sr-layout-btn" id="sr-btn-person" onclick="srSetLayout('person')">By Person</button>
@@ -2062,7 +2067,11 @@ async function showStaffRoster(){
   }catch(e){ console.error('Could not load roster data',e); }
   // Reset filters to defaults every time the page is opened
   srRoles=new Set(['Receptionist','Nurse','Manager']);
+  srLayout='day';
   document.querySelectorAll('.sr-tab').forEach(t=>t.classList.add('active'));
+  document.getElementById('sr-btn-day')?.classList.add('active');
+  document.getElementById('sr-btn-person')?.classList.remove('active');
+  document.getElementById('sr-filters-group')?.classList.remove('disabled');
   const srSel=document.getElementById('sr-staff-filter');
   if(srSel){ srSel.value=''; srSel.classList.remove('individual-active'); }
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
@@ -2112,6 +2121,7 @@ function srSetLayout(layout){
   srLayout=layout;
   document.getElementById('sr-btn-day').classList.toggle('active',layout==='day');
   document.getElementById('sr-btn-person').classList.toggle('active',layout==='person');
+  document.getElementById('sr-filters-group').classList.toggle('disabled',layout==='person');
   renderStaffRoster();
 }
 
