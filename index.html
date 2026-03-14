@@ -309,7 +309,7 @@
   /* ══════════════════════════════
      ADMIN
   ══════════════════════════════ */
-  #view-admin { flex-direction: column; min-height: 100vh; }
+  #view-admin { flex-direction: column; height: 100vh; overflow: hidden; }
 
   .admin-bar {
     display: flex; align-items: center; justify-content: space-between;
@@ -319,7 +319,10 @@
     position: sticky; top: 0; z-index: 10; gap: 1rem;
   }
 
-  .admin-brand { display: flex; align-items: center; gap: 0.5rem; }
+  .admin-brand { display: flex; align-items: center; gap: 0.5rem; flex: 1; }
+  .admin-kiosk-btn-wrap { display:flex; flex-direction:column; align-items:flex-end; flex: 1; }
+  .admin-kiosk-btn { background:var(--burgundy); color:#fff; border:none; border-radius:10px; padding:0.75rem 1.5rem; font-size:1rem; font-weight:800; font-family:'Nunito',sans-serif; cursor:pointer; letter-spacing:0.01em; transition:background 0.15s; white-space:nowrap; }
+  .admin-kiosk-btn:hover { background:var(--wine); }
 
   .admin-brand-sub {
     font-size: 0.63rem; font-weight: 800; letter-spacing: 0.13em;
@@ -328,17 +331,19 @@
   }
 
   .admin-tabs {
-    display: flex; gap: 0.2rem; background: var(--warm-white);
-    border-radius: 30px; padding: 0.25rem; border: 1.5px solid var(--border);
-    position: absolute; left: 50%; transform: translateX(-50%);
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    gap: 0.25rem; background: var(--warm-white);
+    border: 1.5px solid var(--border); border-radius: 12px; padding: 0.3rem;
   }
 
   .tab {
-    padding: 0.44rem 1.1rem; border-radius: 30px; font-size: 0.8rem; font-weight: 700;
-    cursor: pointer; border: none; font-family: 'Nunito',sans-serif;
-    background: transparent; color: var(--muted); transition: all 0.2s; letter-spacing: 0.02em;
+    padding: 0.55rem 1.4rem; border-radius: 9px; font-size: 0.85rem; font-weight: 700;
+    cursor: pointer; border: 1.5px solid var(--border); font-family: 'Nunito',sans-serif;
+    background: var(--white); color: var(--muted); transition: all 0.08s; letter-spacing: 0.02em;
+    text-align: center; white-space: nowrap;
   }
-  .tab.active { background: var(--burgundy); color: #fff; box-shadow: 0 2px 8px rgba(139,37,53,0.25); }
+  .tab.active { background: var(--burgundy); color: #fff; box-shadow: 0 2px 8px rgba(139,37,53,0.25); border-radius: 9px; }
+  .tab:hover:not(.active) { color: var(--burgundy); }
   .tab:hover:not(.active) { color: var(--burgundy); }
 
   .notif-badge {
@@ -347,7 +352,7 @@
     margin-left: 4px; vertical-align: middle; line-height: 1.6;
   }
 
-  .admin-content { flex: 1; padding: 2rem; overflow-y: auto; max-width: 1400px; margin: 0 auto; width: 100%; }
+  .admin-content { flex: 1; padding: 2rem; overflow-y: auto; max-width: 1400px; margin: 0 auto; width: 100%; min-height: 0; }
 
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
@@ -355,6 +360,13 @@
   .section-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; }
   .section-title  { font-family: 'Lora',serif; font-size: 1.1rem; font-weight: 600; color: var(--charcoal); }
   .section-hint   { font-size: 0.76rem; color: var(--muted); font-weight: 500; margin-top: 0.2rem; }
+
+  /* Page ribbon — shared across Team, Timesheets, Notes */
+  .page-ribbon { display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius); padding:0.85rem 1.1rem; box-shadow:var(--shadow); margin-bottom:1.25rem; }
+  .page-ribbon-title { font-size:0.82rem; font-weight:800; color:var(--charcoal); white-space:nowrap; }
+  .page-ribbon-hint  { font-size:0.7rem; color:var(--muted); font-weight:500; margin-top:0.15rem; }
+  .page-ribbon-divider { width:1px; height:28px; background:var(--border); flex-shrink:0; margin:0 0.1rem; }
+  .page-ribbon-spacer { flex:1; }
 
   /* Stats */
   .team-role-bar { display:flex; align-items:center; gap:1rem; margin-bottom:1.25rem; flex-wrap:wrap; }
@@ -371,7 +383,12 @@
   .stat-names { font-size: 0.72rem; font-weight: 600; color: var(--border-dk); margin-top: 0.5rem; line-height: 1.6; }
 
   /* Employee cards */
-  .employees-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(265px,1fr)); gap: 0.9rem; }
+  .employees-grid { display: flex; flex-direction: column; gap: 0; }
+  .team-group { padding-bottom: 1.5rem; }
+  .team-group-divider { border-top: 1.5px solid var(--border); padding-top: 1.5rem; }
+  .team-group-label { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem; }
+  .team-group-count { background: var(--warm-white); border: 1.5px solid var(--border); border-radius: 20px; padding: 0.05rem 0.55rem; font-size: 0.68rem; font-weight: 700; color: var(--charcoal); }
+  .team-group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(265px,1fr)); gap: 0.9rem; }
 
   .employee-card {
     background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius);
@@ -437,13 +454,7 @@
   .form-hint    { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.45; }
   .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
 
-  /* Filters */
-  .filters-bar {
-    background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius);
-    padding: 0.9rem 1.2rem; display: flex; gap: 0.75rem; flex-wrap: wrap;
-    align-items: center; margin-bottom: 1.25rem; box-shadow: var(--shadow);
-  }
-  .filters-bar .form-input, .filters-bar .form-select { width: auto; padding: 0.48rem 0.85rem; font-size: 0.8rem; background: var(--warm-white); }
+  .page-ribbon .form-input, .page-ribbon .form-select { width: auto; padding: 0.48rem 0.85rem; font-size: 0.8rem; background: var(--warm-white); }
 
   .export-btn {
     background: var(--burgundy); color: #fff; border: none; border-radius: 30px;
@@ -550,9 +561,9 @@
     background: var(--white); border-bottom: 1.5px solid var(--border);
     padding: 0.75rem 2rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
   }
-  .sr-role-tabs { display: flex; gap: 0.2rem; background: var(--warm-white); border-radius: 30px; padding: 0.2rem; border: 1.5px solid var(--border); }
-  .sr-tab { padding: 0.35rem 0.9rem; border-radius: 30px; font-size: 0.76rem; font-weight: 700; cursor: pointer; border: none; font-family: 'Nunito',sans-serif; background: transparent; color: var(--muted); transition: all 0.2s; }
-  .sr-tab.active { background: var(--burgundy); color: #fff; box-shadow: 0 2px 8px rgba(139,37,53,0.22); }
+  .sr-role-tabs { display: flex; gap: 0.25rem; background: var(--warm-white); border-radius: 12px; padding: 0.3rem; border: 1.5px solid var(--border); }
+  .sr-tab { padding: 0.42rem 1rem; border-radius: 9px; font-size: 0.76rem; font-weight: 700; cursor: pointer; border: none; font-family: 'Nunito',sans-serif; background: transparent; color: var(--muted); transition: all 0.2s; }
+  .sr-tab.active { background: var(--burgundy); color: #fff; box-shadow: 0 2px 6px rgba(139,37,53,0.22); border-radius: 9px; }
   #sr-staff-filter.individual-active { background: var(--burgundy); color: #fff; border-color: var(--burgundy); box-shadow: 0 2px 8px rgba(139,37,53,0.22); font-weight: 700; }
   .sr-layout-toggle { display: flex; gap: 0.2rem; background: var(--warm-white); border-radius: 30px; padding: 0.2rem; border: 1.5px solid var(--border); margin-left: auto; }
   .sr-filters-group { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; transition:opacity 0.2s; }
@@ -637,15 +648,30 @@
   .empty-state { padding: 2rem; text-align: center; color: var(--muted); font-size: 0.82rem; }
 
   /* ── Roster Builder Phase 2 ── */
-  .rb-ctrl { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius); padding:0.85rem 1.1rem; box-shadow:var(--shadow); margin-bottom:1.25rem; }
+  .rb-ctrl { display:flex; align-items:flex-start; gap:0.6rem; flex-wrap:wrap; background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius); padding:0.85rem 1.1rem; box-shadow:var(--shadow); margin-bottom:1.25rem; }
   .rb-nav-btn { background:var(--white); border:1.5px solid var(--border); border-radius:8px; padding:0.32rem 0.7rem; cursor:pointer; font-size:0.78rem; font-weight:700; color:var(--charcoal); font-family:'Nunito',sans-serif; transition:all 0.15s; }
   .rb-nav-btn:hover { background:var(--blush-lt); border-color:var(--burgundy); }
   .rb-fn-label { font-size:0.85rem; font-weight:800; color:var(--charcoal); min-width:160px; text-align:center; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
   .rb-live-badge { background:#e8f5e9; border:1.5px solid #2e7d32; color:#1b5e20; border-radius:999px; padding:0.1rem 0.55rem; font-size:0.65rem; font-weight:800; letter-spacing:0.05em; white-space:nowrap; }
-  .rb-role-tabs { display:flex; gap:0.3rem; flex-wrap:wrap; }
+  .rb-role-tabs { display:flex; gap:0.3rem; flex-wrap:wrap; justify-content:center; }
   .rb-role-tab { padding:0.28rem 0.7rem; border-radius:999px; border:1.5px solid var(--border); font-size:0.72rem; font-weight:700; cursor:pointer; background:var(--white); color:var(--muted); transition:all 0.15s; font-family:'Nunito',sans-serif; }
   .rb-role-tab.active { background:var(--burgundy); color:#fff; border-color:var(--burgundy); }
   .rb-spacer { flex:1; min-width:0.5rem; }
+  .rb-group { display:flex; flex-direction:column; gap:0.28rem; align-items:center; }
+  .rb-group-label { font-size:0.55rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+  .rb-group-inner { display:flex; align-items:center; gap:0.4rem; min-height:30px; }
+  .rb-group-divider { width:1px; height:44px; align-self:center; background:var(--border); flex-shrink:0; margin:0 0.2rem; }
+  /* Settings tab */
+  .settings-section { border:1.5px solid var(--border); border-radius:var(--radius); background:var(--white); box-shadow:var(--shadow); margin-bottom:1rem; overflow:hidden; }
+  .settings-section-header { display:flex; align-items:center; gap:0.75rem; padding:1rem 1.25rem; cursor:pointer; user-select:none; background:var(--warm-white); }
+  .settings-section-header:hover { background:var(--blush-lt); }
+  .settings-section-chevron { font-size:0.7rem; color:var(--muted); flex-shrink:0; transition:transform 0.2s; width:14px; text-align:center; }
+  .settings-section-title { font-size:0.92rem; font-weight:800; color:var(--charcoal); margin-bottom:0.15rem; }
+  .settings-section-hint { font-size:0.75rem; color:var(--muted); font-weight:500; }
+  .settings-section-body { padding:1.25rem 1.5rem; }
+
+  .rb-nav-centre { flex:1; display:flex; align-items:flex-start; justify-content:center; gap:0.6rem; }
+  .rb-ctrl-disabled { opacity:0.35; pointer-events:none; transition:opacity 0.2s; }
   .rb-lock-btn { background:var(--warm-white); border:1.5px solid var(--border); border-radius:8px; padding:0.32rem 0.8rem; cursor:pointer; font-size:0.72rem; font-weight:700; color:var(--charcoal); font-family:'Nunito',sans-serif; transition:all 0.15s; }
   .rb-lock-btn.locked { background:#fff3cd; border-color:#d4a017; color:#7a5200; }
   .rb-copy-btn { background:var(--blush-lt); border:1.5px solid var(--burgundy); border-radius:8px; padding:0.32rem 0.8rem; cursor:pointer; font-size:0.72rem; font-weight:700; color:var(--burgundy); font-family:'Nunito',sans-serif; transition:all 0.15s; }
@@ -700,11 +726,47 @@
   .rb-shift-handle.left { left:0; border-radius:6px 0 0 6px; } .rb-shift-handle.right { right:0; border-radius:0 6px 6px 0; }
   .rb-shift-del { position:absolute; top:-5px; right:-5px; width:15px; height:15px; border-radius:50%; background:#c0392b; color:#fff; border:none; cursor:pointer; font-size:9px; display:none; align-items:center; justify-content:center; z-index:5; line-height:1; padding:0; font-family:'Nunito',sans-serif; }
   .rb-shift-bar:hover .rb-shift-del { display:flex; }
+  .rb-shift-bar.on-leave { cursor:move; }
+  .rb-shift-bar.annual-leave { background:linear-gradient(135deg,#f5c030,#f0a820); }
+  .rb-shift-bar.annual-leave:hover { box-shadow:0 2px 8px rgba(200,140,0,0.28); }
+  .rb-shift-bar.annual-leave .rb-shift-label { color:#3d2600; }
+  .rb-shift-bar.personal-leave { background:linear-gradient(135deg,#4caf80,#3a9a6e); }
+  .rb-shift-bar.personal-leave:hover { box-shadow:0 2px 8px rgba(40,130,80,0.28); }
+  .rb-shift-bar.personal-leave .rb-shift-label { color:#0d2b1a; }
+  .rb-shift-bar.public-holiday { background:linear-gradient(135deg,#5b9bd5,#4a88c0); }
+  .rb-shift-bar.public-holiday:hover { box-shadow:0 2px 8px rgba(60,110,190,0.28); }
+  .rb-shift-bar.public-holiday .rb-shift-label { color:#fff; }
+  .rb-shift-bar.unpaid-leave { background:linear-gradient(135deg,#a0a0a0,#b8b8b8); }
+  .rb-shift-bar.unpaid-leave:hover { box-shadow:0 2px 8px rgba(100,100,100,0.28); }
+  .rb-shift-bar.unpaid-leave .rb-shift-label { color:#222; }
+  .rb-shift-bar.bereavement-leave { background:linear-gradient(135deg,#9b7db5,#8568a0); }
+  .rb-shift-bar.bereavement-leave:hover { box-shadow:0 2px 8px rgba(130,80,170,0.28); }
+  .rb-shift-bar.bereavement-leave .rb-shift-label { color:#fff; }
+  .rb-panels { display:flex; flex-direction:column; gap:1rem; }
+  .rb-panel { border:1.5px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--white); box-shadow:var(--shadow); }
+  .rb-panel-header { display:flex; align-items:center; padding:0.65rem 1rem; background:var(--warm-white); border-bottom:1.5px solid var(--border); gap:1rem; cursor:pointer; user-select:none; }
+  .rb-panel-header:hover { background:var(--blush-lt); }
+  .rb-panel-toggle { display:flex; align-items:center; gap:0.45rem; flex-shrink:0; }
+  .rb-panel-icon { font-size:0.75rem; color:var(--muted); transition:transform 0.2s; display:inline-block; }
+  .rb-panel.collapsed .rb-panel-icon { transform:rotate(-90deg); }
+  .rb-panel-title { font-size:0.85rem; font-weight:800; color:var(--charcoal); }
+  .rb-panel-actions { display:flex; align-items:center; gap:0.5rem; margin-left:auto; }
+  .rb-panel-body { padding:1rem; }
+  .rb-panel.collapsed .rb-panel-body { display:none; }
+  .rb-leave-select { font-size:0.56rem; padding:0.1rem 0.3rem; border:none; background:rgba(255,255,255,0.3); color:inherit; cursor:pointer; border-radius:4px; margin-left:2px; min-width:90px; max-width:140px; z-index:3; position:relative; }
+  .rb-shift-bar:hover .rb-leave-select { background:rgba(255,255,255,0.5); }
+  .rb-leave-legend { display:flex; align-items:center; gap:0.55rem; font-size:0.6rem; color:var(--muted); font-weight:600; flex-wrap:wrap; }
+  .rb-legend-item { display:flex; align-items:center; gap:0.22rem; white-space:nowrap; }
+  .rb-legend-dot { width:9px; height:9px; border-radius:50%; display:inline-block; flex-shrink:0; }
+  .rb-legend-dot.annual-leave { background:#f5c030; }
+  .rb-legend-dot.personal-leave { background:#4caf80; }
+  .rb-legend-dot.public-holiday { background:#5b9bd5; }
+  .rb-legend-dot.unpaid-leave { background:#a0a0a0; }
+  .rb-legend-dot.bereavement-leave { background:#9b7db5; }
+  .ts-leave-select { font-size:0.72rem; padding:0.22rem 0.5rem; border:1.5px solid var(--border); border-radius:8px; background:var(--warm-white); color:var(--charcoal); cursor:pointer; }
+  .ts-leave-select.has-leave { background:var(--blush-lt); font-weight:700; color:var(--burgundy); border-color:var(--burgundy); }
+  .ts-leave-row td { background:rgba(255,243,205,0.45) !important; }
   .rb-tl-cov { display:flex; align-items:center; border-top:1.5px solid var(--border); height:22px; }
-  /* Advanced/Fallback toggle */
-  .rb-advanced-toggle { display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; padding:0.6rem 0; user-select:none; border-top:1.5px solid var(--border); margin-top:0.5rem; }
-  .rb-advanced-toggle:hover { color:var(--charcoal); }
-  .rb-advanced-body { display:none; } .rb-advanced-body.open { display:block; }
   .wos-pin-boxes { display:flex; gap:0.5rem; }
   .wos-pin-box { width:48px; height:52px; border:1.5px solid var(--border); border-radius:10px; background:var(--warm-white); text-align:center; font-size:1.4rem; font-weight:700; font-family:'Nunito',sans-serif; color:var(--charcoal); outline:none; transition:border-color 0.15s, box-shadow 0.15s; -webkit-text-security:disc; }
   .wos-pin-box:focus { border-color:var(--burgundy); box-shadow:0 0 0 3px rgba(139,37,53,0.1); background:var(--white); }
@@ -960,30 +1022,36 @@
   <div class="admin-bar">
     <div class="admin-brand">
       <img src="Logo.png" alt="Wellness on Wellington" style="height:36px;width:auto;display:block;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
-      <div class="sr-title">Manager Dashboard</div>
+      <div style="width:1px;height:36px;background:var(--border);margin:0 0.5rem;flex-shrink:0;"></div>
+      <div style="font-size:0.75rem;color:var(--muted);font-weight:600;">Logged in: <span id="current-user-label" style="color:var(--burgundy);font-weight:700;"></span></div>
     </div>
     <div class="admin-tabs">
-      <button class="tab active" onclick="switchTab('team',this)">Our Team</button>
+      <button class="tab active" onclick="switchTab('team',this)">Team</button>
+      <button class="tab"        onclick="switchTab('roster',this)">Roster</button>
       <button class="tab"        onclick="switchTab('timesheets',this)">Timesheets</button>
       <button class="tab"        onclick="switchTab('notes',this)">Notes<span class="notif-badge" id="notif-badge" style="display:none"></span></button>
-      <button class="tab"        onclick="switchTab('logins',this)">Logins</button>
-      <button class="tab"        onclick="switchTab('roster',this)">Roster</button>
+      <button class="tab"        onclick="switchTab('settings',this)">Settings</button>
     </div>
-    <div style="display:flex;align-items:center;gap:0.75rem;">
-      <div style="font-size:0.75rem;color:var(--muted);font-weight:600;">Logged in: <span id="current-user-label" style="color:var(--burgundy);font-weight:700;"></span></div>
-      <button class="nav-btn" onclick="showView('kiosk')">← Kiosk</button>
+    <div class="admin-kiosk-btn-wrap">
+      <button class="admin-kiosk-btn" onclick="showView('kiosk')">← Return to Kiosk</button>
     </div>
   </div>
 
   <div class="admin-content">
     <div id="tab-team" class="tab-panel active">
-      <div class="team-role-bar">
+      <div class="page-ribbon">
+        <div>
+          <div class="page-ribbon-title">Team</div>
+          <div class="page-ribbon-hint">Manage staff, roles and RFID cards</div>
+        </div>
+        <div class="page-ribbon-divider"></div>
         <div class="sr-role-tabs">
           <button class="sr-tab active" onclick="teamToggleRole('Receptionist',this)">Receptionists</button>
           <button class="sr-tab active" onclick="teamToggleRole('Nurse',this)">Nurses</button>
           <button class="sr-tab active" onclick="teamToggleRole('Manager',this)">Managers</button>
         </div>
-        <button class="add-emp-btn" style="margin-left:auto;" onclick="openAddEmployee()">+ Add person</button>
+        <div class="page-ribbon-spacer"></div>
+        <button class="add-emp-btn" onclick="openAddEmployee()">+ Add person</button>
       </div>
       <div class="today-strip" id="today-strip"></div>
       <hr style="border:none;border-top:1.5px solid var(--border);margin-bottom:1.75rem;">
@@ -991,128 +1059,175 @@
     </div>
 
     <div id="tab-timesheets" class="tab-panel">
-      <div class="section-header">
+      <div class="page-ribbon">
         <div>
-          <div class="section-title">Timesheet Records</div>
-          <div class="section-hint">Filter by person or date range, then export for MYOB</div>
+          <div class="page-ribbon-title">Timesheets</div>
+          <div class="page-ribbon-hint">Filter by person or date range, then export for MYOB</div>
         </div>
-      </div>
-      <div class="filters-bar">
+        <div class="page-ribbon-divider"></div>
         <select class="form-select" id="filter-employee" onchange="renderTimesheets()"><option value="">All staff</option></select>
         <input class="form-input" type="date" id="filter-from" onchange="renderTimesheets()" />
         <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">to</span>
         <input class="form-input" type="date" id="filter-to" onchange="renderTimesheets()" />
+        <div class="page-ribbon-spacer"></div>
         <button class="export-btn" onclick="exportMYOB()">⬇ Export for MYOB</button>
       </div>
       <div class="table-wrap">
         <table class="timesheet-table">
-          <thead><tr><th>Team member</th><th>Role</th><th>Date</th><th>Arrived</th><th>Left</th><th>Hours</th><th>Status</th></tr></thead>
+          <thead><tr><th>Team member</th><th>Role</th><th>Date</th><th>Arrived</th><th>Left</th><th>Hours</th><th>Leave</th><th>Status</th></tr></thead>
           <tbody id="timesheet-body"></tbody>
         </table>
       </div>
     </div>
 
     <div id="tab-notes" class="tab-panel">
-      <div class="section-header">
+      <div class="page-ribbon">
         <div>
-          <div class="section-title">Team Notes</div>
-          <div class="section-hint">Notes left by staff when checking in or out outside their usual hours</div>
+          <div class="page-ribbon-title">Notes</div>
+          <div class="page-ribbon-hint">Notes left by staff when checking in or out outside their usual hours</div>
         </div>
       </div>
       <div class="approvals-list" id="approvals-list"></div>
     </div>
 
-    <!-- LOGINS TAB -->
-    <div id="tab-logins" class="tab-panel">
-      <div class="section-header">
-        <div>
-          <div class="section-title">Manager Logins</div>
-          <div class="section-hint">Each manager has their own name and PIN. PINs must be 4–8 digits and cannot be simple sequences.</div>
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" class="tab-panel">
+
+      <!-- Roster Settings -->
+      <div class="settings-section" id="ss-roster">
+        <div class="settings-section-header" onclick="toggleSettingsSection('roster')">
+          <div class="settings-section-chevron" id="ss-chevron-roster">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Roster Settings</div>
+            <div class="settings-section-hint">Roster cycle configuration and staff access PIN.</div>
+          </div>
         </div>
-        <button class="add-emp-btn" onclick="openAddManager()">+ Add manager</button>
+        <div class="settings-section-body" id="ss-body-roster" style="display:none;">
+          <div class="roster-section" style="margin-bottom:1.5rem;">
+            <div class="roster-section-title">Fortnight Cycle Start Date</div>
+            <div class="roster-anchor-bar">
+              <label class="form-label" style="margin:0;white-space:nowrap;">Cycle starts</label>
+              <input class="form-input" type="date" id="anchor-date" style="width:auto;" />
+              <button class="add-emp-btn" onclick="saveAnchorDate()">Save</button>
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Sets the Monday that Week A begins. All fortnights are calculated from this date.</span>
+            </div>
+          </div>
+          <div class="roster-section" style="margin-bottom:1rem;">
+            <div class="roster-section-title">Who's On PIN</div>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:1rem;">
+              <div style="font-size:0.8rem;color:var(--muted);font-weight:500;line-height:1.5;">This PIN is what staff enter to access the Who's On roster view. Choose something easy for staff to remember but not obvious.</div>
+              <div style="display:flex;align-items:flex-end;gap:1.5rem;flex-wrap:wrap;">
+                <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                  <label class="form-label" style="margin:0;">New PIN</label>
+                  <div class="wos-pin-boxes" id="wos-pin-new-wrap">
+                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="0" />
+                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="1" />
+                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="2" />
+                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="3" />
+                  </div>
+                </div>
+                <button class="add-emp-btn" id="whos-on-pin-save" onclick="saveWhosOnPIN()" disabled style="opacity:0.4;cursor:not-allowed;margin-bottom:2px;">Save PIN</button>
+              </div>
+              <div id="whos-on-pin-feedback" style="font-size:0.78rem;font-weight:600;min-height:1rem;"></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="table-wrap">
-        <table class="timesheet-table">
-          <thead><tr><th>Name</th><th>Last login</th><th>Actions</th></tr></thead>
-          <tbody id="managers-body"></tbody>
-        </table>
+
+      <!-- Manager Logins -->
+      <div class="settings-section" id="ss-managers">
+        <div class="settings-section-header" onclick="toggleSettingsSection('managers')">
+          <div class="settings-section-chevron" id="ss-chevron-managers">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Manager Logins</div>
+            <div class="settings-section-hint">Each manager has their own name and PIN. PINs must be 4–8 digits and cannot be simple sequences.</div>
+          </div>
+        </div>
+        <div class="settings-section-body" id="ss-body-managers" style="display:none;">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+            <button class="add-emp-btn" onclick="openAddManager()">+ Add manager</button>
+          </div>
+          <div class="table-wrap">
+            <table class="timesheet-table">
+              <thead><tr><th>Name</th><th>Last login</th><th>Actions</th></tr></thead>
+              <tbody id="managers-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
+
+      <!-- Clock Audit -->
+      <div class="settings-section" id="ss-clockaudit">
+        <div class="settings-section-header" onclick="toggleSettingsSection('clockaudit')">
+          <div class="settings-section-chevron" id="ss-chevron-clockaudit">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Clock Audit</div>
+            <div class="settings-section-hint">A full log of all clock-in and clock-out events.</div>
+          </div>
+        </div>
+        <div class="settings-section-body" id="ss-body-clockaudit" style="display:none;">
+          <div class="empty-state" style="padding:2rem;">Coming soon</div>
+        </div>
+      </div>
+
+      <!-- Help Guide -->
+      <div class="settings-section" id="ss-help">
+        <div class="settings-section-header" onclick="toggleSettingsSection('help')">
+          <div class="settings-section-chevron" id="ss-chevron-help">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Help Guide</div>
+            <div class="settings-section-hint">Instructions and tips for using Wellness Timesheets.</div>
+          </div>
+        </div>
+        <div class="settings-section-body" id="ss-body-help" style="display:none;">
+          <div class="empty-state" style="padding:2rem;">Coming soon</div>
+        </div>
+      </div>
+
     </div>
     <div id="tab-roster" class="tab-panel">
 
       <!-- Control bar -->
       <div class="rb-ctrl">
-        <button class="rb-nav-btn" onclick="rbNavFn(-1)">&#8592; Prev</button>
-        <div class="rb-fn-label" id="rb-fn-label">—</div>
-        <button class="rb-nav-btn" onclick="rbNavFn(1)">Next &#8594;</button>
-        <div class="rb-role-tabs">
-          <div class="rb-role-tab active" onclick="rbSetRole('All')">All</div>
-          <div class="rb-role-tab" onclick="rbSetRole('Receptionist')">Receptionists</div>
-          <div class="rb-role-tab" onclick="rbSetRole('Nurse')">Nurses</div>
-          <div class="rb-role-tab" onclick="rbSetRole('Manager')">Managers</div>
-        </div>
-        <div class="rb-spacer"></div>
-        <button class="rb-lock-btn" id="rb-lock-btn" onclick="rbToggleLock()">&#128275; Unlocked</button>
-        <button class="rb-publish-btn" id="rb-publish-btn" onclick="rbTogglePublish()">&#10003; Publish Roster</button>
-        <button class="rb-copy-btn" onclick="rbCopyLastFn()">Copy Last Fortnight</button>
-      </div>
-
-      <!-- 14-day fortnight grid -->
-      <div id="rb-grid-view">
-        <div class="rb-fn-grid" id="rb-fn-grid"></div>
-      </div>
-
-      <!-- Day timeline (shown when a day cell is clicked) -->
-      <div id="rb-tl-view" style="display:none;">
-        <div class="rb-tl-back">
-          <button class="rb-nav-btn" onclick="rbCloseTl()">&#8592; Overview</button>
-          <button class="rb-nav-btn" onclick="rbNavDay(-1)">&#8592; Prev day</button>
-          <div class="rb-tl-title" id="rb-tl-title"></div>
-          <button class="rb-nav-btn" onclick="rbNavDay(1)">Next day &#8594;</button>
-          <div style="flex:1"></div>
-          <button class="rb-nav-btn" onclick="rbGoToday()">Today</button>
-        </div>
-        <div class="rb-tl-wrap">
-          <div class="rb-tl-header" id="rb-tl-header"></div>
-          <div class="rb-tl-rows" id="rb-tl-rows"></div>
-          <div class="rb-tl-cov" id="rb-tl-cov"><span class="rb-tl-cov-label">Coverage</span></div>
-        </div>
-      </div>
-
-      <!-- Advanced / Settings section -->
-      <div class="rb-advanced-toggle" onclick="rbToggleAdvanced()">
-        <span id="rb-adv-arrow">&#9658;</span> Advanced Settings
-      </div>
-      <div class="rb-advanced-body" id="rb-advanced-body">
-        <div class="roster-section" style="margin-bottom:1.5rem;margin-top:1rem;">
-          <div class="roster-section-title">Fortnight Cycle Start Date</div>
-          <div class="roster-anchor-bar">
-            <label class="form-label" style="margin:0;white-space:nowrap;">Cycle starts</label>
-            <input class="form-input" type="date" id="anchor-date" style="width:auto;" />
-            <button class="add-emp-btn" onclick="saveAnchorDate()">Save</button>
-            <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Sets the Monday that Week A begins. All fortnights are calculated from this date.</span>
-          </div>
-        </div>
-        <div class="roster-section" style="margin-bottom:1rem;">
-          <div class="roster-section-title">Who's On PIN</div>
-          <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:1rem;">
-            <div style="font-size:0.8rem;color:var(--muted);font-weight:500;line-height:1.5;">This PIN is what staff enter to access the Who's On roster view. Choose something easy for staff to remember but not obvious.</div>
-            <div style="display:flex;align-items:flex-end;gap:1.5rem;flex-wrap:wrap;">
-              <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                <label class="form-label" style="margin:0;">New PIN</label>
-                <div class="wos-pin-boxes" id="wos-pin-new-wrap">
-                  <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="0" />
-                  <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="1" />
-                  <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="2" />
-                  <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="3" />
-                </div>
-              </div>
-              <button class="add-emp-btn" id="whos-on-pin-save" onclick="saveWhosOnPIN()" disabled style="opacity:0.4;cursor:not-allowed;margin-bottom:2px;">Save PIN</button>
+        <button class="rb-nav-btn rb-all-days-btn" id="rb-all-days-btn" onclick="rbCloseAllDays()" style="height:44px;align-self:center;">&#8592; All Days</button>
+        <button class="rb-nav-btn" onclick="rbGoToday()" style="height:44px;align-self:center;">Today</button>
+        <div class="rb-group-divider"></div>
+        <div class="rb-nav-centre">
+          <div class="rb-group rb-ctrl-disabled" id="rb-day-group">
+            <div class="rb-group-label">Day</div>
+            <div class="rb-group-inner">
+              <button class="rb-nav-btn" onclick="rbNavDay(-1)">&#8592; Prev</button>
+              <div class="rb-fn-label" id="rb-day-label" style="min-width:200px;">—</div>
+              <button class="rb-nav-btn" onclick="rbNavDay(1)">Next &#8594;</button>
             </div>
-            <div id="whos-on-pin-feedback" style="font-size:0.78rem;font-weight:600;min-height:1rem;"></div>
+          </div>
+          <div class="rb-group-divider"></div>
+          <div class="rb-group">
+            <div class="rb-group-label">Fortnight</div>
+            <div class="rb-group-inner">
+              <button class="rb-nav-btn" onclick="rbNavFn(-1)">&#8592; Prev</button>
+              <div class="rb-fn-label" id="rb-fn-label">—</div>
+              <button class="rb-nav-btn" onclick="rbNavFn(1)">Next &#8594;</button>
+            </div>
+          </div>
+        </div>
+        <div class="rb-group-divider"></div>
+        <div class="rb-group">
+          <div class="rb-group-label">Legend</div>
+          <div class="rb-group-inner">
+            <div class="rb-leave-legend">
+              <span class="rb-legend-item"><span class="rb-legend-dot annual-leave"></span>Annual</span>
+              <span class="rb-legend-item"><span class="rb-legend-dot personal-leave"></span>Personal</span>
+              <span class="rb-legend-item"><span class="rb-legend-dot public-holiday"></span>Public Hol</span>
+              <span class="rb-legend-item"><span class="rb-legend-dot unpaid-leave"></span>Unpaid</span>
+              <span class="rb-legend-item"><span class="rb-legend-dot bereavement-leave"></span>Bereavement</span>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Role panels -->
+      <div class="rb-panels" id="rb-panels"></div>
 
     </div>
   </div>
@@ -1270,7 +1385,11 @@ let _rosterShifts=[], _rosterFortnights=[], _coverageRules=[];
 
 // Roster builder state
 const TL_START=465, TL_END=1290, TL_RANGE=825, TL_SNAP=15;
-let rFnOffset=0, rRole='All', rSelectedDay=null, rAdvancedOpen=false, _rbDrag=null;
+let rFnOffset=0, rAdvancedOpen=false, _rbDrag=null;
+const RB_ROLES=['Receptionist','Nurse','Manager'];
+const RB_ROLE_LABELS={Receptionist:'Receptionists',Nurse:'Nurses',Manager:'Managers'};
+let rbSelectedDay=null;
+let rbState={Receptionist:{collapsed:false},Nurse:{collapsed:false},Manager:{collapsed:false}};
 
 async function loadAll() {
   showLoading(true);
@@ -1309,7 +1428,8 @@ function normaliseEntry(r) {
     id: r.id, employeeId: r.employee_id, employeeName: r.employee_name,
     role: r.role, date: r.date, clockIn: r.clock_in, clockInISO: r.clock_in_iso,
     clockOut: r.clock_out, clockOutISO: r.clock_out_iso, hours: r.hours,
-    reasonIn: r.reason_in, reasonOut: r.reason_out, status: r.status
+    reasonIn: r.reason_in, reasonOut: r.reason_out, status: r.status,
+    leaveType: r.leave_type || null
   };
 }
 
@@ -1338,6 +1458,8 @@ function showLoading(on) {
 
 const GRACE = 10;
 const ROUND_WINDOW = 5; // minutes — clock times within this window of rostered time are rounded to roster time on timesheets
+const LEAVE_TYPES = { annual_leave:'Annual Leave', personal_leave:'Personal Leave', public_holiday:'Public Holiday', unpaid_leave:'Unpaid Leave', bereavement_leave:'Bereavement Leave' };
+function formatLeaveType(lt){ return LEAVE_TYPES[lt]||'Worked'; }
 
 function roundToRoster(actualTimeStr, scheduledMin){
   if(scheduledMin===null) return actualTimeStr;
@@ -1448,6 +1570,16 @@ async function processRFID(card){
 async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason){
   try {
     if(action==='in'){
+      // If a leave entry exists for today, convert it to a clock-in and alert manager
+      const leaveEntry=_entries.find(e=>e.employeeId===emp.id&&e.date===todayKey&&e.leaveType);
+      if(leaveEntry){
+        const leaveName=formatLeaveType(leaveEntry.leaveType);
+        await db.update('entries',leaveEntry.id,{leave_type:null,clock_in:sheetTimeStr,clock_in_iso:isoNow,clock_out:null,clock_out_iso:null,hours:null,status:'pending',reason_in:`Clocked in — was marked as ${leaveName}`});
+        Object.assign(leaveEntry,{leaveType:null,clockIn:sheetTimeStr,clockInISO:isoNow,clockOut:null,hours:null,status:'pending',reasonIn:`Clocked in — was marked as ${leaveName}`});
+        await addNote(emp,'Leave conflict',timeStr,`Clocked in but was marked as ${leaveName} for today — please review`,leaveEntry.id,todayKey);
+        showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr);
+        return;
+      }
       const row = {
         id:'T'+Date.now(), employee_id:emp.id, employee_name:emp.name, role:emp.role,
         date:todayKey, clock_in:sheetTimeStr, clock_in_iso:isoNow,
@@ -1733,8 +1865,8 @@ function switchTab(name,btn){
   if(name==='timesheets') renderTimesheets();
   if(name==='notes')      renderApprovals();
   if(name==='team')       renderTeam();
-  if(name==='logins')     renderManagersTab();
   if(name==='roster')     renderRoster();
+  if(name==='settings'){  renderManagersTab(); wosInitPinBoxes(); renderAnchorDate(); }
 }
 
 /* ═══════════════════════════════════════════
@@ -1763,10 +1895,23 @@ function renderTeam(){
   const prev=sel.value; sel.innerHTML='<option value="">All staff</option>';
   _emps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;sel.appendChild(o);});
   sel.value=prev;
-  document.getElementById('employees-grid').innerHTML=filtered.map(emp=>{
+  const TEAM_GROUPS=[
+    {role:'Receptionist',label:'Receptionists'},
+    {role:'Nurse',       label:'Nurses'},
+    {role:'Manager',     label:'Managers'},
+  ];
+  const cardHtml=emp=>{
     const initials=emp.name.replace(/^(Dr\.|Nurse|Reception|Practice Mgr)\s*/i,'').split(' ').slice(0,2).map(n=>n[0]).join('');
     const cc=ROLE_C[emp.role]||'c-doctor'; const isIn=inNow.has(emp.id);
     return`<div class="employee-card"><div class="emp-avatar ${cc}">${initials}</div><div class="emp-info"><div class="emp-name">${emp.name}</div><div class="emp-meta">${emp.role} · ${emp.type}</div><div class="emp-rfid">${emp.rfid}</div></div><button class="emp-edit-btn" onclick="openEditEmployee('${emp.id}')">Edit</button><div class="status-dot ${isIn?'in':'out'}" title="${isIn?'Checked in':'Not in today'}"></div></div>`;
+  };
+  const visibleGroups=TEAM_GROUPS.filter(g=>teamRoles.has(g.role));
+  document.getElementById('employees-grid').innerHTML=visibleGroups.map((g,i)=>{
+    const emps=_emps.filter(e=>e.role===g.role);
+    return`<div class="team-group${i>0?' team-group-divider':''}">
+      <div class="team-group-label">${g.label}<span class="team-group-count">${emps.length}</span></div>
+      <div class="team-group-grid">${emps.length?emps.map(cardHtml).join(''):`<div class="empty-state" style="padding:1rem 0;">No ${g.label.toLowerCase()} added yet</div>`}</div>
+    </div>`;
   }).join('');
 }
 
@@ -1860,7 +2005,8 @@ function groupEntriesByDay(entries){
       hours:totalPaidMins>0?(totalPaidMins/60).toFixed(2):null,
       status:worstStatus,
       breakCount:sorted.length-1,
-      breakMins
+      breakMins,
+      leaveType:group.find(r=>r.leaveType)?.leaveType||null
     };
   });
 }
@@ -1882,7 +2028,9 @@ function renderTimesheets(){
     const breakNote=r.breakCount>0?`<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem;">${r.breakCount} break${r.breakCount>1?'s':''}${r.breakMins!==null?' · '+r.breakMins+' min unpaid':''}</div>`:'';
     const hrs=r.hours?`<span class="mono">${r.hours}h</span>`:'—';
     const badge=r.status==='pending'?'<span class="badge badge-pending">Note pending</span>':r.status==='approved'?'<span class="badge badge-approved">✓ Acknowledged</span>':r.status==='flagged'?'<span class="badge badge-flagged">Flagged</span>':'<span class="badge badge-normal">✓ Normal</span>';
-    return`<tr><td><strong>${r.employeeName}</strong></td><td style="color:var(--muted)">${r.role}</td><td>${dateF}</td><td><span class="mono">${r.clockIn}</span></td><td>${out}</td><td>${hrs}${breakNote}</td><td>${badge}</td></tr>`;
+    const leaveOpts=Object.entries({'':`Worked`,...LEAVE_TYPES}).map(([v,l])=>`<option value="${v}"${r.leaveType===v||(!r.leaveType&&v==='')?'selected':''}>${l}</option>`).join('');
+    const leaveSel=`<select class="ts-leave-select${r.leaveType?' has-leave':''}" onchange="setLeaveType('${r.id}',this.value)">${leaveOpts}</select>`;
+    return`<tr class="${r.leaveType?'ts-leave-row':''}"><td><strong>${r.employeeName}</strong></td><td style="color:var(--muted)">${r.role}</td><td>${dateF}</td><td><span class="mono">${r.clockIn||'—'}</span></td><td>${out}</td><td>${hrs}${breakNote}</td><td>${leaveSel}</td><td>${badge}</td></tr>`;
   }).join('');
 }
 
@@ -1896,12 +2044,56 @@ function exportMYOB(){
   if(dt)rows=rows.filter(r=>r.date<=dt);
   const done=groupEntriesByDay(rows).filter(r=>r.clockOut&&r.hours);
   if(!done.length){showToast('No completed entries to export');return;}
-  const csv=[['Employee Name','Date','Start Time','Finish Time','Hours','Activity'].join(','),...done.map(r=>[`"${r.employeeName}"`,r.date.split('-').reverse().join('/'),r.clockIn,r.clockOut,r.hours,`"${r.role}"`].join(','))].join('\n');
+  const csv=[['Employee Name','Date','Start Time','Finish Time','Hours','Activity','Leave Type'].join(','),...done.map(r=>[`"${r.employeeName}"`,r.date.split('-').reverse().join('/'),r.clockIn||'',r.clockOut||'',r.hours||'',`"${r.role}"`,`"${formatLeaveType(r.leaveType)}"`].join(','))].join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`wellness-timesheets-${df||'all'}-to-${dt||'all'}.csv`;
   a.click();
   showToast(`Exported ${done.length} entries for MYOB ✓`);
+}
+
+async function setLeaveType(entryId, leaveType){
+  try{
+    await db.update('entries', entryId, {leave_type: leaveType||null});
+    const e=_entries.find(e=>e.id===entryId);
+    if(e) e.leaveType=leaveType||null;
+    renderTimesheets();
+  }catch(err){showToast('Could not update leave type');console.error(err);}
+}
+
+async function rbMarkLeave(empId, date, shiftId, leaveType){
+  const shift=_rosterShifts.find(s=>s.id===shiftId);
+  const emp=_emps.find(e=>e.id===empId);
+  if(!shift||!emp) return;
+  // Block if employee has actually clocked in (real entry, not a leave entry)
+  const realEntry=_entries.find(e=>e.employeeId===empId&&e.date===date&&!e.leaveType&&e.clockIn);
+  if(realEntry){showToast('Cannot mark leave — employee has already clocked in');renderDayTimeline();return;}
+  const existingLeave=_entries.find(e=>e.employeeId===empId&&e.date===date&&e.leaveType);
+  if(!leaveType){
+    if(existingLeave){
+      await db.delete('entries',existingLeave.id);
+      _entries=_entries.filter(e=>e.id!==existingLeave.id);
+      showToast('Leave cleared');
+    }
+    renderDayTimeline(); renderTimesheets(); return;
+  }
+  const sMin=timeStrToMin(shift.start_time)||TL_START;
+  const eMin=timeStrToMin(shift.end_time)||TL_END;
+  const hours=((eMin-sMin)/60).toFixed(2);
+  const clockIn=(shift.start_time||'').slice(0,5);
+  const clockOut=(shift.end_time||'').slice(0,5);
+  try{
+    if(existingLeave){
+      await db.update('entries',existingLeave.id,{leave_type:leaveType,clock_in:clockIn,clock_out:clockOut,hours});
+      Object.assign(existingLeave,{leaveType,clockIn,clockOut,hours});
+    }else{
+      const row={id:'L'+Date.now(),employee_id:empId,employee_name:emp.name,role:emp.role,date,clock_in:clockIn,clock_out:clockOut,hours,leave_type:leaveType,status:'normal'};
+      await db.insert('entries',row);
+      _entries.push(normaliseEntry(row));
+    }
+    showToast(formatLeaveType(leaveType)+' marked');
+    renderDayTimeline(); renderTimesheets();
+  }catch(err){showToast('Could not save leave');console.error(err);}
 }
 
 /* ═══════════════════════════════════════════
@@ -2264,42 +2456,69 @@ function getScheduledTimes(employeeId,dateStr){
    ROSTER UI – PHASE 2 BUILDER
 ═══════════════════════════════════════════ */
 function renderRoster(){
-  // Update advanced section anchor field (if visible)
   const anchorEl=document.getElementById('anchor-date');
   if(anchorEl&&_rosterConfig) anchorEl.value=_rosterConfig.cycle_start_date;
-  // Update control bar
   const fnStart=rbGetFnStart();
   const labelEl=document.getElementById('rb-fn-label');
-  if(labelEl){
-    const published=rbIsPublished(fnStart);
-    labelEl.innerHTML=rbFnLabel(fnStart)+(published?'<span class="rb-live-badge">&#9679; Live</span>':'');
+  if(labelEl) labelEl.innerHTML=rbFnLabel(fnStart);
+  // Day group — grey out when no day selected
+  const inDayView=!!rbSelectedDay;
+  document.getElementById('rb-day-group')?.classList.toggle('rb-ctrl-disabled',!inDayView);
+  document.getElementById('rb-all-days-btn')?.classList.toggle('rb-ctrl-disabled',!inDayView);
+  const dayLabel=document.getElementById('rb-day-label');
+  if(dayLabel) dayLabel.textContent=rbSelectedDay?new Date(rbSelectedDay+'T12:00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'—';
+  renderRosterPanels();
+}
+
+function renderRosterPanels(){
+  const container=document.getElementById('rb-panels');
+  if(!container) return;
+  const fnStart=rbGetFnStart();
+  // Build panel HTML if not yet built
+  if(!container.children.length){
+    container.innerHTML=RB_ROLES.map(role=>`
+      <div class="rb-panel" id="rb-panel-${role}">
+        <div class="rb-panel-header" onclick="rbTogglePanel('${role}')">
+          <div class="rb-panel-toggle">
+            <span class="rb-panel-icon" id="rb-panel-icon-${role}">&#9660;</span>
+            <span class="rb-panel-title">${RB_ROLE_LABELS[role]}</span>
+          </div>
+          <div class="rb-panel-actions" onclick="event.stopPropagation()">
+            <button class="rb-copy-btn" onclick="rbCopyLastFnForRole('${role}')">Copy Last Fortnight</button>
+            <button class="rb-lock-btn" id="rb-lock-btn-${role}" onclick="rbToggleLockForRole('${role}')">&#128275; Unlocked</button>
+            <button class="rb-publish-btn" id="rb-publish-btn-${role}" onclick="rbTogglePublishForRole('${role}')">&#10003; Publish Roster</button>
+          </div>
+        </div>
+        <div class="rb-panel-body" id="rb-panel-body-${role}">
+          <div class="rb-fn-grid" id="rb-fn-grid-${role}"></div>
+          <div id="rb-tl-${role}" style="display:none;">
+            <div class="rb-tl-wrap">
+              <div class="rb-tl-header" id="rb-tl-header-${role}"></div>
+              <div class="rb-tl-rows" id="rb-tl-rows-${role}"></div>
+              <div class="rb-tl-cov" id="rb-tl-cov-${role}"></div>
+            </div>
+          </div>
+        </div>
+      </div>`).join('');
   }
-  const lockBtn=document.getElementById('rb-lock-btn');
-  if(lockBtn){
-    const locked=rbIsLocked(fnStart);
-    lockBtn.innerHTML=locked?'&#128274; Locked':'&#128275; Unlocked';
-    lockBtn.classList.toggle('locked',locked);
-  }
-  const pubBtn=document.getElementById('rb-publish-btn');
-  if(pubBtn){
-    const published=rbIsPublished(fnStart);
-    pubBtn.innerHTML=published?'&#10003; Live &middot; Unpublish':'&#10003; Publish Roster';
-    pubBtn.classList.toggle('published',published);
-  }
-  document.querySelectorAll('.rb-role-tab').forEach(t=>{
-    const map={'All':'All','Receptionists':'Receptionist','Nurses':'Nurse','Managers':'Manager'};
-    t.classList.toggle('active',map[t.textContent]===rRole||(rRole==='All'&&t.textContent==='All'));
+  // Update each panel
+  RB_ROLES.forEach(role=>{
+    const panel=document.getElementById('rb-panel-'+role);
+    if(!panel) return;
+    const collapsed=rbState[role].collapsed;
+    panel.classList.toggle('collapsed',collapsed);
+    // Lock/publish buttons
+    const locked=rbIsLockedForRole(fnStart,role);
+    const published=rbIsPublishedForRole(fnStart,role);
+    const lockBtn=document.getElementById('rb-lock-btn-'+role);
+    if(lockBtn){ lockBtn.innerHTML=locked?'&#128274; Locked':'&#128275; Unlocked'; lockBtn.classList.toggle('locked',locked); }
+    const pubBtn=document.getElementById('rb-publish-btn-'+role);
+    if(pubBtn){ pubBtn.innerHTML=published?'&#10003; Live &middot; Unpublish':'&#10003; Publish Roster'; pubBtn.classList.toggle('published',published); }
+    if(collapsed) return;
+    document.getElementById('rb-fn-grid-'+role).style.display=rbSelectedDay?'none':'';
+    document.getElementById('rb-tl-'+role).style.display=rbSelectedDay?'block':'none';
+    if(rbSelectedDay) renderDayTimelineForRole(role); else renderFnGridForRole(role);
   });
-  // Show grid or timeline
-  if(rSelectedDay){
-    document.getElementById('rb-grid-view').style.display='none';
-    document.getElementById('rb-tl-view').style.display='block';
-    renderDayTimeline();
-  } else {
-    document.getElementById('rb-tl-view').style.display='none';
-    document.getElementById('rb-grid-view').style.display='block';
-    renderFnGrid();
-  }
 }
 
 function rbGetFnStart(){
@@ -2307,9 +2526,8 @@ function rbGetFnStart(){
   const anchor=_rosterConfig?.cycle_start_date;
   if(!anchor){const t=toMonday(new Date());return t;}
   const a=toMonday(new Date(anchor+'T12:00:00'));
-  // In day view, derive fortnight from the selected day so they stay in sync
-  const ref=rSelectedDay?toMonday(new Date(rSelectedDay+'T12:00:00')):toMonday(new Date());
-  const daysDiff=Math.floor((ref-a)/86400000);
+  const today=toMonday(new Date());
+  const daysDiff=Math.floor((today-a)/86400000);
   const fnNum=Math.floor(daysDiff/14);
   const base=new Date(a);
   base.setDate(base.getDate()+(fnNum+rFnOffset)*14);
@@ -2319,151 +2537,124 @@ function rbGetFnStart(){
 function rbFnLabel(start){
   const end=new Date(start); end.setDate(end.getDate()+13);
   const fmt=d=>d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
-  const locked=rbIsLocked(start);
-  return fmt(start)+' – '+fmt(end)+(locked?' 🔒':'');
+  return fmt(start)+' – '+fmt(end);
 }
 
-function rbIsLocked(fnStart){
-  const key=fnStart.toISOString().slice(0,10);
-  return _rosterFortnights.some(f=>f.fn_start===key&&f.is_locked);
+function rbIsLockedForRole(fnStart,role){
+  const key=fnStart instanceof Date?fnStart.toISOString().slice(0,10):fnStart;
+  return _rosterFortnights.some(f=>f.fn_start===key&&f.role===role&&f.is_locked);
 }
 
-function rbIsPublished(fnStart){
-  const key=fnStart.toISOString().slice(0,10);
-  return _rosterFortnights.some(f=>f.fn_start===key&&f.is_published);
+function rbIsPublishedForRole(fnStart,role){
+  const key=fnStart instanceof Date?fnStart.toISOString().slice(0,10):fnStart;
+  return _rosterFortnights.some(f=>f.fn_start===key&&f.role===role&&f.is_published);
 }
+
+// Keep legacy helpers so srIsPublished (Who's On) still works
+function rbIsLocked(fnStart){ return RB_ROLES.some(r=>rbIsLockedForRole(fnStart,r)); }
+function rbIsPublished(fnStart){ return RB_ROLES.some(r=>rbIsPublishedForRole(fnStart,r)); }
 
 let _rbConfirmCallback=null;
 function rbConfirmClose(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); _rbConfirmCallback=null; }
 function rbConfirmProceed(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); if(_rbConfirmCallback) _rbConfirmCallback(); _rbConfirmCallback=null; }
 
-function rbTogglePublish(){
+function rbTogglePublishForRole(role){
   const fnStart=rbGetFnStart();
   const key=fnStart.toISOString().slice(0,10);
   const end=new Date(fnStart); end.setDate(end.getDate()+13);
   const fmt=d=>d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
   const dateRange=fmt(fnStart)+' – '+fmt(end);
-  const published=rbIsPublished(fnStart);
+  const published=rbIsPublishedForRole(fnStart,role);
   const overlay=document.getElementById('rb-confirm-overlay');
-  const titleEl=document.getElementById('rb-confirm-title');
-  const msgEl=document.getElementById('rb-confirm-msg');
+  document.getElementById('rb-confirm-title').textContent=published?'Unpublish Roster?':'Publish Roster?';
+  document.getElementById('rb-confirm-msg').textContent=published
+    ?`This will hide the ${RB_ROLE_LABELS[role]} roster (${dateRange}) from staff. Saved shifts will not be deleted.`
+    :`This will make the ${RB_ROLE_LABELS[role]} roster (${dateRange}) visible to staff in the Who's On view.`;
   const okBtn=document.getElementById('rb-confirm-ok');
-  if(!published){
-    titleEl.textContent='Publish Roster?';
-    msgEl.textContent=`This will make the ${dateRange} roster visible to staff in the Who's On view.`;
-    okBtn.textContent='Publish';
-    okBtn.className='rb-confirm-ok';
-    _rbConfirmCallback=()=>rbSetPublished(key,true);
-  } else {
-    titleEl.textContent='Unpublish Roster?';
-    msgEl.textContent=`This will hide the ${dateRange} roster from staff. Your saved shifts will not be deleted.`;
-    okBtn.textContent='Unpublish';
-    okBtn.className='rb-confirm-ok danger';
-    _rbConfirmCallback=()=>rbSetPublished(key,false);
-  }
+  okBtn.textContent=published?'Unpublish':'Publish';
+  okBtn.className=published?'rb-confirm-ok danger':'rb-confirm-ok';
+  _rbConfirmCallback=()=>rbSetPublishedForRole(key,role,!published);
   overlay.classList.add('show');
 }
 
-async function rbSetPublished(fnKey,published){
-  const existing=_rosterFortnights.find(f=>f.fn_start===fnKey);
+async function rbSetPublishedForRole(fnKey,role,published){
+  const existing=_rosterFortnights.find(f=>f.fn_start===fnKey&&f.role===role);
   try{
     if(existing){
       await db.update('roster_fortnights',existing.id,{is_published:published});
       existing.is_published=published;
     } else {
-      const row={id:'FN'+Date.now(),fn_start:fnKey,is_locked:false,is_published:published};
+      const row={id:'FN'+Date.now(),fn_start:fnKey,role,is_locked:false,is_published:published};
       await db.insert('roster_fortnights',row);
       _rosterFortnights.push(row);
     }
     renderRoster();
-    showToast(published?'Roster published — now visible to staff':'Live roster cleared');
-  }catch(e){
-    showToast('Publish error: '+e.message.slice(0,80));
-    console.error(e);
-  }
+    showToast(published?`${RB_ROLE_LABELS[role]} roster published`:`${RB_ROLE_LABELS[role]} roster unpublished`);
+  }catch(e){ showToast('Publish error: '+e.message.slice(0,80)); console.error(e); }
 }
 
 function rbNavFn(dir){
-  if(rSelectedDay){
-    // In day view: advance the day by ±14 days, fortnight label follows automatically
-    const d=new Date(rSelectedDay+'T12:00:00');
-    d.setDate(d.getDate()+dir*14);
-    rSelectedDay=d.toISOString().slice(0,10);
-    rFnOffset=0;
-    renderRoster();
-  } else {
-    rFnOffset+=dir;
-    renderRoster();
-  }
+  rFnOffset+=dir;
+  renderRoster();
 }
 
-function rbSetRole(role){
-  rRole=role;
-  document.querySelectorAll('.rb-role-tab').forEach(t=>{
-    const map={'All':'All','Receptionists':'Receptionist','Nurses':'Nurse','Managers':'Manager'};
-    t.classList.toggle('active',map[t.textContent]===rRole||(rRole==='All'&&t.textContent==='All'));
-  });
-  if(rSelectedDay) renderDayTimeline(); else renderFnGrid();
+function rbTogglePanel(role){
+  rbState[role].collapsed=!rbState[role].collapsed;
+  renderRosterPanels();
 }
 
-function rbGetEmps(){
-  if(rRole==='All') return _emps;
-  return _emps.filter(e=>e.role===rRole);
-}
+function rbGetEmpsForRole(role){ return _emps.filter(e=>e.role===role); }
 
-function rbToggleLock(){
+function rbToggleLockForRole(role){
   const fnStart=rbGetFnStart();
   const key=fnStart.toISOString().slice(0,10);
-  const existing=_rosterFortnights.find(f=>f.fn_start===key);
-  rbSaveFnLock(key,!(existing?.is_locked));
+  rbSaveFnLockForRole(key,role,!rbIsLockedForRole(fnStart,role));
 }
 
-async function rbSaveFnLock(fnStart,locked){
-  const existing=_rosterFortnights.find(f=>f.fn_start===fnStart);
+async function rbSaveFnLockForRole(fnStart,role,locked){
+  const existing=_rosterFortnights.find(f=>f.fn_start===fnStart&&f.role===role);
   try{
     if(existing){
       await db.update('roster_fortnights',existing.id,{is_locked:locked});
       existing.is_locked=locked;
     } else {
-      const row={id:'FN'+Date.now(),fn_start:fnStart,is_locked:locked};
+      const row={id:'FN'+Date.now(),fn_start:fnStart,role,is_locked:locked,is_published:false};
       await db.insert('roster_fortnights',row);
       _rosterFortnights.push(row);
     }
     renderRoster();
-    showToast(locked?'Fortnight locked':'Fortnight unlocked');
-  }catch(e){
-    showToast('Lock error: '+e.message.slice(0,80));
-    console.error(e);
-  }
+    showToast(locked?`${RB_ROLE_LABELS[role]} locked`:`${RB_ROLE_LABELS[role]} unlocked`);
+  }catch(e){ showToast('Lock error: '+e.message.slice(0,80)); console.error(e); }
 }
 
-async function rbCopyLastFn(){
+async function rbCopyLastFnForRole(role){
   const fnStart=rbGetFnStart();
   const prevStart=new Date(fnStart); prevStart.setDate(prevStart.getDate()-14);
   const fnKey=fnStart.toISOString().slice(0,10);
   const prevKey=prevStart.toISOString().slice(0,10);
-  const prevShifts=_rosterShifts.filter(s=>s.date>=prevKey&&s.date<fnKey);
-  if(!prevShifts.length){showToast('No shifts found in previous fortnight');return;}
+  const roleEmps=rbGetEmpsForRole(role).map(e=>e.id);
+  const prevShifts=_rosterShifts.filter(s=>s.date>=prevKey&&s.date<fnKey&&roleEmps.includes(s.employee_id));
+  if(!prevShifts.length){showToast('No shifts found in previous fortnight for '+RB_ROLE_LABELS[role]);return;}
   const base=Date.now();
   const newShifts=prevShifts.map((s,i)=>{
     const d=new Date(s.date+'T12:00:00'); d.setDate(d.getDate()+14);
-    // Only include known columns — avoid spreading any DB-generated fields
     return{id:'SH'+(base+i),employee_id:s.employee_id,date:d.toISOString().slice(0,10),start_time:s.start_time,end_time:s.end_time,is_day_off:s.is_day_off};
   });
   try{
     await db.bulkInsert('roster_shifts',newShifts);
     _rosterShifts.push(...newShifts);
     renderRoster();
-    showToast(`Copied ${newShifts.length} shifts from previous fortnight`);
-  }catch(e){showToast('Copy error: '+e.message.slice(0,80));console.error(e);}
+    showToast(`Copied ${newShifts.length} shifts for ${RB_ROLE_LABELS[role]}`);
+  }catch(e){ showToast('Copy error: '+e.message.slice(0,80)); console.error(e); }
 }
 
-function renderFnGrid(){
-  const grid=document.getElementById('rb-fn-grid');
+function renderFnGridForRole(role){
+  const grid=document.getElementById('rb-fn-grid-'+role);
   if(!grid) return;
   const fnStart=rbGetFnStart();
   const today=new Date(new Date().toDateString());
-  const emps=rbGetEmps();
+  const emps=rbGetEmpsForRole(role);
+  const dnMap=buildDisplayNames(_emps);
   const days=[];
   for(let i=0;i<14;i++){ const d=new Date(fnStart); d.setDate(d.getDate()+i); days.push(d); }
   grid.innerHTML=days.map(d=>{
@@ -2477,7 +2668,6 @@ function renderFnGrid(){
     const monthStr=d.toLocaleDateString('en-AU',{month:'short'});
     const pills=dayShifts.slice(0,3).map(s=>{
       const emp=_emps.find(e=>e.id===s.employee_id);
-      const dnMap=buildDisplayNames(_emps);
       return`<div class="rb-shift-pill">${emp?dnMap[emp.id]||empFirstName(emp):'?'} ${(s.start_time||'').slice(0,5)}</div>`;
     }).join('');
     const more=dayShifts.length>3?`<div class="rb-shift-pill" style="opacity:0.55;">+${dayShifts.length-3}</div>`:'';
@@ -2491,32 +2681,25 @@ function renderFnGrid(){
 }
 
 function rbOpenDay(dateKey){
-  rSelectedDay=dateKey;
-  document.getElementById('rb-grid-view').style.display='none';
-  document.getElementById('rb-tl-view').style.display='block';
-  const d=new Date(dateKey+'T12:00:00');
-  document.getElementById('rb-tl-title').textContent=d.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  renderDayTimeline();
+  rbSelectedDay=dateKey;
+  renderRoster();
 }
 
-function rbCloseTl(){
-  rSelectedDay=null;
-  document.getElementById('rb-tl-view').style.display='none';
-  document.getElementById('rb-grid-view').style.display='block';
-  renderFnGrid();
+function rbCloseAllDays(){
+  rbSelectedDay=null;
+  renderRoster();
 }
 
 function rbGoToday(){
-  rSelectedDay=new Date().toISOString().slice(0,10);
   rFnOffset=0;
   renderRoster();
 }
 
 function rbNavDay(dir){
-  const d=new Date(rSelectedDay+'T12:00:00');
+  if(!rbSelectedDay) return;
+  const d=new Date(rbSelectedDay+'T12:00:00');
   d.setDate(d.getDate()+dir);
-  rSelectedDay=d.toISOString().slice(0,10);
-  rFnOffset=0; // fortnight label now derived from rSelectedDay
+  rbSelectedDay=d.toISOString().slice(0,10);
   renderRoster();
 }
 
@@ -2524,15 +2707,13 @@ function minToTimeStr(min){ return String(Math.floor(min/60)).padStart(2,'0')+':
 function timeStrToMin(t){ if(!t) return null; const[h,m]=t.split(':').map(Number); return h*60+m; }
 function snapMin(min){ return Math.round(min/TL_SNAP)*TL_SNAP; }
 
-function renderDayTimeline(){
-  const header=document.getElementById('rb-tl-header');
-  const rows=document.getElementById('rb-tl-rows');
-  const cov=document.getElementById('rb-tl-cov');
-  if(!header||!rows||!cov||!rSelectedDay) return;
-  const isLocked=rbIsLocked(rbGetFnStart());
-  // Sync title with current selected day
-  const titleEl=document.getElementById('rb-tl-title');
-  if(titleEl&&rSelectedDay) titleEl.textContent=new Date(rSelectedDay+'T12:00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+function renderDayTimelineForRole(role){
+  const selectedDay=rbSelectedDay;
+  const header=document.getElementById('rb-tl-header-'+role);
+  const rows=document.getElementById('rb-tl-rows-'+role);
+  const cov=document.getElementById('rb-tl-cov-'+role);
+  if(!header||!rows||!cov||!selectedDay) return;
+  const isLocked=rbIsLockedForRole(rbGetFnStart(),role);
   // Time axis — tick mark every 15 min, label every whole hour, edges at 7:45am/9:30pm
   let ticks='';
   for(let m=TL_START;m<=TL_END;m+=TL_SNAP){
@@ -2551,22 +2732,27 @@ function renderDayTimeline(){
   }
   header.innerHTML=`<div class="rb-tl-name-spacer"></div><div class="rb-tl-track-header">${ticks}</div>`;
   // Staff rows
-  const emps=rbGetEmps();
+  const emps=rbGetEmpsForRole(role);
   rows.innerHTML=emps.map(emp=>{
-    const shifts=_rosterShifts.filter(s=>s.date===rSelectedDay&&s.employee_id===emp.id&&!s.is_day_off);
+    const shifts=_rosterShifts.filter(s=>s.date===selectedDay&&s.employee_id===emp.id&&!s.is_day_off);
+    const leaveEntry=_entries.find(e=>e.employeeId===emp.id&&e.date===selectedDay&&e.leaveType);
+    const currentLeave=leaveEntry?.leaveType||'';
     const bars=shifts.map(s=>{
       const sMin=timeStrToMin(s.start_time)||TL_START, eMin=timeStrToMin(s.end_time)||TL_END;
       const lPct=((sMin-TL_START)/TL_RANGE)*100, wPct=((eMin-sMin)/TL_RANGE)*100;
       const lbl=`${(s.start_time||'').slice(0,5)}–${(s.end_time||'').slice(0,5)}`;
       const drag=isLocked?'':` onmousedown="rbStartDrag(event,'${s.id}','move')"`;
-      const delBtn=!isLocked?`<button class="rb-shift-del" onclick="event.stopPropagation();rbDeleteShift('${s.id}')" title="Remove">&#215;</button>`:'';
+      const delBtn=!isLocked?`<button class="rb-shift-del" onclick="event.stopPropagation();rbDeleteShift('${s.id}','${role}')" title="Remove">&#215;</button>`:'';
       const lHandle=!isLocked?`<div class="rb-shift-handle left" onmousedown="event.stopPropagation();rbStartDrag(event,'${s.id}','left')"></div>`:'';
       const rHandle=!isLocked?`<div class="rb-shift-handle right" onmousedown="event.stopPropagation();rbStartDrag(event,'${s.id}','right')"></div>`:'';
-      return`<div class="rb-shift-bar" data-shift-id="${s.id}" style="left:${lPct.toFixed(2)}%;width:${wPct.toFixed(2)}%"${drag} title="${emp.name}: ${lbl}">
-        ${lHandle}<span class="rb-shift-label">${lbl}</span>${rHandle}${delBtn}
+      const leaveOpts=`<option value="">Worked Shift</option>`+Object.entries(LEAVE_TYPES).map(([v,l])=>`<option value="${v}"${currentLeave===v?' selected':''}>${l}</option>`).join('');
+      const leaveBtn=!isLocked?`<select class="rb-leave-select" onmousedown="event.stopPropagation()" onchange="event.stopPropagation();rbMarkLeave('${emp.id}','${selectedDay}','${s.id}',this.value)">${leaveOpts}</select>`:'';
+      const leaveClass=currentLeave?' on-leave '+currentLeave.replace(/_/g,'-'):'';
+      return`<div class="rb-shift-bar${leaveClass}" data-shift-id="${s.id}" style="left:${lPct.toFixed(2)}%;width:${wPct.toFixed(2)}%"${drag} title="${emp.name}: ${lbl}${currentLeave?' ('+formatLeaveType(currentLeave)+')':''}">
+        ${lHandle}<span class="rb-shift-label">${lbl}</span>${rHandle}${leaveBtn}${delBtn}
       </div>`;
     }).join('');
-    const addBtn=!isLocked?`<button class="rb-add-shift-btn" onclick="rbAddShift('${emp.id}','${rSelectedDay}')" title="Add shift">+</button>`:'';
+    const addBtn=!isLocked?`<button class="rb-add-shift-btn" onclick="rbAddShift('${emp.id}','${selectedDay}','${role}')" title="Add shift">+</button>`:'';
     return`<div class="rb-tl-row">
       <div class="rb-tl-name"><span class="rb-tl-name-text">${emp.name}</span>${addBtn}</div>
       <div class="rb-tl-track" data-emp-id="${emp.id}">${bars}</div>
@@ -2575,7 +2761,7 @@ function renderDayTimeline(){
   // Coverage segments
   let slots='';
   for(let m=TL_START;m<TL_END;m+=TL_SNAP){
-    const cnt=_rosterShifts.filter(s=>s.date===rSelectedDay&&!s.is_day_off&&emps.some(e=>e.id===s.employee_id)
+    const cnt=_rosterShifts.filter(s=>s.date===selectedDay&&!s.is_day_off&&emps.some(e=>e.id===s.employee_id)
       &&(timeStrToMin(s.start_time)||TL_START)<=m&&(timeStrToMin(s.end_time)||TL_END)>m).length;
     const col=cnt>=3?'#4CAF7D':cnt>=2?'#f5a623':'#c0392b';
     const lPct=((m-TL_START)/TL_RANGE)*100, wPct=(TL_SNAP/TL_RANGE)*100;
@@ -2584,7 +2770,9 @@ function renderDayTimeline(){
   cov.innerHTML=`<div class="rb-tl-name-spacer" style="font-size:0.6rem;font-weight:700;color:var(--muted);display:flex;align-items:center;padding-left:6px;border-right:1px solid rgba(234,217,220,0.6);">Coverage</div><div style="flex:1;position:relative;height:100%;">${slots}</div>`;
 }
 
-async function rbAddShift(empId,date){
+function rbRoleForEmp(empId){ const e=_emps.find(e=>e.id===empId); return e?.role||null; }
+
+async function rbAddShift(empId,date,role){
   try{
     const sched=await getScheduledTimes(empId,date);
     const start=sched?.startMin!=null?minToTimeStr(sched.startMin):'09:00';
@@ -2592,16 +2780,18 @@ async function rbAddShift(empId,date){
     const row={id:'SH'+Date.now(),employee_id:empId,date,start_time:start,end_time:end,is_day_off:false};
     await db.insert('roster_shifts',row);
     _rosterShifts.push(row);
-    renderDayTimeline();
+    renderDayTimelineForRole(role||rbRoleForEmp(empId));
     showToast('Shift added');
   }catch(e){showToast('Could not add shift');console.error(e);}
 }
 
-async function rbDeleteShift(shiftId){
+async function rbDeleteShift(shiftId,role){
   try{
     await db.delete('roster_shifts',shiftId);
+    const shift=_rosterShifts.find(s=>s.id===shiftId);
+    const r=role||rbRoleForEmp(shift?.employee_id);
     _rosterShifts=_rosterShifts.filter(s=>s.id!==shiftId);
-    renderDayTimeline();
+    renderDayTimelineForRole(r);
     showToast('Shift removed');
   }catch(e){showToast('Could not remove');console.error(e);}
 }
@@ -2610,8 +2800,11 @@ async function rbSaveShiftTimes(shiftId,startTime,endTime){
   const shift=_rosterShifts.find(s=>s.id===shiftId);
   if(!shift) return;
   shift.start_time=startTime; shift.end_time=endTime;
-  try{ await db.update('roster_shifts',shiftId,{start_time:startTime,end_time:endTime}); }
-  catch(e){showToast('Could not save shift');console.error(e);}
+  const role=rbRoleForEmp(shift.employee_id);
+  try{
+    await db.update('roster_shifts',shiftId,{start_time:startTime,end_time:endTime});
+    if(role) renderDayTimelineForRole(role);
+  }catch(e){showToast('Could not save shift');console.error(e);}
 }
 
 function rbStartDrag(e,shiftId,type){
@@ -2661,11 +2854,17 @@ function rbOnMouseUp(){
   if(curStart!=null&&curEnd!=null) rbSaveShiftTimes(shiftId,minToTimeStr(curStart),minToTimeStr(curEnd));
 }
 
-function rbToggleAdvanced(){
-  rAdvancedOpen=!rAdvancedOpen;
-  document.getElementById('rb-advanced-body').classList.toggle('open',rAdvancedOpen);
-  document.getElementById('rb-adv-arrow').innerHTML=rAdvancedOpen?'&#9660;':'&#9658;';
-  if(rAdvancedOpen){ renderRosterGrid(); renderOverrides(); wosInitPinBoxes(); }
+function toggleSettingsSection(key){
+  const body=document.getElementById('ss-body-'+key);
+  const chevron=document.getElementById('ss-chevron-'+key);
+  const open=body.style.display==='none';
+  body.style.display=open?'':'none';
+  chevron.innerHTML=open?'&#9660;':'&#9658;';
+}
+
+function renderAnchorDate(){
+  const el=document.getElementById('anchor-date');
+  if(el&&_rosterConfig) el.value=_rosterConfig.cycle_start_date||'';
 }
 
 function renderRosterGrid(){
