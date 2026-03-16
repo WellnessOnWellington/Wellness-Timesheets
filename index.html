@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wellness Timesheets</title>
+<title>Running Well</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -284,13 +284,13 @@
 
   .login-card {
     background: var(--white); border: 1.5px solid var(--border); border-radius: 26px;
-    padding: 2.5rem; width: 100%; max-width: 340px;
+    padding: 3.5rem 2.5rem; width: 100%; max-width: 400px;
     box-shadow: var(--shadow-md); text-align: center;
   }
 
   .login-logo-wrap {
-    display: flex; align-items: center;
-    justify-content: center; margin: 0 auto 1.25rem;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; margin: 0 auto 2rem; gap: 0.4rem;
   }
 
   .login-title { font-family: 'Lora',serif; font-size: 1.1rem; font-weight: 600; color: var(--charcoal); margin-bottom: 0.2rem; }
@@ -381,6 +381,8 @@
   .stat-val   { font-family: 'Lora',serif; font-size: 2rem; font-weight: 600; color: var(--burgundy); line-height: 1; }
   .stat-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em; color: var(--muted); text-transform: uppercase; margin-top: 0.3rem; }
   .stat-names { font-size: 0.72rem; font-weight: 600; color: var(--border-dk); margin-top: 0.5rem; line-height: 1.6; }
+  .stat-names-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.25rem; margin-top:0.5rem; }
+  .stat-role-col { font-size:0.72rem; font-weight:600; color:var(--border-dk); line-height:1.6; }
 
   /* Employee cards */
   .employees-grid { display: flex; flex-direction: column; gap: 0; }
@@ -491,7 +493,11 @@
     border-left: 3.5px solid var(--dusty); border-radius: var(--radius);
     padding: 1.2rem 1.5rem; box-shadow: var(--shadow);
     display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem;
+    overflow: hidden; max-height: 400px;
+    transition: background 0.28s ease, border-color 0.28s ease, max-height 0.35s ease, opacity 0.3s ease, padding 0.35s ease, margin 0.35s ease, box-shadow 0.28s ease;
   }
+  .approval-card.ac-flash-green { background: var(--success-lt) !important; border-left-color: var(--success) !important; border-color: rgba(58,107,79,0.35) !important; box-shadow: 0 0 0 3px rgba(58,107,79,0.1) !important; }
+  .approval-card.ac-collapse { max-height: 0 !important; opacity: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin-bottom: 0 !important; box-shadow: none !important; }
 
   .approval-meta  { flex: 1; }
   .approval-who   { font-size: 0.9rem; font-weight: 700; color: var(--charcoal); margin-bottom: 0.15rem; }
@@ -766,6 +772,11 @@
   .ts-leave-select { font-size:0.72rem; padding:0.22rem 0.5rem; border:1.5px solid var(--border); border-radius:8px; background:var(--warm-white); color:var(--charcoal); cursor:pointer; }
   .ts-leave-select.has-leave { background:var(--blush-lt); font-weight:700; color:var(--burgundy); border-color:var(--burgundy); }
   .ts-leave-row td { background:rgba(255,243,205,0.45) !important; }
+  .ts-pending-row td { background:rgba(255,193,7,0.06) !important; }
+  .ts-pending-row td:first-child { border-left:3px solid var(--warning); }
+  .ts-legend { display:flex; gap:1.25rem; flex-wrap:wrap; padding:0.75rem 0 0.25rem; font-size:0.72rem; color:var(--muted); font-weight:600; }
+  .ts-legend-item { display:flex; align-items:center; gap:0.4rem; }
+  .ts-legend-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
   .rb-tl-cov { display:flex; align-items:center; border-top:1.5px solid var(--border); height:22px; }
   .wos-pin-boxes { display:flex; gap:0.5rem; }
   .wos-pin-box { width:48px; height:52px; border:1.5px solid var(--border); border-radius:10px; background:var(--warm-white); text-align:center; font-size:1.4rem; font-weight:700; font-family:'Nunito',sans-serif; color:var(--charcoal); outline:none; transition:border-color 0.15s, box-shadow 0.15s; -webkit-text-security:disc; }
@@ -861,7 +872,19 @@
     <div class="logo-wrap">
       <img src="Logo.png" alt="Wellness on Wellington" style="height:70px;width:auto;display:block;">
     </div>
-    <div class="app-tagline">Wellness Timesheets</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:0;margin-top:0.3rem;">
+      <div style="font-family:'Lora',serif;font-size:1.35rem;font-weight:600;color:var(--charcoal);letter-spacing:-0.02em;line-height:1;text-align:center;">
+        Running <span style="font-style:italic;color:var(--burgundy);font-weight:400;">Well</span>
+      </div>
+      <svg width="128" height="15" viewBox="0 0 128 15" fill="none" style="margin-top:3px;">
+        <path d="M 0 10 C 23 10, 46 2, 68 2 C 89 2, 107 5, 126 2"
+          stroke="#8B2535" stroke-width="1.7" stroke-linecap="round" fill="none"/>
+        <path d="M 0 13 C 23 13, 46 6, 68 6 C 89 6, 107 9, 126 6"
+          stroke="#D4899A" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.55"/>
+        <path d="M 119 0 L 126 2 L 120 7"
+          stroke="#8B2535" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </div>
   </div>
 
   <div class="kiosk-time-section">
@@ -931,6 +954,19 @@
 <div id="view-staff-roster" class="view">
   <div class="sr-header">
     <img src="Logo.png" alt="Wellness on Wellington" style="height:36px;width:auto;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0;margin-left:0.6rem;">
+      <div style="font-family:'Lora',serif;font-size:0.95rem;font-weight:600;color:var(--charcoal);letter-spacing:-0.02em;line-height:1;white-space:nowrap;">
+        Running <span style="font-style:italic;color:var(--burgundy);font-weight:400;">Well</span>
+      </div>
+      <svg width="90" height="11" viewBox="0 0 90 11" fill="none" style="margin-top:2px;">
+        <path d="M 0 7 C 15 7, 30 1, 48 1 C 63 1, 76 4, 88 1"
+          stroke="#8B2535" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+        <path d="M 0 9 C 15 9, 30 4, 48 4 C 63 4, 76 7, 88 4"
+          stroke="#D4899A" stroke-width="0.8" stroke-linecap="round" fill="none" opacity="0.55"/>
+        <path d="M 82 0 L 88 1 L 83 6"
+          stroke="#8B2535" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </div>
     <div class="sr-title">Who's On</div>
     <div class="sr-header-spacer"></div>
     <div class="sr-nav">
@@ -990,6 +1026,19 @@
   <div class="login-card">
     <div class="login-logo-wrap">
       <img src="Logo.png" alt="Wellness on Wellington" style="height:48px;width:auto;display:block;margin:0 auto;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+        <div style="font-family:'Lora',serif;font-size:1.1rem;font-weight:600;color:var(--charcoal);letter-spacing:-0.02em;line-height:1;text-align:center;">
+          Running <span style="font-style:italic;color:var(--burgundy);font-weight:400;">Well</span>
+        </div>
+        <svg width="104" height="13" viewBox="0 0 104 13" fill="none" style="margin-top:2px;">
+          <path d="M 0 9 C 18 9, 36 2, 55 2 C 72 2, 87 5, 102 2"
+            stroke="#8B2535" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M 0 11 C 18 11, 36 5, 55 5 C 72 5, 87 8, 102 5"
+            stroke="#D4899A" stroke-width="0.9" stroke-linecap="round" fill="none" opacity="0.55"/>
+          <path d="M 95 0 L 102 2 L 96 7"
+            stroke="#8B2535" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
     </div>
     <div class="login-title" id="login-title">Manager Login</div>
     <div class="login-sub"   id="login-sub">Select your name, then enter your PIN</div>
@@ -1022,6 +1071,19 @@
   <div class="admin-bar">
     <div class="admin-brand">
       <img src="Logo.png" alt="Wellness on Wellington" style="height:36px;width:auto;display:block;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0;margin-left:0.6rem;">
+        <div style="font-family:'Lora',serif;font-size:0.95rem;font-weight:600;color:var(--charcoal);letter-spacing:-0.02em;line-height:1;white-space:nowrap;">
+          Running <span style="font-style:italic;color:var(--burgundy);font-weight:400;">Well</span>
+        </div>
+        <svg width="90" height="11" viewBox="0 0 90 11" fill="none" style="margin-top:2px;">
+          <path d="M 0 7 C 15 7, 30 1, 48 1 C 63 1, 76 4, 88 1"
+            stroke="#8B2535" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+          <path d="M 0 9 C 15 9, 30 4, 48 4 C 63 4, 76 7, 88 4"
+            stroke="#D4899A" stroke-width="0.8" stroke-linecap="round" fill="none" opacity="0.55"/>
+          <path d="M 82 0 L 88 1 L 83 6"
+            stroke="#8B2535" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
       <div style="width:1px;height:36px;background:var(--border);margin:0 0.5rem;flex-shrink:0;"></div>
       <div style="font-size:0.75rem;color:var(--muted);font-weight:600;">Logged in: <span id="current-user-label" style="color:var(--burgundy);font-weight:700;"></span></div>
     </div>
@@ -1087,7 +1149,7 @@
           <div class="page-ribbon-hint">Notes left by staff when checking in or out outside their usual hours</div>
         </div>
       </div>
-      <div class="approvals-list" id="approvals-list"></div>
+      <div class="rb-panels" id="notes-panels"></div>
     </div>
 
     <!-- SETTINGS TAB -->
@@ -1162,11 +1224,55 @@
           <div class="settings-section-chevron" id="ss-chevron-clockaudit">&#9658;</div>
           <div style="flex:1;">
             <div class="settings-section-title">Clock Audit</div>
-            <div class="settings-section-hint">A full log of all clock-in and clock-out events.</div>
+            <div class="settings-section-hint">Every clock-in and clock-out event across all staff.</div>
           </div>
         </div>
         <div class="settings-section-body" id="ss-body-clockaudit" style="display:none;">
-          <div class="empty-state" style="padding:2rem;">Coming soon</div>
+          <div class="page-ribbon" style="margin-bottom:1rem;box-shadow:none;border-color:var(--border);">
+            <select class="form-select" id="ca-filter-emp" onchange="renderClockAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);"><option value="">All staff</option></select>
+            <select class="form-select" id="ca-filter-role" onchange="renderClockAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);">
+              <option value="">All roles</option>
+              <option>Receptionist</option><option>Nurse</option><option>Manager</option>
+            </select>
+            <input class="form-input" type="date" id="ca-filter-from" onchange="renderClockAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
+            <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">to</span>
+            <input class="form-input" type="date" id="ca-filter-to" onchange="renderClockAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
+          </div>
+          <div class="table-wrap">
+            <table class="timesheet-table">
+              <thead><tr><th>Date</th><th>Staff member</th><th>Role</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th></tr></thead>
+              <tbody id="clock-audit-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes Audit -->
+      <div class="settings-section" id="ss-notesaudit">
+        <div class="settings-section-header" onclick="toggleSettingsSection('notesaudit')">
+          <div class="settings-section-chevron" id="ss-chevron-notesaudit">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Notes Audit</div>
+            <div class="settings-section-hint">History of all staff notes and their acknowledgement status.</div>
+          </div>
+        </div>
+        <div class="settings-section-body" id="ss-body-notesaudit" style="display:none;">
+          <div class="page-ribbon" style="margin-bottom:1rem;box-shadow:none;border-color:var(--border);">
+            <select class="form-select" id="na-filter-emp" onchange="renderNotesAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);"><option value="">All staff</option></select>
+            <select class="form-select" id="na-filter-role" onchange="renderNotesAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);">
+              <option value="">All roles</option>
+              <option>Receptionist</option><option>Nurse</option><option>Manager</option>
+            </select>
+            <input class="form-input" type="date" id="na-filter-from" onchange="renderNotesAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
+            <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">to</span>
+            <input class="form-input" type="date" id="na-filter-to" onchange="renderNotesAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
+          </div>
+          <div class="table-wrap">
+            <table class="timesheet-table">
+              <thead><tr><th>Date</th><th>Staff member</th><th>Role</th><th>Type</th><th>Reason</th><th>Acknowledged by</th><th>Status</th></tr></thead>
+              <tbody id="notes-audit-body"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1176,7 +1282,7 @@
           <div class="settings-section-chevron" id="ss-chevron-help">&#9658;</div>
           <div style="flex:1;">
             <div class="settings-section-title">Help Guide</div>
-            <div class="settings-section-hint">Instructions and tips for using Wellness Timesheets.</div>
+            <div class="settings-section-hint">Instructions and tips for using Running Well.</div>
           </div>
         </div>
         <div class="settings-section-body" id="ss-body-help" style="display:none;">
@@ -1437,7 +1543,8 @@ function normaliseNote(r) {
   return {
     id: r.id, entryId: r.entry_id, employeeId: r.employee_id,
     employeeName: r.employee_name, role: r.role, type: r.type,
-    time: r.time, date: r.date, reason: r.reason, status: r.status
+    time: r.time, date: r.date, reason: r.reason, status: r.status,
+    resolvedBy: r.resolved_by || null
   };
 }
 
@@ -1881,16 +1988,23 @@ function renderTeam(){
   const doneNow=new Set(_entries.filter(e=>e.date===today&&e.clockOut).map(e=>e.employeeId));
   const dnMap=buildDisplayNames(_emps);
   const displayName=emp=>dnMap[emp.id]||empFirstName(emp);
-  const inNames=filtered.filter(e=>inNow.has(e.id)).map(displayName);
-  const doneNames=filtered.filter(e=>doneNow.has(e.id)).map(displayName);
-  const notYetEmps=filtered.filter(e=>!inNow.has(e.id)&&!doneNow.has(e.id));
-  const notYetNames=notYetEmps.map(displayName);
-  const nameList=names=>names.length?`<div class="stat-names">${names.join('<br>')}</div>`:'';
+  const inEmps=filtered.filter(e=>inNow.has(e.id));
+  const doneEmps=filtered.filter(e=>doneNow.has(e.id));
+  const rosteredTodayIds=new Set(_rosterShifts.filter(s=>s.date===today&&!s.is_day_off).map(s=>s.employee_id));
+  const notYetEmps=filtered.filter(e=>!inNow.has(e.id)&&!doneNow.has(e.id)&&rosteredTodayIds.has(e.id));
+  const namesByRole=emps=>{
+    if(!emps.length) return '';
+    const cols=RB_ROLES.map(role=>{
+      const names=emps.filter(e=>e.role===role).map(e=>displayName(e));
+      return`<div class="stat-role-col">${names.map(n=>`<div>${n}</div>`).join('')}</div>`;
+    });
+    return`<div class="stat-names-grid">${cols.join('')}</div>`;
+  };
   document.getElementById('today-strip').innerHTML=`
     <div class="stat-tile"><div class="stat-val">${filtered.length}</div><div class="stat-label">Total staff</div></div>
-    <div class="stat-tile"><div class="stat-val">${inNames.length}</div><div class="stat-label">Currently in</div>${nameList(inNames)}</div>
-    <div class="stat-tile"><div class="stat-val">${doneNames.length}</div><div class="stat-label">Finished today</div>${nameList(doneNames)}</div>
-    <div class="stat-tile"><div class="stat-val">${notYetEmps.length}</div><div class="stat-label">Not yet in</div>${nameList(notYetNames)}</div>`;
+    <div class="stat-tile"><div class="stat-val">${inEmps.length}</div><div class="stat-label">Currently in</div>${namesByRole(inEmps)}</div>
+    <div class="stat-tile"><div class="stat-val">${doneEmps.length}</div><div class="stat-label">Finished today</div>${namesByRole(doneEmps)}</div>
+    <div class="stat-tile"><div class="stat-val">${notYetEmps.length}</div><div class="stat-label">Not yet in</div>${namesByRole(notYetEmps)}</div>`;
   const sel=document.getElementById('filter-employee');
   const prev=sel.value; sel.innerHTML='<option value="">All staff</option>';
   _emps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;sel.appendChild(o);});
@@ -2030,8 +2144,18 @@ function renderTimesheets(){
     const badge=r.status==='pending'?'<span class="badge badge-pending">Note pending</span>':r.status==='approved'?'<span class="badge badge-approved">✓ Acknowledged</span>':r.status==='flagged'?'<span class="badge badge-flagged">Flagged</span>':'<span class="badge badge-normal">✓ Normal</span>';
     const leaveOpts=Object.entries({'':`Worked`,...LEAVE_TYPES}).map(([v,l])=>`<option value="${v}"${r.leaveType===v||(!r.leaveType&&v==='')?'selected':''}>${l}</option>`).join('');
     const leaveSel=`<select class="ts-leave-select${r.leaveType?' has-leave':''}" onchange="setLeaveType('${r.id}',this.value)">${leaveOpts}</select>`;
-    return`<tr class="${r.leaveType?'ts-leave-row':''}"><td><strong>${r.employeeName}</strong></td><td style="color:var(--muted)">${r.role}</td><td>${dateF}</td><td><span class="mono">${r.clockIn||'—'}</span></td><td>${out}</td><td>${hrs}${breakNote}</td><td>${leaveSel}</td><td>${badge}</td></tr>`;
+    const rowClass=[r.leaveType?'ts-leave-row':'',r.status==='pending'?'ts-pending-row':''].filter(Boolean).join(' ');
+    return`<tr class="${rowClass}"><td><strong>${r.employeeName}</strong></td><td style="color:var(--muted)">${r.role}</td><td>${dateF}</td><td><span class="mono">${r.clockIn||'—'}</span></td><td>${out}</td><td>${hrs}${breakNote}</td><td>${leaveSel}</td><td>${badge}</td></tr>`;
   }).join('');
+  const hasPending=grouped.some(r=>r.status==='pending');
+  if(hasPending){
+    const legend=document.createElement('div');
+    legend.className='ts-legend';
+    legend.innerHTML=`<div class="ts-legend-item"><div class="ts-legend-dot" style="background:var(--warning);"></div>Pending review — not included in MYOB export until acknowledged</div>`;
+    document.querySelector('#tab-timesheets .table-wrap').after(legend);
+  } else {
+    document.querySelector('#tab-timesheets .ts-legend')?.remove();
+  }
 }
 
 function exportMYOB(){
@@ -2042,14 +2166,16 @@ function exportMYOB(){
   if(ef)rows=rows.filter(r=>r.employeeId===ef);
   if(df)rows=rows.filter(r=>r.date>=df);
   if(dt)rows=rows.filter(r=>r.date<=dt);
-  const done=groupEntriesByDay(rows).filter(r=>r.clockOut&&r.hours);
-  if(!done.length){showToast('No completed entries to export');return;}
+  const grouped=groupEntriesByDay(rows).filter(r=>r.clockOut&&r.hours);
+  const done=grouped.filter(r=>r.status!=='pending');
+  const skipped=grouped.length-done.length;
+  if(!done.length){showToast(skipped?`${skipped} entr${skipped>1?'ies':'y'} pending review — nothing to export`:'No completed entries to export');return;}
   const csv=[['Employee Name','Date','Start Time','Finish Time','Hours','Activity','Leave Type'].join(','),...done.map(r=>[`"${r.employeeName}"`,r.date.split('-').reverse().join('/'),r.clockIn||'',r.clockOut||'',r.hours||'',`"${r.role}"`,`"${formatLeaveType(r.leaveType)}"`].join(','))].join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`wellness-timesheets-${df||'all'}-to-${dt||'all'}.csv`;
   a.click();
-  showToast(`Exported ${done.length} entries for MYOB ✓`);
+  showToast(`Exported ${done.length} entr${done.length>1?'ies':'y'}${skipped?' · '+skipped+' pending review skipped':''}  ✓`);
 }
 
 async function setLeaveType(entryId, leaveType){
@@ -2099,28 +2225,211 @@ async function rbMarkLeave(empId, date, shiftId, leaveType){
 /* ═══════════════════════════════════════════
    NOTES / APPROVALS
 ═══════════════════════════════════════════ */
+const NOTES_ROLE_GROUPS=[
+  {role:'Receptionist', label:'Receptionists'},
+  {role:'Nurse',        label:'Nurses'},
+  {role:'Manager',      label:'Managers'},
+];
+const _notesPanelCollapsed=NOTES_ROLE_GROUPS.reduce((a,g)=>({...a,[g.role]:false}),{});
+
+function toggleNotesPanel(role){
+  _notesPanelCollapsed[role]=!_notesPanelCollapsed[role];
+  const panel=document.getElementById('notes-panel-'+role);
+  if(panel) panel.classList.toggle('collapsed',_notesPanelCollapsed[role]);
+}
+
 function renderApprovals(){
   const pend=_notes.filter(a=>a.status==='pending');
   const badge=document.getElementById('notif-badge');
   badge.textContent=pend.length; badge.style.display=pend.length?'inline':'none';
-  const list=document.getElementById('approvals-list');
-  if(!pend.length){list.innerHTML=`<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-msg">All clear — no notes waiting</div><div class="empty-sub">Staff notes appear here when someone checks in or out outside their usual hours</div></div>`;return;}
-  list.innerHTML=pend.map(a=>{
+  const container=document.getElementById('notes-panels');
+  if(!container) return;
+
+  const cardHtml=a=>{
     const dateF=new Date(a.date+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short'});
-    return`<div class="approval-card"><div class="approval-meta"><div class="approval-who">${a.employeeName} <span style="color:var(--muted);font-weight:500;font-size:0.78rem">· ${a.role}</span></div><div class="approval-detail">${a.type} · ${dateF} at ${a.time}</div><div class="approval-reason">${a.reason}</div></div><div class="approval-actions"><button class="acknowledge-btn" onclick="resolveNote('${a.id}','approved')">✓ Acknowledge</button><button class="flag-btn" onclick="resolveNote('${a.id}','flagged')">Flag for follow-up</button></div></div>`;
+    return`<div class="approval-card" data-id="${a.id}">
+      <div class="approval-meta">
+        <div class="approval-who">${a.employeeName} <span style="color:var(--muted);font-weight:500;font-size:0.78rem">· ${a.role}</span></div>
+        <div class="approval-detail">${a.type} · ${dateF} at ${a.time}</div>
+        <div class="approval-reason">${a.reason}</div>
+      </div>
+      <div class="approval-actions">
+        <button class="acknowledge-btn" onclick="resolveNote('${a.id}','approved')">✓ Acknowledge</button>
+        <button class="flag-btn" onclick="resolveNote('${a.id}','flagged')">Flag for follow-up</button>
+      </div>
+    </div>`;
+  };
+
+  container.innerHTML=NOTES_ROLE_GROUPS.map(g=>{
+    const notes=pend.filter(a=>a.role===g.role);
+    const collapsed=_notesPanelCollapsed[g.role];
+    const countBadge=notes.length?`<span style="background:var(--wine);color:#fff;border-radius:20px;padding:0.05rem 0.55rem;font-size:0.7rem;font-weight:800;margin-left:0.25rem;">${notes.length}</span>`:'';
+    const body=notes.length
+      ? `<div class="rb-panel-body"><div class="approvals-list">${notes.map(cardHtml).join('')}</div></div>`
+      : `<div class="rb-panel-body"><div style="font-size:0.78rem;color:var(--muted);font-weight:600;padding:0.25rem 0;">No pending notes</div></div>`;
+    return`<div class="rb-panel${collapsed?' collapsed':''}" id="notes-panel-${g.role}">
+      <div class="rb-panel-header" onclick="toggleNotesPanel('${g.role}')">
+        <div class="rb-panel-toggle"><span class="rb-panel-icon">▼</span></div>
+        <div class="rb-panel-title">${g.label}${countBadge}</div>
+      </div>
+      ${body}
+    </div>`;
   }).join('');
+}
+
+const CA_PAGE_SIZE=20;
+let _caPage=0;
+
+function renderClockAudit(resetPage=false){
+  const tbody=document.getElementById('clock-audit-body');
+  if(!tbody) return;
+  const today=new Date().toISOString().slice(0,10);
+  // Populate staff filter (always refresh); set default dates on first open
+  const empSel=document.getElementById('ca-filter-emp');
+  if(empSel){
+    const prev=empSel.value;
+    empSel.innerHTML='<option value="">All staff</option>';
+    _emps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;empSel.appendChild(o);});
+    if(prev) empSel.value=prev;
+    const fromEl=document.getElementById('ca-filter-from');
+    const toEl=document.getElementById('ca-filter-to');
+    if(!fromEl.value) fromEl.value=today;
+    if(!toEl.value) toEl.value=today;
+  }
+  if(resetPage) _caPage=0;
+  const ef=document.getElementById('ca-filter-emp')?.value;
+  const rf=document.getElementById('ca-filter-role')?.value;
+  const df=document.getElementById('ca-filter-from')?.value;
+  const dt=document.getElementById('ca-filter-to')?.value;
+  let rows=[..._entries].filter(r=>r.clockIn);
+  if(ef) rows=rows.filter(r=>r.employeeId===ef);
+  if(rf) rows=rows.filter(r=>r.role===rf);
+  if(df) rows=rows.filter(r=>r.date>=df);
+  if(dt) rows=rows.filter(r=>r.date<=dt);
+  rows.sort((a,b)=>b.date.localeCompare(a.date)||b.clockIn.localeCompare(a.clockIn));
+  if(!rows.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-msg">No clock events found</div></div></td></tr>`;
+    document.getElementById('ca-pagination')?.remove();
+    return;
+  }
+  const totalPages=Math.ceil(rows.length/CA_PAGE_SIZE);
+  _caPage=Math.min(_caPage,totalPages-1);
+  const page=rows.slice(_caPage*CA_PAGE_SIZE,(_caPage+1)*CA_PAGE_SIZE);
+  tbody.innerHTML=page.map(r=>{
+    const dateF=new Date(r.date+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
+    const out=r.clockOut?`<span class="mono">${r.clockOut}</span>`:`<span style="color:var(--dusty)">Still in</span>`;
+    const hrs=r.hours?`<span class="mono">${r.hours}h</span>`:'—';
+    const badge=r.status==='pending'?'<span class="badge badge-pending">Pending</span>':r.status==='approved'?'<span class="badge badge-approved">✓ Acknowledged</span>':r.status==='flagged'?'<span class="badge badge-flagged">Flagged</span>':'<span class="badge badge-normal">✓ Normal</span>';
+    return`<tr>
+      <td>${dateF}</td>
+      <td><strong>${r.employeeName}</strong></td>
+      <td style="color:var(--muted)">${r.role}</td>
+      <td><span class="mono">${r.clockIn}</span></td>
+      <td>${out}</td>
+      <td>${hrs}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+  // Pagination bar
+  let pag=document.getElementById('ca-pagination');
+  if(!pag){
+    pag=document.createElement('div');
+    pag.id='ca-pagination';
+    pag.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0 0.25rem;';
+    tbody.closest('.table-wrap').after(pag);
+  }
+  pag.innerHTML=`
+    <button onclick="_caPage--;renderClockAudit()" ${_caPage===0?'disabled':''} style="background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:0.35rem 0.9rem;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;${_caPage===0?'opacity:0.35;cursor:not-allowed;':''}">← Prev</button>
+    <span style="font-size:0.75rem;color:var(--muted);font-weight:600;">Page ${_caPage+1} of ${totalPages} · ${rows.length} total</span>
+    <button onclick="_caPage++;renderClockAudit()" ${_caPage>=totalPages-1?'disabled':''} style="background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:0.35rem 0.9rem;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;${_caPage>=totalPages-1?'opacity:0.35;cursor:not-allowed;':''}">Next →</button>`;
+}
+
+let _naPage=0;
+
+function renderNotesAudit(resetPage=false){
+  const tbody=document.getElementById('notes-audit-body');
+  if(!tbody) return;
+  const today=new Date().toISOString().slice(0,10);
+  // Populate staff filter (always refresh); set default dates on first open
+  const empSel=document.getElementById('na-filter-emp');
+  if(empSel){
+    const prev=empSel.value;
+    empSel.innerHTML='<option value="">All staff</option>';
+    _emps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;empSel.appendChild(o);});
+    if(prev) empSel.value=prev;
+    const fromEl=document.getElementById('na-filter-from');
+    const toEl=document.getElementById('na-filter-to');
+    if(!fromEl.value) fromEl.value=today;
+    if(!toEl.value) toEl.value=today;
+  }
+  if(resetPage) _naPage=0;
+  const ef=document.getElementById('na-filter-emp')?.value;
+  const rf=document.getElementById('na-filter-role')?.value;
+  const df=document.getElementById('na-filter-from')?.value;
+  const dt=document.getElementById('na-filter-to')?.value;
+  let notes=[..._notes];
+  if(ef) notes=notes.filter(n=>n.employeeId===ef);
+  if(rf) notes=notes.filter(n=>n.role===rf);
+  if(df) notes=notes.filter(n=>n.date>=df);
+  if(dt) notes=notes.filter(n=>n.date<=dt);
+  const sorted=notes.sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time));
+  if(!sorted.length){
+    tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="empty-msg">No notes recorded yet</div></div></td></tr>`;
+    document.getElementById('na-pagination')?.remove();
+    return;
+  }
+  const totalPages=Math.ceil(sorted.length/CA_PAGE_SIZE);
+  _naPage=Math.min(_naPage,totalPages-1);
+  const page=sorted.slice(_naPage*CA_PAGE_SIZE,(_naPage+1)*CA_PAGE_SIZE);
+  tbody.innerHTML=page.map(n=>{
+    const dateF=new Date(n.date+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
+    const badge=n.status==='approved'?'<span class="badge badge-approved">✓ Acknowledged</span>':n.status==='flagged'?'<span class="badge badge-flagged">Flagged</span>':'<span class="badge badge-pending">Pending</span>';
+    return`<tr>
+      <td>${dateF} <span style="color:var(--muted);font-size:0.75rem;">${n.time||''}</span></td>
+      <td><strong>${n.employeeName}</strong></td>
+      <td style="color:var(--muted)">${n.role}</td>
+      <td style="color:var(--muted)">${n.type||'—'}</td>
+      <td style="max-width:280px;font-size:0.8rem;">${n.reason||'—'}</td>
+      <td style="color:var(--muted);font-size:0.8rem;">${n.resolvedBy||'—'}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+  // Pagination bar
+  let pag=document.getElementById('na-pagination');
+  if(!pag){
+    pag=document.createElement('div');
+    pag.id='na-pagination';
+    pag.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0 0.25rem;';
+    tbody.closest('.table-wrap').after(pag);
+  }
+  pag.innerHTML=`
+    <button onclick="_naPage--;renderNotesAudit()" ${_naPage===0?'disabled':''} style="background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:0.35rem 0.9rem;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;${_naPage===0?'opacity:0.35;cursor:not-allowed;':''}">← Prev</button>
+    <span style="font-size:0.75rem;color:var(--muted);font-weight:600;">Page ${_naPage+1} of ${totalPages} · ${sorted.length} total</span>
+    <button onclick="_naPage++;renderNotesAudit()" ${_naPage>=totalPages-1?'disabled':''} style="background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:0.35rem 0.9rem;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;${_naPage>=totalPages-1?'opacity:0.35;cursor:not-allowed;':''}">Next →</button>`;
 }
 
 async function resolveNote(id,status){
   const note=_notes.find(a=>a.id===id);
   if(!note)return;
+  const card=document.querySelector(`.approval-card[data-id="${id}"]`);
+  const flashClass='ac-flash-green'; // flag colour added later
   try {
-    await db.update('notes',id,{status});
-    await db.update('entries',note.entryId,{status});
-    note.status=status;
+    const resolvedBy=currentManager?.name||null;
+    await Promise.all([
+      db.update('notes',id,{status, resolved_by:resolvedBy}),
+      db.update('entries',note.entryId,{status})
+    ]);
+    note.status=status; note.resolvedBy=resolvedBy;
     const entry=_entries.find(e=>e.id===note.entryId);
     if(entry) entry.status=status;
-    renderApprovals(); renderTimesheets();
+    // Animate: flash colour → collapse → re-render
+    if(card){
+      card.classList.add(flashClass);
+      setTimeout(()=>card.classList.add('ac-collapse'), 320);
+      setTimeout(()=>{ renderApprovals(); renderTimesheets(); }, 700);
+    } else {
+      renderApprovals(); renderTimesheets();
+    }
     showToast(status==='approved'?'Note acknowledged ✓':'Flagged for follow-up');
   } catch(e){ showToast('Could not update — please try again.'); }
 }
@@ -2172,7 +2481,7 @@ function buildDisplayNames(emps){
 
 const SR_DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const SR_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-const SR_ROLE_COLORS={Doctor:'#8B2535',Nurse:'#A63245',Receptionist:'#C45670',Manager:'#6B2030'};
+const SR_ROLE_COLORS={Doctor:'#8B2535',Nurse:'#5B7A5E',Receptionist:'#B85C38',Manager:'#4A5568'};
 const SR_ROLE_BG={Doctor:'rgba(139,37,53,0.10)',Nurse:'rgba(166,50,69,0.12)',Receptionist:'rgba(212,137,154,0.2)',Manager:'rgba(139,37,53,0.07)'};
 
 function getFortnightStart(offsetFortnights){
@@ -2389,7 +2698,8 @@ function srByDay(days,emps,today){
     const d=new Date(date+'T12:00:00');
     const isToday=date===today;
     const shifts=emps.map(e=>({emp:e,shift:srShiftForEmp(e.id,date)})).filter(x=>x.shift&&x.shift!=='off');
-    shifts.sort((a,b)=>a.shift.start.localeCompare(b.shift.start));
+    const SR_ROLE_ORDER={Receptionist:0,Nurse:1,Manager:2};
+    shifts.sort((a,b)=>(SR_ROLE_ORDER[a.emp.role]??9)-(SR_ROLE_ORDER[b.emp.role]??9)||a.shift.start.localeCompare(b.shift.start));
     const items=shifts.length
       ?shifts.map(({emp,shift})=>`<div class="sr-shift-item"><div class="sr-shift-dot" style="background:${SR_ROLE_COLORS[emp.role]||'var(--dusty)'}"></div><span class="sr-shift-name">${_srDnMap[emp.id]||empFirstName(emp)}</span><span class="sr-shift-time">${shift.start}–${shift.end}</span></div>`).join('')
       :`<div class="sr-no-staff">No staff scheduled</div>`;
@@ -2860,6 +3170,8 @@ function toggleSettingsSection(key){
   const open=body.style.display==='none';
   body.style.display=open?'':'none';
   chevron.innerHTML=open?'&#9660;':'&#9658;';
+  if(open&&key==='clockaudit') renderClockAudit();
+  if(open&&key==='notesaudit') renderNotesAudit();
 }
 
 function renderAnchorDate(){
