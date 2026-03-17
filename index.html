@@ -954,7 +954,7 @@
 <div id="view-staff-roster" class="view">
   <div class="sr-header">
     <img src="Logo.png" alt="Wellness on Wellington" style="height:36px;width:auto;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0;margin-left:0.6rem;">
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0;margin-left:0.6rem;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
       <div style="font-family:'Lora',serif;font-size:0.95rem;font-weight:600;color:var(--charcoal);letter-spacing:-0.02em;line-height:1;white-space:nowrap;">
         Running <span style="font-style:italic;color:var(--burgundy);font-weight:400;">Well</span>
       </div>
@@ -1071,7 +1071,7 @@
   <div class="admin-bar">
     <div class="admin-brand">
       <img src="Logo.png" alt="Wellness on Wellington" style="height:36px;width:auto;display:block;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
-      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0;margin-left:0.6rem;">
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0;margin-left:0.6rem;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
         <div style="font-family:'Lora',serif;font-size:0.95rem;font-weight:600;color:var(--charcoal);letter-spacing:-0.02em;line-height:1;white-space:nowrap;">
           Running <span style="font-style:italic;color:var(--burgundy);font-weight:400;">Well</span>
         </div>
@@ -2193,7 +2193,8 @@ async function rbMarkLeave(empId, date, shiftId, leaveType){
   if(!shift||!emp) return;
   // Block if employee has actually clocked in (real entry, not a leave entry)
   const realEntry=_entries.find(e=>e.employeeId===empId&&e.date===date&&!e.leaveType&&e.clockIn);
-  if(realEntry){showToast('Cannot mark leave — employee has already clocked in');renderDayTimeline();return;}
+  const role=rbRoleForEmp(empId);
+  if(realEntry){showToast('Cannot mark leave — employee has already clocked in');renderDayTimelineForRole(role);return;}
   const existingLeave=_entries.find(e=>e.employeeId===empId&&e.date===date&&e.leaveType);
   if(!leaveType){
     if(existingLeave){
@@ -2201,7 +2202,7 @@ async function rbMarkLeave(empId, date, shiftId, leaveType){
       _entries=_entries.filter(e=>e.id!==existingLeave.id);
       showToast('Leave cleared');
     }
-    renderDayTimeline(); renderTimesheets(); return;
+    renderDayTimelineForRole(role); renderTimesheets(); return;
   }
   const sMin=timeStrToMin(shift.start_time)||TL_START;
   const eMin=timeStrToMin(shift.end_time)||TL_END;
@@ -2214,11 +2215,12 @@ async function rbMarkLeave(empId, date, shiftId, leaveType){
       Object.assign(existingLeave,{leaveType,clockIn,clockOut,hours});
     }else{
       const row={id:'L'+Date.now(),employee_id:empId,employee_name:emp.name,role:emp.role,date,clock_in:clockIn,clock_out:clockOut,hours,leave_type:leaveType,status:'normal'};
-      await db.insert('entries',row);
-      _entries.push(normaliseEntry(row));
+      const returned=await db.insert('entries',row);
+      const saved=Array.isArray(returned)?returned[0]:returned;
+      _entries.push(normaliseEntry({...row,id:saved?.id||row.id}));
     }
     showToast(formatLeaveType(leaveType)+' marked');
-    renderDayTimeline(); renderTimesheets();
+    renderDayTimelineForRole(role); renderTimesheets();
   }catch(err){showToast('Could not save leave');console.error(err);}
 }
 
@@ -3062,7 +3064,8 @@ function renderDayTimelineForRole(role){
         ${lHandle}<span class="rb-shift-label">${lbl}</span>${rHandle}${leaveBtn}${delBtn}
       </div>`;
     }).join('');
-    const addBtn=!isLocked?`<button class="rb-add-shift-btn" onclick="rbAddShift('${emp.id}','${selectedDay}','${role}')" title="Add shift">+</button>`:'';
+    const hasShift=_rosterShifts.some(s=>s.employee_id===emp.id&&s.date===selectedDay&&!s.is_day_off);
+    const addBtn=!isLocked&&!hasShift?`<button class="rb-add-shift-btn" onclick="rbAddShift('${emp.id}','${selectedDay}','${role}')" title="Add shift">+</button>`:'';
     return`<div class="rb-tl-row">
       <div class="rb-tl-name"><span class="rb-tl-name-text">${emp.name}</span>${addBtn}</div>
       <div class="rb-tl-track" data-emp-id="${emp.id}">${bars}</div>
@@ -3083,16 +3086,23 @@ function renderDayTimelineForRole(role){
 function rbRoleForEmp(empId){ const e=_emps.find(e=>e.id===empId); return e?.role||null; }
 
 async function rbAddShift(empId,date,role){
+  const existing=_rosterShifts.find(s=>s.employee_id===empId&&s.date===date&&!s.is_day_off);
+  if(existing){showToast('Already has a shift on this day');return;}
+  const sched=getScheduledTimes(empId,date);
+  const start=sched?.startMin!=null?minToTimeStr(sched.startMin):'09:00';
+  const end=sched?.endMin!=null?minToTimeStr(sched.endMin):'17:00';
+  const row={id:'SH'+Date.now(),employee_id:empId,date,start_time:start,end_time:end,is_day_off:false};
+  _rosterShifts.push(row);
+  renderDayTimelineForRole(role||rbRoleForEmp(empId));
   try{
-    const sched=await getScheduledTimes(empId,date);
-    const start=sched?.startMin!=null?minToTimeStr(sched.startMin):'09:00';
-    const end=sched?.endMin!=null?minToTimeStr(sched.endMin):'17:00';
-    const row={id:'SH'+Date.now(),employee_id:empId,date,start_time:start,end_time:end,is_day_off:false};
     await db.insert('roster_shifts',row);
-    _rosterShifts.push(row);
-    renderDayTimelineForRole(role||rbRoleForEmp(empId));
     showToast('Shift added');
-  }catch(e){showToast('Could not add shift');console.error(e);}
+  }catch(e){
+    _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
+    renderDayTimelineForRole(role||rbRoleForEmp(empId));
+    showToast('Could not add shift');
+    console.error(e);
+  }
 }
 
 async function rbDeleteShift(shiftId,role){
