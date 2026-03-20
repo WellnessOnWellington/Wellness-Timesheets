@@ -467,6 +467,8 @@
     box-shadow: 0 2px 8px rgba(139,37,53,0.2); transition: background 0.18s; white-space: nowrap;
   }
   .export-btn:hover { background: var(--wine); }
+  .export-btn.ready { background: var(--success); box-shadow: 0 2px 8px rgba(39,174,96,0.25); }
+  .export-btn.ready:hover { background: #219a52; }
 
   /* Table */
   .table-wrap { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
@@ -499,12 +501,27 @@
     transition: background 0.28s ease, border-color 0.28s ease, max-height 0.35s ease, opacity 0.3s ease, padding 0.35s ease, margin 0.35s ease, box-shadow 0.28s ease;
   }
   .approval-card.ac-flash-green { background: var(--success-lt) !important; border-left-color: var(--success) !important; border-color: rgba(58,107,79,0.35) !important; box-shadow: 0 0 0 3px rgba(58,107,79,0.1) !important; }
+  .approval-card.ac-flash-orange { background: #fef3e8 !important; border-left-color: #e67e22 !important; border-color: rgba(230,126,34,0.35) !important; box-shadow: 0 0 0 3px rgba(230,126,34,0.1) !important; }
   .approval-card.ac-collapse { max-height: 0 !important; opacity: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin-bottom: 0 !important; box-shadow: none !important; }
 
-  .approval-meta  { flex: 1; }
-  .approval-who   { font-size: 0.9rem; font-weight: 700; color: var(--charcoal); margin-bottom: 0.15rem; }
-  .approval-detail{ font-size: 0.75rem; color: var(--muted); font-weight: 500; margin-bottom: 0.65rem; }
-  .approval-reason{ font-size: 0.8rem; color: var(--text); background: var(--blush-lt); border-left: 3px solid var(--dusty); padding: 0.55rem 0.8rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-style: italic; line-height: 1.45; }
+  .approval-card.unrostered { border-left-color: #e67e22; }
+  .approval-meta  { flex: 1; min-width: 0; }
+  .approval-header { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.75rem; }
+  .approval-who   { font-size: 0.95rem; font-weight: 800; color: var(--charcoal); }
+  .approval-role-badge { font-size:0.68rem; font-weight:700; padding:0.12rem 0.5rem; border-radius:999px; background:var(--blush-lt); color:var(--burgundy); border:1px solid var(--border); }
+  .approval-type-badge { font-size:0.68rem; font-weight:700; padding:0.12rem 0.5rem; border-radius:999px; background:rgba(0,0,0,0.05); color:var(--charcoal); }
+  .approval-header-dot { color:var(--muted); font-size:0.55rem; align-self:center; }
+  .approval-type-badge.unrostered { background:#fef3e8; color:#e67e22; border:1px solid rgba(230,126,34,0.3); }
+  .approval-time-stamp { font-size:0.72rem; color:var(--muted); font-weight:500; white-space:nowrap; }
+  .approval-times-row { display:flex; gap:1.5rem; margin-bottom:0.75rem; }
+  .approval-time-col { display:flex; flex-direction:column; gap:0.18rem; }
+  .approval-time-label { font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted); }
+  .approval-time-val { font-size:0.85rem; font-weight:700; color:var(--charcoal); font-family:'Courier New',monospace; }
+  .approval-time-val.not-rostered { color:#e67e22; font-family:'Nunito',sans-serif; font-size:0.78rem; background:#fef3e8; border:1px solid rgba(230,126,34,0.3); border-radius:6px; padding:0.1rem 0.45rem; }
+  .approval-time-val.diff-ok { color:var(--muted); }
+  .approval-time-val.diff-warn { color:#e6a817; }
+  .approval-time-val.diff-bad { color:var(--burgundy); }
+  .approval-reason{ font-size: 0.8rem; color: var(--text); background: var(--blush-lt); border-left: 3px solid var(--dusty); padding: 0.55rem 0.8rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-style: italic; line-height: 1.45; margin-bottom:0; }
   .approval-actions { display: flex; flex-direction: column; gap: 0.5rem; flex-shrink: 0; }
 
   .acknowledge-btn { background: var(--success-lt); color: var(--success); border: 1px solid rgba(58,107,79,0.18); border-radius: 8px; padding: 0.42rem 1rem; font-family: 'Nunito',sans-serif; font-size: 0.76rem; font-weight: 800; cursor: pointer; transition: all 0.18s; white-space: nowrap; }
@@ -807,7 +824,10 @@
   .ts-emp-role-badge { font-size:0.68rem; font-weight:700; padding:0.15rem 0.55rem; border-radius:999px; background:var(--blush-lt); color:var(--burgundy); border:1px solid var(--border); }
   .ts-emp-pending { font-size:0.72rem; font-weight:700; color:var(--burgundy); background:rgba(139,37,53,0.08); border-radius:999px; padding:0.15rem 0.65rem; }
   .ts-emp-ok { font-size:0.72rem; font-weight:700; color:var(--success); }
-  .ts-emp-hours { margin-left:auto; font-size:1rem; font-weight:800; color:var(--charcoal); font-family:'Courier New',monospace; flex-shrink:0; }
+  .ts-emp-hours { font-size:1rem; font-weight:800; color:var(--charcoal); font-family:'Courier New',monospace; flex-shrink:0; }
+  .ts-emp-hours.ready { color:var(--success); }
+  .ts-emp-myob-badge { font-size:0.72rem; font-weight:700; color:var(--success); background:rgba(39,174,96,0.1); border:1px solid rgba(39,174,96,0.35); border-radius:999px; padding:0.15rem 0.65rem; white-space:nowrap; }
+  .ts-emp-right { display:flex; align-items:center; gap:0.6rem; margin-left:auto; flex-shrink:0; }
   .ts-shift-row { border-bottom:1px solid rgba(234,217,220,0.5); }
   .ts-shift-row:last-child { border-bottom:none; }
   .ts-shift-row.ts-locked { background:rgba(0,0,0,0.015); }
@@ -815,27 +835,36 @@
   .ts-shift-row.ts-flag-yellow .ts-row-main { border-left:3px solid #e6a817; }
   .ts-shift-row.ts-flag-green .ts-row-main { border-left:3px solid var(--success); }
   .ts-shift-row.ts-flag-grey .ts-row-main { border-left:3px solid var(--muted); }
+  .ts-shift-row.ts-flag-flagged .ts-row-main { border-left:3px solid #e67e22; }
+  .ts-times-clock.ts-times-flagged-follow { color:#e67e22; }
+  .ts-flag-icon { font-size:0.75rem; flex-shrink:0; line-height:1; margin-left:-0.2rem; color:#e67e22; }
   .ts-row-main { display:flex; align-items:center; gap:1rem; padding:0.7rem 1.1rem; cursor:pointer; transition:background 0.15s; user-select:none; }
   .ts-row-main:hover { background:var(--blush-lt); }
   .ts-row-date { width:115px; flex-shrink:0; font-size:0.88rem; font-weight:700; color:var(--charcoal); }
-  .ts-row-times { flex:1; display:flex; align-items:center; gap:0.6rem; font-size:0.88rem; }
+  .ts-row-times { width:200px; flex-shrink:0; display:flex; align-items:center; gap:0.6rem; font-size:0.88rem; }
   .ts-times-rost { color:var(--muted); font-family:'Courier New',monospace; }
   .ts-times-arrow { color:var(--border); font-size:0.68rem; }
   .ts-times-clock { color:var(--charcoal); font-weight:800; font-family:'Courier New',monospace; }
   .ts-times-clock.ts-times-flagged { color:var(--burgundy); }
   .ts-row-flag-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-  .ts-row-hours { font-size:1.05rem; font-weight:800; color:var(--burgundy); font-family:'Courier New',monospace; flex-shrink:0; min-width:52px; text-align:right; letter-spacing:-0.02em; }
-  .ts-payroll-select { font-size:0.72rem; padding:0.22rem 0.5rem; border:1.5px solid var(--border); border-radius:7px; background:var(--warm-white); color:var(--charcoal); cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; flex-shrink:0; max-width:140px; }
+  .ts-adjusted-pencil { font-size:0.7rem; color:var(--success); flex-shrink:0; line-height:1; margin-left:-0.2rem; }
+  .ts-row-right { display:flex; align-items:center; gap:1.2rem; flex-shrink:0; }
+  .ts-row-hours { font-size:1.05rem; font-weight:800; color:var(--burgundy); font-family:'Courier New',monospace; width:52px; text-align:right; letter-spacing:-0.02em; }
+  .ts-row-hours:empty::before { content:'\00a0'; }
+  .ts-payroll-wrap { width:130px; flex-shrink:0; }
+  .ts-payroll-select { font-size:0.72rem; padding:0.22rem 0.5rem; border:1.5px solid var(--border); border-radius:7px; background:var(--warm-white); color:var(--charcoal); cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; width:100%; }
   .ts-payroll-select:focus { outline:none; border-color:var(--burgundy); }
-  .ts-payroll-label { font-size:0.72rem; font-weight:700; color:var(--muted); flex-shrink:0; }
-  .ts-locked-label { font-size:0.68rem; color:var(--muted); font-weight:600; white-space:nowrap; }
+  .ts-payroll-label { font-size:0.72rem; font-weight:700; color:var(--muted); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ts-locked-label { font-size:0.68rem; color:var(--muted); font-weight:600; white-space:nowrap; width:70px; text-align:left; }
   .ts-row-detail { background:rgba(250,245,246,0.7); border-top:1px solid rgba(234,217,220,0.5); padding:0.5rem 1.1rem 0.75rem; }
   .ts-sub-row { display:flex; align-items:center; gap:0.75rem; padding:0.3rem 0; font-size:0.8rem; }
   .ts-sub-label { width:72px; flex-shrink:0; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); }
   .ts-sub-rostered .ts-sub-time { color:var(--muted); font-weight:800; font-family:'Courier New',monospace; font-size:0.88rem; }
   .ts-sub-clocked .ts-sub-time { color:var(--charcoal); font-weight:800; font-family:'Courier New',monospace; font-size:0.88rem; }
   .ts-diff { font-size:0.68rem; font-family:'Courier New',monospace; padding:0.1rem 0.4rem; background:rgba(0,0,0,0.05); border-radius:4px; margin-left:0.25rem; }
-  .ts-sub-final { flex-wrap:wrap; }
+  .ts-sub-final { flex-wrap:nowrap; gap:1rem; }
+  .ts-sub-final-left { width:calc(315px + 1rem); flex-shrink:0; display:flex; align-items:center; gap:0.75rem; }
+  .ts-sub-final-right { display:flex; align-items:center; flex:1; }
   .ts-time-input { border:1.5px solid var(--border); border-radius:7px; padding:0.25rem 0.45rem; font-size:0.78rem; font-family:'Courier New',monospace; color:var(--charcoal); background:var(--white); width:88px; box-sizing:border-box; }
   .ts-time-input:focus { outline:none; border-color:var(--burgundy); }
   .ts-time-pair { display:inline-flex; align-items:center; gap:2px; }
@@ -1868,12 +1897,16 @@ async function processRFID(card){
   const diff=scheduledMin!==null?Math.abs(actualMin-scheduledMin):0;
   const isAfter=scheduledMin!==null?actualMin>scheduledMin:false;
   const sheetTimeStr=roundToRoster(timeStr,scheduledMin);
-  if(scheduledMin!==null&&diff>GRACE){
+  if(scheduled===null&&action==='in'){
+    pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType:'Unrostered arrival'};
+    showReasonPrompt(emp.name.split(' ')[0],action,null);
+  }else if(scheduledMin!==null&&diff>GRACE){
     const label=diff+' min '+(isAfter?'after':'before')+' scheduled time';
-    pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey};
+    const noteType=action==='in'?'Arrival note':'Departure note';
+    pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType};
     showReasonPrompt(emp.name.split(' ')[0],action,label);
   }else{
-    await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,null);
+    await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,null,null);
   }
   // Silently refresh cache in background for next scan
   Promise.all([db.get('employees'),db.get('entries')]).then(([emps,entries])=>{
@@ -1881,7 +1914,7 @@ async function processRFID(card){
   }).catch(()=>{});
 }
 
-async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason){
+async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType){
   try {
     if(action==='in'){
       // If a leave entry exists for today, convert it to a clock-in and alert manager
@@ -1900,7 +1933,7 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
         reason_in:reason||null, status:reason?'pending':'normal'
       };
       await db.insert('entries', row);
-      if(reason) await addNote(emp,'Arrival note',timeStr,reason,row.id,todayKey);
+      if(reason) await addNote(emp,noteType||'Arrival note',timeStr,reason,row.id,todayKey);
       showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr);
     } else {
       const[ih,im]=open.clockIn.split(':').map(Number);
@@ -1913,7 +1946,7 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
         status:reason?'pending':open.status
       };
       await db.update('entries', open.id, patch);
-      if(reason) await addNote(emp,'Departure note',timeStr,reason,open.id,todayKey);
+      if(reason) await addNote(emp,noteType||'Departure note',timeStr,reason,open.id,todayKey);
       showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],'Checked out · '+timeStr+' · '+hoursStr+'h');
     }
   } catch(e) {
@@ -1949,7 +1982,9 @@ function showFlash(type,wave,greeting,name,sub){
 function showReasonPrompt(firstName,action,label){
   document.getElementById('reason-overlay').classList.add('show');
   document.getElementById('reason-title').textContent=action==='in'?'Just let us know, '+firstName+' 😊':'Quick note before you go, '+firstName;
-  document.getElementById('reason-sub').textContent="You're "+label+". No problem at all — just pop a quick note below so your manager is across it.";
+  document.getElementById('reason-sub').textContent=label===null
+    ? "You're not rostered on today — no worries! Just pop a quick note below so your manager knows why you're in."
+    : "You're "+label+". No problem at all — just pop a quick note below so your manager is across it.";
   document.getElementById('reason-submit-btn').textContent=action==='in'?'Submit & check in':'Submit & check out';
   document.getElementById('reason-text').value='';
   setTimeout(()=>document.getElementById('reason-text').focus(),120);
@@ -1963,8 +1998,8 @@ async function submitReason(){
   document.getElementById('reason-text').style.borderColor='';
   document.getElementById('reason-overlay').classList.remove('show');
   if(pending){
-    const{emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey}=pending;
-    await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,txt);
+    const{emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType}=pending;
+    await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,txt,noteType);
     pending=null;
   }
 }
@@ -2392,16 +2427,29 @@ function tsSetRole(role, btn){
   renderTimesheets();
 }
 
-function tsGetFlag(rostStart, rostEnd, finalStart, finalEnd, manuallyAdjusted, noEntry){
-  if(manuallyAdjusted) return 'grey';
-  if(noEntry||!finalStart||!finalEnd) return 'red';
-  if(!rostStart||!rostEnd) return 'green';
-  const ds=Math.abs(timeToMin(finalStart)-timeToMin(rostStart));
-  const de=Math.abs(timeToMin(finalEnd)-timeToMin(rostEnd));
-  const maxDiff=Math.max(ds,de);
-  if(maxDiff>=RED_THRESHOLD) return 'red';
-  if(maxDiff>=YELLOW_THRESHOLD) return 'yellow';
-  return 'green';
+function tsMissedClockOut(entry){
+  if(!entry||!entry.clockIn||entry.clockOut) return false;
+  const today=rbDateKey(new Date());
+  return entry.date<today||(entry.date===today&&new Date().getHours()>=23);
+}
+
+function tsIsAutoApproved(entry, shift){
+  if(!entry||entry.locked) return false;
+  const fs=entry.finalStart||entry.clockIn;
+  const fe=entry.finalEnd||entry.clockOut;
+  const rs=shift?.start_time||null;
+  const re=shift?.end_time||null;
+  if(!fs||!fe||!rs||!re) return false;
+  return Math.abs(timeToMin(fs)-timeToMin(rs))<YELLOW_THRESHOLD &&
+         Math.abs(timeToMin(fe)-timeToMin(re))<YELLOW_THRESHOLD;
+}
+
+function tsGetFlag(locked, noEntry, finalStart, finalEnd, autoApproved, entryStatus, missedClockOut){
+  if(locked||autoApproved) return 'green';
+  if(entryStatus==='flagged') return 'flagged';
+  if(noEntry||missedClockOut) return 'red';
+  if(!finalStart||!finalEnd) return 'yellow'; // still in — in progress
+  return 'yellow';
 }
 
 function tsBuildRow(emp, date, shift, entry){
@@ -2418,10 +2466,13 @@ function tsBuildRow(emp, date, shift, entry){
   const manuallyAdjusted=entry?.manuallyAdjusted||false;
   const entryId=entry?.id||null;
   const noEntry=!entry&&!!shift;
-  const flag=tsGetFlag(rostStart,rostEnd,finalStart,finalEnd,manuallyAdjusted,noEntry);
-  const autoExpand=flag==='red'||flag==='yellow'||entryId==_tsExpandEntryId;
-  const flagColors={green:'var(--success)',yellow:'#e6a817',red:'var(--burgundy)',grey:'var(--muted)'};
-  const flagColor=flagColors[flag]||flagColors.green;
+  const missedClockOut=tsMissedClockOut(entry);
+  const autoApproved=tsIsAutoApproved(entry,shift);
+  const entryStatus=entry?.status||null;
+  const flag=tsGetFlag(locked,noEntry,finalStart,finalEnd,autoApproved,entryStatus,missedClockOut);
+  const autoExpand=flag==='red'||flag==='flagged'||entryId==_tsExpandEntryId;
+  const flagColors={green:'var(--success)',yellow:'#e6a817',red:'var(--burgundy)',flagged:'#e67e22'};
+  const flagColor=flagColors[flag]||flagColors.yellow;
 
   let diffLabel='';
   if(rostStart&&finalStart&&rostEnd&&finalEnd){
@@ -2443,31 +2494,33 @@ function tsBuildRow(emp, date, shift, entry){
   const rowClass=['ts-shift-row',locked?'ts-locked':'',`ts-flag-${flag}`].filter(Boolean).join(' ');
 
   const finalMins=(finalStart&&finalEnd)?timeToMin(finalEnd)-timeToMin(finalStart):0;
-  const hoursDisp=finalMins>0?`<span class="ts-row-hours">${(finalMins/60).toFixed(1)}h</span>`:'';
+  const hoursText=finalMins>0?`${(finalMins/60).toFixed(1)}h`:'';
 
   const PAYROLL_TYPES=[['','— shift type —'],['base_hourly','Base Hourly'],['evening','Evening'],['saturday','Saturday'],['public_holiday','Public Holiday']];
   const payrollType=entry?.payrollType||'';
-  const payrollEl=locked
-    ?(payrollType?`<span class="ts-payroll-label">${PAYROLL_TYPES.find(([v])=>v===payrollType)?.[1]||payrollType}</span>`:'')
-    :`<select class="ts-payroll-select" onclick="event.stopPropagation()" ${!entry?'disabled title="Clock-in required"':''} onchange="tsSavePayrollType('${entryId}',this.value)">${PAYROLL_TYPES.map(([v,l])=>`<option value="${v}"${payrollType===v?' selected':''}>${l}</option>`).join('')}</select>`;
+  const payrollInner=locked
+    ?`<span class="ts-payroll-label">${PAYROLL_TYPES.find(([v])=>v===payrollType)?.[1]||''}</span>`
+    :`<select class="ts-payroll-select" onclick="event.stopPropagation()" onchange="tsSavePayrollType('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',this.value)">${PAYROLL_TYPES.map(([v,l])=>`<option value="${v}"${payrollType===v?' selected':''}>${l}</option>`).join('')}</select>`;
 
   const compactRow=`<div class="ts-row-main" onclick="tsToggleRow(this.closest('.ts-shift-row'))">
     <div class="ts-row-date">${dateLabel}</div>
     <div class="ts-row-times">
       <span class="ts-times-rost">${rostStart&&rostEnd?rostStart+'–'+rostEnd:'—'}</span>
       <span class="ts-times-arrow">→</span>
-      <span class="ts-times-clock${flag!=='green'&&flag!=='grey'?' ts-times-flagged':''}">${clockStart&&clockEnd?clockStart+'–'+clockEnd:noEntry?'No clock-in':'—'}</span>
+      <span class="ts-times-clock${flag==='red'?' ts-times-flagged':flag==='flagged'?' ts-times-flagged-follow':''}">${finalStart&&finalEnd?finalStart+'–'+finalEnd:clockStart&&clockEnd?clockStart+'–'+clockEnd:missedClockOut?clockStart+' – No clock-out':noEntry?'No clock-in':'—'}</span>
     </div>
-    ${payrollEl}
-    ${hoursDisp}
-    <div class="ts-row-flag-dot" style="background:${flagColor}"></div>
-    ${locked?`<span class="ts-locked-label">Locked${lockedBy?' · '+lockedBy:''}</span>`:''}
+    <div class="ts-row-right">
+      <div class="ts-payroll-wrap">${payrollInner}</div>
+      <span class="ts-row-hours">${hoursText}</span>
+      <div class="ts-row-flag-dot" style="background:${flagColor}"></div><span class="ts-adjusted-pencil" title="Acknowledged by manager" style="${locked&&manuallyAdjusted?'':'visibility:hidden'}">✎</span><span class="ts-flag-icon" title="Flagged for follow-up" style="${flag==='flagged'?'':'visibility:hidden'}">⚑</span>
+      <span class="ts-locked-label" style="${locked?'':'visibility:hidden'}">Locked${locked&&lockedBy?' · '+lockedBy:''}</span>
+    </div>
   </div>`;
 
   const mkPair=(val,field)=>{
     const[hh,mm]=(val||'').split(':');
     return`<div class="ts-time-pair" data-entry="${entryId||''}" data-emp="${safeEmpId}" data-name="${safeEmpName}" data-date="${date}" data-field="${field}">
-      <input class="ts-time-hm" type="text" maxlength="2" placeholder="HH" value="${hh||''}" onclick="event.stopPropagation()" oninput="tsHMInput(this,'h')" onblur="tsHMBlur(this.closest('.ts-time-pair'))">
+      <input class="ts-time-hm" type="text" maxlength="2" placeholder="HH" value="${hh||''}" onclick="event.stopPropagation()" oninput="tsHMInput(this,'h')" onblur="tsHMBlur(this.closest('.ts-time-pair'))" onkeydown="if(event.key==='Enter'){event.preventDefault();tsHMSave(this.closest('.ts-time-pair'))}">
       <span class="ts-hm-colon">:</span>
       <input class="ts-time-hm" type="text" maxlength="2" placeholder="MM" value="${mm||''}" onclick="event.stopPropagation()" oninput="tsHMInput(this,'m')" onblur="tsHMBlur(this.closest('.ts-time-pair'))" onkeydown="if(event.key==='Enter'){event.preventDefault();tsHMSave(this.closest('.ts-time-pair'))}">
     </div>`;
@@ -2483,14 +2536,17 @@ function tsBuildRow(emp, date, shift, entry){
     </div>
     <div class="ts-sub-row ts-sub-clocked">
       <span class="ts-sub-label">Clocked</span>
-      <span class="ts-sub-time">${clockStart?clockStart+' – '+(clockEnd||'Still in'):'<em style="color:var(--muted)">No clock-in recorded.</em>'}</span>
+      <span class="ts-sub-time">${clockStart?clockStart+' – '+(clockEnd||(missedClockOut?'<span style="color:var(--burgundy);font-weight:700">No clock-out</span>':'Still in')):'<em style="color:var(--muted)">No clock-in recorded.</em>'}</span>
       ${diffLabel}
     </div>
     <div class="ts-sub-row ts-sub-final">
-      <span class="ts-sub-label">Final</span>
-      ${finalInputs}
-      <div class="ts-sub-actions">
+      <div class="ts-sub-final-left">
+        <span class="ts-sub-label">Final</span>
+        ${finalInputs}
+      </div>
+      <div class="ts-sub-final-right">
         ${entry?lockBtn:''}
+        <div style="flex:1"></div>
         ${entry?deleteBtn:''}
       </div>
     </div>
@@ -2539,9 +2595,8 @@ function renderTimesheets(){
       const shift=empShifts.find(s=>s.date===date)||null;
       const dayEntries=empEntries.filter(e=>e.date===date);
       const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
-      if(entry?.locked) return acc;
-      const f=tsGetFlag(shift?.start_time||null,shift?.end_time||null,entry?.finalStart||entry?.clockIn||null,entry?.finalEnd||entry?.clockOut||null,entry?.manuallyAdjusted||false,!entry&&!!shift);
-      if(f==='red'||f==='yellow') acc++;
+      const f=tsGetFlag(entry?.locked||false,!entry&&!!shift,entry?.finalStart||entry?.clockIn||null,entry?.finalEnd||entry?.clockOut||null,tsIsAutoApproved(entry,shift),entry?.status||null,tsMissedClockOut(entry));
+      if(f==='red'||f==='flagged') acc++;
       return acc;
     },0);
 
@@ -2558,7 +2613,15 @@ function renderTimesheets(){
       if(!s||!e2) return acc;
       return acc+Math.max(0,timeToMin(e2)-timeToMin(s));
     },0);
-    const totalHrsEl=totalMins>0?`<div class="ts-emp-hours">${(totalMins/60).toFixed(1)}h</div>`:'';
+
+    const allLocked=activeDays.length>0&&activeDays.every(date=>{
+      const shift=empShifts.find(s=>s.date===date)||null;
+      const dayEntries=empEntries.filter(e=>e.date===date);
+      const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
+      return entry?.locked===true||tsIsAutoApproved(entry,shift);
+    });
+    const myobBadge=allLocked?`<div class="ts-emp-myob-badge">Ready for MYOB</div>`:'';
+    const totalHrsEl=totalMins>0?`<div class="ts-emp-hours${allLocked?' ready':''}">${(totalMins/60).toFixed(1)}h</div>`:'';
 
     const empIdStr=String(emp.id);
     const collapsed=_tsCollapsed.has(empIdStr);
@@ -2568,7 +2631,7 @@ function renderTimesheets(){
         <div class="ts-emp-name">${emp.name}</div>
         <div class="ts-emp-role-badge">${emp.role}</div>
         ${statusEl}
-        ${totalHrsEl}
+        <div class="ts-emp-right">${myobBadge}${totalHrsEl}</div>
       </div>
       <div class="ts-emp-rows" style="display:${collapsed?'none':'block'}">
         ${rows}
@@ -2577,6 +2640,25 @@ function renderTimesheets(){
   }).filter(Boolean).join('');
 
   content.innerHTML=blocks||`<div class="ts-no-shifts">No shifts found for this fortnight.</div>`;
+
+  // Check if ALL employees across ALL roles are fully locked for this fortnight
+  const exportBtn=document.querySelector('.export-btn');
+  if(exportBtn){
+    const allEmpsReady=_emps.filter(e=>e.active!==false).every(emp=>{
+      const empShifts=_rosterShifts.filter(s=>s.employee_id===emp.id&&fnDays.includes(s.date)&&!s.is_day_off);
+      const empEntries=_entries.filter(e=>e.employeeId===emp.id&&fnDays.includes(e.date));
+      const activeDays=[...new Set([...empShifts.map(s=>s.date),...empEntries.map(e=>e.date)])];
+      if(!activeDays.length) return true; // no shifts this fortnight — not blocking
+      return activeDays.every(date=>{
+        const shift=empShifts.find(s=>s.date===date)||null;
+        const dayEntries=empEntries.filter(e=>e.date===date);
+        const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
+        return entry?.locked===true||tsIsAutoApproved(entry,shift);
+      });
+    });
+    exportBtn.classList.toggle('ready',allEmpsReady);
+    exportBtn.title=allEmpsReady?'All shifts locked — ready to export':'Lock all shifts across all tabs before exporting';
+  }
 }
 
 function tsToggleEmp(headerEl){
@@ -2612,7 +2694,9 @@ async function tsUnlockRow(entryId, e){
     await db.update('entries',entryId,{locked:false,locked_by:null,locked_at:null});
     const entry=_entries.find(en=>en.id===entryId);
     if(entry){entry.locked=false;entry.lockedBy=null;}
+    _tsExpandEntryId=String(entryId);
     renderTimesheets();
+    _tsExpandEntryId=null;
     showToast('Entry unlocked.');
   }catch(err){showToast('Could not unlock entry');console.error(err);}
 }
@@ -2674,6 +2758,7 @@ function tsPairValue(pairEl){
 
 function tsHMBlur(pairEl){
   setTimeout(()=>{
+    if(!pairEl.isConnected) return; // element removed from DOM by re-render — skip ghost save
     if(pairEl.contains(document.activeElement)) return; // still inside the pair
     const val=tsPairValue(pairEl);
     if(!val) return;
@@ -2738,14 +2823,32 @@ async function tsUpdateFinal(entryId, empId, empName, date, field, value, inputE
     _tsExpandEntryId=String(entryId);
     renderTimesheets();
     _tsExpandEntryId=null;
+    showToast('Saved ✓');
   }catch(err){showToast('Could not save: '+(err.message||err));console.error(err);}
 }
 
-async function tsSavePayrollType(entryId, value){
+async function tsSavePayrollType(entryId, empId, empName, role, date, value){
   const entry=_entries.find(e=>e.id==entryId);
+  const mgr=currentManager?.name||'Manager';
   try{
+    if(!entry){
+      // No entry yet — create a stub so payroll type can be set before times are entered
+      const newId='M'+Date.now();
+      const newEntry={id:newId,employee_id:empId,employee_name:empName,role,date,
+        clock_in:null,clock_out:null,hours:null,status:'normal',
+        manually_adjusted:true,adjusted_by:mgr,adjusted_at:new Date().toISOString(),
+        payroll_type:value||null};
+      await db.insert('entries',newEntry);
+      _entries.push(normaliseEntry({...newEntry,id:newId}));
+      _tsExpandEntryId=newId;
+      renderTimesheets();
+      _tsExpandEntryId=null;
+      if(value) showToast('Shift type saved.');
+      return;
+    }
     await db.update('entries',entryId,{payroll_type:value||null});
-    if(entry) entry.payrollType=value||null;
+    entry.payrollType=value||null;
+    if(value) showToast('Shift type saved.');
   }catch(err){showToast('Could not save shift type: '+(err.message||err));console.error(err);}
 }
 
@@ -2863,11 +2966,48 @@ function renderApprovals(){
   if(!container) return;
 
   const cardHtml=a=>{
-    const dateF=new Date(a.date+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short'});
-    return`<div class="approval-card" data-id="${a.id}">
+    const dateF=new Date(a.date+'T12:00:00').toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+    const isUnrostered=a.type==='Unrostered arrival';
+    const entry=_entries.find(e=>e.id==a.entryId);
+    const shift=_rosterShifts.find(s=>s.employee_id===a.employeeId&&s.date===a.date)||null;
+    const rostStart=shift?.start_time||null;
+    const rostEnd=shift?.end_time||null;
+    const clockStart=entry?.clockIn||null;
+    const clockEnd=entry?.clockOut||null;
+    const rostVal=rostStart&&rostEnd?rostStart+'–'+rostEnd:null;
+    let diffVal='—', diffClass='diff-ok';
+    if(rostVal&&clockStart){
+      const ds=timeToMin(clockStart)-timeToMin(rostStart);
+      const sign=ds>=0?'+':'';
+      diffVal=sign+ds+'m start';
+      diffClass=Math.abs(ds)>=RED_THRESHOLD?'diff-bad':Math.abs(ds)>=YELLOW_THRESHOLD?'diff-warn':'diff-ok';
+    }
+    const rostEl=rostVal
+      ?`<div class="approval-time-val">${rostVal}</div>`
+      :`<div class="approval-time-val not-rostered">⚠ Not rostered</div>`;
+    return`<div class="approval-card${isUnrostered?' unrostered':''}" data-id="${a.id}">
       <div class="approval-meta">
-        <div class="approval-who">${a.employeeName} <span style="color:var(--muted);font-weight:500;font-size:0.78rem">· ${a.role}</span></div>
-        <div class="approval-detail">${a.type} · ${dateF} at ${a.time}</div>
+        <div class="approval-header">
+          <div class="approval-who">${a.employeeName}</div>
+          <div class="approval-role-badge">${a.role}</div>
+          <span class="approval-header-dot">●</span>
+          <div class="approval-type-badge${isUnrostered?' unrostered':''}">${a.type}</div>
+          <div class="approval-time-stamp" style="margin-left:auto">${dateF} · ${a.time}</div>
+        </div>
+        <div class="approval-times-row">
+          <div class="approval-time-col">
+            <div class="approval-time-label">Rostered</div>
+            ${rostEl}
+          </div>
+          <div class="approval-time-col">
+            <div class="approval-time-label">${a.type==='Departure note'?'Clocked out':'Clocked in'}</div>
+            <div class="approval-time-val">${a.type==='Departure note'?(clockEnd||'—'):(clockStart||'—')}</div>
+          </div>
+          <div class="approval-time-col">
+            <div class="approval-time-label">Difference</div>
+            <div class="approval-time-val ${diffClass}">${rostVal?diffVal:'N/A'}</div>
+          </div>
+        </div>
         <div class="approval-reason">${a.reason}</div>
       </div>
       <div class="approval-actions">
@@ -3102,16 +3242,36 @@ async function resolveNote(id,status){
   const note=_notes.find(a=>a.id===id);
   if(!note)return;
   const card=document.querySelector(`.approval-card[data-id="${id}"]`);
-  const flashClass='ac-flash-green'; // flag colour added later
+  const flashClass=status==='flagged'?'ac-flash-orange':'ac-flash-green';
   try {
     const resolvedBy=currentManager?.name||null;
+    const entry=_entries.find(e=>e.id===note.entryId);
+    const entryPatch={status};
+    if(status==='approved'&&entry){
+      const now=new Date().toISOString();
+      entryPatch.final_start=entry.clockIn||null;
+      entryPatch.final_end=entry.clockOut||null;
+      entryPatch.locked=true;
+      entryPatch.locked_by=resolvedBy;
+      entryPatch.locked_at=now;
+      entryPatch.manually_adjusted=true;
+      entryPatch.adjusted_by=resolvedBy;
+      entryPatch.adjusted_at=now;
+    }
     await Promise.all([
       db.update('notes',id,{status, resolved_by:resolvedBy}),
-      db.update('entries',note.entryId,{status})
+      db.update('entries',note.entryId,entryPatch)
     ]);
     note.status=status; note.resolvedBy=resolvedBy;
-    const entry=_entries.find(e=>e.id===note.entryId);
-    if(entry) entry.status=status;
+    if(entry){
+      entry.status=status;
+      if(status==='approved'){
+        entry.finalStart=entry.clockIn||null;
+        entry.finalEnd=entry.clockOut||null;
+        entry.locked=true; entry.lockedBy=resolvedBy;
+        entry.manuallyAdjusted=true; entry.adjustedBy=resolvedBy;
+      }
+    }
     // Animate: flash colour → collapse → re-render
     if(card){
       card.classList.add(flashClass);
