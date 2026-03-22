@@ -763,6 +763,73 @@
   .rb-day-cell.today { border-top:3px solid var(--burgundy); background:rgba(212,137,154,0.08); }
   .rb-day-cell.today:hover { border-color:var(--burgundy); }
   .rb-day-cell.past { opacity:0.45; cursor:default; pointer-events:none; }
+  .rb-day-cell.req-highlight { animation: reqCellPulse 3s ease forwards; }
+  @keyframes reqCellPulse {
+    0%   { box-shadow: 0 0 0 3px rgba(160,114,40,0.8), inset 0 0 0 2000px rgba(253,243,226,0.55); }
+    60%  { box-shadow: 0 0 0 3px rgba(160,114,40,0.6), inset 0 0 0 2000px rgba(253,243,226,0.4); }
+    100% { box-shadow: none; inset 0 0 0 0px transparent; }
+  }
+
+  /* ══════════════════════════════
+     REQUESTS — kiosk view
+  ══════════════════════════════ */
+  #view-requests { flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; padding:1.5rem 1.5rem 2rem; gap:0; overflow-y:auto; }
+  .req-kiosk-header { display:flex; flex-direction:column; align-items:center; gap:0.2rem; margin-bottom:1.25rem; }
+  .req-view-title { font-family:'Lora',serif; font-size:1.15rem; font-weight:600; color:var(--charcoal); }
+  .req-panel { width:100%; max-width:440px; }
+  .req-scan-card { background:var(--white); border:1.5px solid var(--border); border-radius:26px; padding:2.25rem 2.75rem; text-align:center; width:100%; box-shadow:var(--shadow-md); }
+  .req-emp-greeting { font-family:'Lora',serif; font-size:1.1rem; font-weight:600; color:var(--charcoal); margin-bottom:0.25rem; }
+  .req-role-badge { display:inline-block; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:0.2rem 0.6rem; border-radius:20px; background:var(--blush); color:var(--wine); margin-bottom:1rem; }
+  .req-notif-card { background:var(--white); border:1.5px solid var(--burgundy); border-left:4px solid var(--burgundy); border-radius:var(--radius-sm); padding:0.85rem 1rem; margin-bottom:0.6rem; cursor:pointer; transition:box-shadow 0.15s; }
+  .req-notif-card:hover { box-shadow:var(--shadow); }
+  .req-notif-label { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; color:var(--wine); margin-bottom:0.2rem; }
+  .req-notif-msg { font-size:0.88rem; font-weight:700; color:var(--charcoal); }
+  .req-notif-time { font-size:0.72rem; color:var(--muted); margin-top:0.15rem; }
+  .req-status-card { background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:0.85rem 1rem; margin-bottom:0.6rem; cursor:pointer; transition:border-color 0.15s; }
+  .req-status-card:hover { border-color:var(--dusty); }
+  .req-status-pill { display:inline-block; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:0.15rem 0.5rem; border-radius:20px; margin-bottom:0.3rem; }
+  .req-status-pill.pending_peer,.req-status-pill.pending_manager { background:var(--warning-lt); color:var(--warning); }
+  .req-status-pill.approved { background:var(--success-lt); color:var(--success); }
+  .req-status-pill.declined { background:#fde8ea; color:var(--burgundy); }
+  .req-status-pill.expired { background:#f0f0f0; color:var(--muted); }
+  .req-status-title { font-size:0.88rem; font-weight:700; color:var(--charcoal); }
+  .req-status-sub { font-size:0.75rem; color:var(--muted); margin-top:0.15rem; }
+  .req-section-label { font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin:1rem 0 0.5rem; }
+  .req-empty { text-align:center; color:var(--muted); font-size:0.88rem; font-weight:500; padding:2rem 1rem; }
+  .req-new-btn { width:100%; background:var(--burgundy); color:#fff; border:none; border-radius:var(--radius-sm); padding:0.85rem; font-family:'Nunito',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:background 0.18s; margin-top:0.75rem; letter-spacing:0.02em; }
+  .req-new-btn:hover { background:var(--wine); }
+  .req-back-btn { width:100%; background:transparent; color:var(--muted); border:1.5px solid var(--border-dk); border-radius:var(--radius-sm); padding:0.7rem; font-family:'Nunito',sans-serif; font-size:0.85rem; font-weight:600; cursor:pointer; transition:all 0.18s; margin-top:0.6rem; }
+  .req-back-btn:hover { color:var(--charcoal); border-color:var(--dusty); }
+  .req-type-tabs { display:flex; gap:0.35rem; margin-bottom:1.25rem; }
+  .req-type-tab { flex:1; padding:0.55rem 0.4rem; border-radius:var(--radius-sm); font-family:'Nunito',sans-serif; font-size:0.75rem; font-weight:700; border:1.5px solid var(--border); background:var(--white); color:var(--muted); cursor:pointer; transition:all 0.15s; text-align:center; }
+  .req-type-tab.active { background:var(--burgundy); color:#fff; border-color:var(--burgundy); }
+  .req-giveaway-notice { background:#fff8e1; border:1.5px solid #f9c825; border-radius:var(--radius-sm); padding:0.6rem 0.85rem; font-size:0.78rem; font-weight:600; color:#7a5c00; margin-bottom:0.85rem; }
+  .req-detail-actions { display:flex; gap:0.6rem; margin-top:1rem; }
+  .req-accept-confirm { background:var(--warm-white); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:1rem 1.1rem; margin-top:1rem; }
+  .req-accept-confirm-title { font-family:'Lora',serif; font-size:0.95rem; font-weight:600; color:var(--charcoal); margin-bottom:0.75rem; }
+  .req-accept-confirm-row { display:flex; gap:0.6rem; align-items:flex-start; font-size:0.82rem; font-weight:600; line-height:1.45; padding:0.45rem 0; border-bottom:1px solid var(--border); }
+  .req-accept-confirm-row:last-of-type { border-bottom:none; }
+  .req-accept-confirm-row .icon { font-size:1rem; flex-shrink:0; margin-top:0.05rem; }
+  .req-accept-confirm-row.lose { color:var(--burgundy); }
+  .req-accept-confirm-row.gain { color:var(--success); }
+  .req-accept-confirm-actions { display:flex; gap:0.6rem; margin-top:0.85rem; }
+  .req-accept-btn { flex:1; background:var(--success); color:#fff; border:none; border-radius:var(--radius-sm); padding:0.75rem; font-family:'Nunito',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; transition:background 0.18s; }
+  .req-accept-btn:hover { background:#2d5740; }
+  .req-decline-peer-btn { flex:1; background:var(--white); color:var(--burgundy); border:1.5px solid var(--burgundy); border-radius:var(--radius-sm); padding:0.75rem; font-family:'Nunito',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; transition:all 0.18s; }
+  .req-decline-peer-btn:hover { background:var(--blush); }
+  /* Admin requests tab */
+  .req-admin-card { background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:1rem; box-shadow:var(--shadow); }
+  .req-admin-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:0.6rem; }
+  .req-admin-names { font-size:0.95rem; font-weight:700; color:var(--charcoal); }
+  .req-admin-meta { font-size:0.78rem; color:var(--muted); font-weight:500; margin-top:0.1rem; }
+  .req-admin-type-pill { font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:0.18rem 0.5rem; border-radius:20px; background:var(--blush); color:var(--wine); white-space:nowrap; flex-shrink:0; }
+  .req-admin-shifts { background:var(--warm-white); border:1px solid var(--border); border-radius:var(--radius-sm); padding:0.65rem 0.85rem; margin-bottom:0.75rem; font-size:0.82rem; line-height:1.65; }
+  .req-admin-actions { display:flex; gap:0.6rem; align-items:flex-start; flex-wrap:wrap; }
+  .req-approve-btn { flex:1; min-width:100px; background:var(--success); color:#fff; border:none; border-radius:var(--radius-sm); padding:0.6rem 1rem; font-family:'Nunito',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; transition:background 0.18s; }
+  .req-approve-btn:hover { background:#2d5740; }
+  .req-decline-btn { flex:1; min-width:100px; background:var(--white); color:var(--burgundy); border:1.5px solid var(--burgundy); border-radius:var(--radius-sm); padding:0.6rem 1rem; font-family:'Nunito',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.18s; }
+  .req-decline-btn:hover { background:var(--blush); }
+  .req-coverage-warn { background:#fff8e1; border:1.5px solid #f9c825; border-radius:var(--radius-sm); padding:0.45rem 0.7rem; font-size:0.78rem; font-weight:600; color:#7a5c00; margin-bottom:0.6rem; }
 
   /* ── Print roster ── */
   #roster-print-area { display:none; }
@@ -1077,9 +1144,58 @@
     </div>
   </div>
 
-  <div class="kiosk-footer-nav">
-    <button class="nav-btn" onclick="openRosterPIN()">👥 Who's On</button>
-    <button class="nav-btn" onclick="showView('login')">⚙️ Manager Login</button>
+  <div class="kiosk-footer-nav" style="flex-direction:column;">
+    <button class="nav-btn" onclick="openRosterPIN()" style="width:100%;">👥 Who's On</button>
+    <div style="display:flex;gap:0.75rem;width:100%;">
+      <button class="nav-btn" onclick="openRequestsView()" style="flex:1;">📋 Requests</button>
+      <button class="nav-btn" onclick="showView('login')" style="flex:1;">⚙️ Manager Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- REQUESTS VIEW -->
+<div class="view" id="view-requests">
+  <div class="req-kiosk-header">
+    <img src="Logo.png" alt="Running Well" style="height:38px;object-fit:contain;margin-bottom:0.2rem;" />
+    <div class="req-view-title">Staff Requests</div>
+  </div>
+  <!-- Auth panel: scan card -->
+  <div class="req-panel" id="req-panel-auth">
+    <div class="req-scan-card">
+      <span class="scan-emoji">📋</span>
+      <div class="scan-prompt">Tap your card</div>
+      <div class="scan-sub">Tap your RFID card to view your requests and notifications</div>
+      <div class="reader-pill"><span class="pulse-dot"></span> READY TO SCAN</div>
+      <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px dashed var(--border);">
+        <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--dusty);margin-bottom:0.5rem;">⌨ Test mode — type card number</div>
+        <div style="display:flex;gap:0.5rem;">
+          <input id="test-rfid-req" type="text" placeholder="e.g. 0001234567"
+                 onkeydown="if(event.key==='Enter'){testScanReq();}"
+                 style="flex:1;background:#fff;border:1.5px solid var(--border-dk);border-radius:var(--radius-sm);padding:0.55rem 0.85rem;font-family:'Nunito',sans-serif;font-size:0.85rem;font-weight:600;color:#000;caret-color:#000;outline:none;" />
+          <button onclick="testScanReq()"
+            style="background:var(--blush);color:var(--burgundy);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:0.55rem 1rem;font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:800;cursor:pointer;">
+            Scan
+          </button>
+        </div>
+      </div>
+    </div>
+    <button class="req-back-btn" onclick="showView('kiosk')">← Back to Clock In</button>
+  </div>
+  <!-- List panel: notifications + active requests -->
+  <div class="req-panel" id="req-panel-list" style="display:none;">
+    <div id="req-list-content"></div>
+    <button class="req-new-btn" onclick="reqShowForm()">+ New Request</button>
+    <button class="req-back-btn" onclick="reqLogout()">← Back to Clock In</button>
+  </div>
+  <!-- Form panel: new request -->
+  <div class="req-panel" id="req-panel-form" style="display:none;">
+    <div id="req-form-content"></div>
+    <button class="req-back-btn" onclick="reqShowList()">← Back to My Requests</button>
+  </div>
+  <!-- Detail panel: view + respond to a request -->
+  <div class="req-panel" id="req-panel-detail" style="display:none;">
+    <div id="req-detail-content"></div>
+    <button class="req-back-btn" onclick="reqShowList()">← Back to My Requests</button>
   </div>
 </div>
 
@@ -1263,6 +1379,7 @@
       <button class="tab"        onclick="switchTab('roster',this)">Roster</button>
       <button class="tab"        onclick="switchTab('notes',this)">Notes<span class="notif-badge" id="notif-badge" style="display:none"></span></button>
       <button class="tab"        onclick="switchTab('timesheets',this)">Timesheets</button>
+      <button class="tab"        onclick="switchTab('requests',this)">Requests<span class="notif-badge" id="req-admin-badge" style="display:none"></span></button>
       <button class="tab"        onclick="switchTab('settings',this)">Settings</button>
     </div>
     <div class="admin-kiosk-btn-wrap">
@@ -1321,6 +1438,22 @@
         </div>
       </div>
       <div class="rb-panels" id="notes-panels"></div>
+    </div>
+
+    <!-- REQUESTS TAB -->
+    <div id="tab-requests" class="tab-panel">
+      <div class="page-ribbon">
+        <div>
+          <div class="page-ribbon-title">Requests</div>
+          <div class="page-ribbon-hint">Pending leave requests and peer-approved shift swaps awaiting your decision</div>
+        </div>
+      </div>
+      <div class="ts-role-tabs-bar">
+        <button class="ts-role-tab active" id="req-tab-Receptionist" onclick="reqSetRole('Receptionist',this)">Receptionists</button>
+        <button class="ts-role-tab" id="req-tab-Nurse" onclick="reqSetRole('Nurse',this)">Nurses</button>
+        <button class="ts-role-tab" id="req-tab-Manager" onclick="reqSetRole('Manager',this)">Managers</button>
+      </div>
+      <div id="req-admin-content"></div>
     </div>
 
     <!-- SETTINGS TAB -->
@@ -1492,6 +1625,46 @@
               <thead><tr><th>Date</th><th>Staff member</th><th>Role</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th></tr></thead>
               <tbody id="clock-audit-body"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Request Settings -->
+      <div class="settings-section" id="ss-requests">
+        <div class="settings-section-header" onclick="toggleSettingsSection('requests')">
+          <div class="settings-section-chevron" id="ss-chevron-requests">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Request Settings</div>
+            <div class="settings-section-hint">Configure shift swap expiry and notification behaviour.</div>
+          </div>
+        </div>
+        <div class="settings-section-body" id="ss-body-requests" style="display:none;">
+          <div class="roster-section" style="margin-bottom:1.5rem;">
+            <div class="roster-section-title">Swap Request Expiry</div>
+            <div class="roster-anchor-bar">
+              <label class="form-label" style="margin:0;white-space:nowrap;">Auto-expire after</label>
+              <input class="form-input" type="number" id="swap-expiry-days" min="1" max="30" step="1" style="width:70px;" />
+              <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">days</span>
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Swap requests with no peer response after this many days will auto-expire.</span>
+            </div>
+          </div>
+          <div class="roster-section" style="margin-bottom:1.5rem;">
+            <div class="roster-section-title">Decline Reason Visibility</div>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
+              <div style="font-size:0.8rem;color:var(--muted);font-weight:500;line-height:1.5;">Choose whether staff see the manager's reason when a request is declined.</div>
+              <select class="form-input" id="show-decline-reason" style="width:auto;">
+                <option value="true">Show decline reason to employee</option>
+                <option value="false">Show only "Request declined"</option>
+              </select>
+            </div>
+          </div>
+          <button class="add-emp-btn" onclick="saveRequestSettings()">Save Request Settings</button>
+          <div class="roster-section" style="margin-top:1.5rem;">
+            <div class="roster-section-title">Request Audit Log</div>
+            <div style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem;">Complete history of all requests, peer responses, manager decisions and roster changes.</div>
+            <div id="req-audit-content">
+              <button class="add-emp-btn" onclick="loadReqAudit()">Load Audit Log</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1793,6 +1966,8 @@ let _rosterShifts=[], _rosterFortnights=[], _coverageRules=[];
 // Roster builder state
 const TL_START=465, TL_END=1290, TL_RANGE=825, TL_SNAP=15;
 let rFnOffset=0, rAdvancedOpen=false, _rbDrag=null;
+const _rbHighlightDates = new Set();
+let _rbHighlightRole = null;
 const RB_ROLES=['Receptionist','Nurse','Manager'];
 const RB_ROLE_LABELS={Receptionist:'Receptionists',Nurse:'Nurses',Manager:'Managers'};
 let rbSelectedDay=null;
@@ -1801,7 +1976,7 @@ let rbState={Receptionist:{collapsed:false},Nurse:{collapsed:false},Manager:{col
 async function loadAll() {
   showLoading(true);
   try {
-    const [emps, entries, notes, mgrs, rosterCfg, rosterTmpl, rosterOv, rosterShifts, rosterFn, covRules] = await Promise.all([
+    const [emps, entries, notes, mgrs, rosterCfg, rosterTmpl, rosterOv, rosterShifts, rosterFn, covRules, reqs, notifs] = await Promise.all([
       db.get('employees'),
       db.get('entries'),
       db.get('notes'),
@@ -1811,7 +1986,9 @@ async function loadAll() {
       db.get('roster_overrides'),
       db.get('roster_shifts'),
       db.get('roster_fortnights'),
-      db.get('coverage_rules')
+      db.get('coverage_rules'),
+      db.get('requests').catch(()=>[]),
+      db.get('notifications').catch(()=>[])
     ]);
     _emps    = emps.filter(e=>e.active!==false);
     _entries = entries.map(normaliseEntry);
@@ -1821,11 +1998,15 @@ async function loadAll() {
     if(_rosterConfig?.grace_period!=null) GRACE=_rosterConfig.grace_period;
   if(_rosterConfig?.yellow_threshold!=null) YELLOW_THRESHOLD=_rosterConfig.yellow_threshold;
   if(_rosterConfig?.red_threshold!=null) RED_THRESHOLD=_rosterConfig.red_threshold;
+  if(_rosterConfig?.swap_expiry_days!=null) SWAP_EXPIRY_DAYS=_rosterConfig.swap_expiry_days;
+  if(_rosterConfig?.show_decline_reason!=null) SHOW_DECLINE_REASON=_rosterConfig.show_decline_reason;
     _rosterTemplates = rosterTmpl;
     _rosterOverrides = rosterOv;
     _rosterShifts    = rosterShifts;
     _rosterFortnights= rosterFn;
     _coverageRules   = covRules;
+    _requests        = reqs.map(normaliseRequest);
+    _notifications   = notifs.map(normaliseNotif);
   } catch(e) {
     showToast('⚠ Could not connect to database — check your internet connection');
     console.error(e);
@@ -1857,6 +2038,27 @@ function normaliseNote(r) {
   };
 }
 
+function normaliseRequest(r) {
+  return {
+    id:r.id, type:r.type, status:r.status,
+    initiatorId:r.initiator_id, initiatorName:r.initiator_name, initiatorRole:r.initiator_role,
+    initiatorShiftId:r.initiator_shift_id, initiatorShiftDate:r.initiator_shift_date,
+    initiatorShiftStart:r.initiator_shift_start, initiatorShiftEnd:r.initiator_shift_end,
+    colleagueId:r.colleague_id, colleagueName:r.colleague_name,
+    colleagueShiftId:r.colleague_shift_id, colleagueShiftDate:r.colleague_shift_date,
+    colleagueShiftStart:r.colleague_shift_start, colleagueShiftEnd:r.colleague_shift_end,
+    leaveType:r.leave_type, leaveStartDate:r.leave_start_date, leaveEndDate:r.leave_end_date,
+    reason:r.reason, createdAt:r.created_at, expiresAt:r.expires_at,
+    peerResponse:r.peer_response, peerResponseAt:r.peer_response_at, peerReason:r.peer_reason,
+    managerId:r.manager_id, managerName:r.manager_name,
+    managerDecision:r.manager_decision, managerReason:r.manager_reason, managerDecidedAt:r.manager_decided_at
+  };
+}
+
+function normaliseNotif(r) {
+  return { id:r.id, employeeId:r.employee_id, requestId:r.request_id, message:r.message, type:r.type, seenAt:r.seen_at, createdAt:r.created_at };
+}
+
 function normaliseMgr(r) {
   return { id: r.id, name: r.name, pinHash: r.pin_hash, lastLogin: r.last_login };
 }
@@ -1881,6 +2083,17 @@ let _tsExpandEntryId = null;
 const _tsCollapsed = new Set();
 const _tsAutoOverride = new Set(); // entry IDs where manager clicked to override auto-approval
 let _tsAutoLockRunning = false;
+// Requests state
+let _requests = [];
+let _notifications = [];
+let _reqEmployee = null;
+let _reqFormType = 'leave';
+let _reqDetailId = null;
+let _reqMyShifts = [];
+let _reqColleagueShifts = [];
+let SWAP_EXPIRY_DAYS = 7;
+let SHOW_DECLINE_REASON = true;
+let reqRole = 'Receptionist';
 const ROUND_WINDOW = 5; // minutes — clock times within this window of rostered time are rounded to roster time on timesheets
 const LEAVE_TYPES = { annual_leave:'Annual Leave', personal_leave:'Personal Leave', public_holiday:'Public Holiday', unpaid_leave:'Unpaid Leave', compassionate_leave:'Compassionate Leave' };
 function formatLeaveType(lt){ return LEAVE_TYPES[lt]||'Worked'; }
@@ -1901,9 +2114,9 @@ function showView(v){
   clearInterval(_srRefreshInterval); _srRefreshInterval=null;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
-  if(v==='kiosk'){
+  if(v==='kiosk'||v==='requests'){
     setTimeout(focusRFID,80);
-    _kioskRefreshInterval=setInterval(()=>{
+    if(v==='kiosk') _kioskRefreshInterval=setInterval(()=>{
       Promise.all([db.get('employees'),db.get('entries')]).then(([emps,entries])=>{
         _emps=emps.filter(e=>e.active!==false); _entries=entries.map(normaliseEntry);
       }).catch(()=>{});
@@ -1912,7 +2125,7 @@ function showView(v){
   if(v==='login') populateManagerSelect();
   if(v==='admin'){
     document.getElementById('current-user-label').textContent = currentManager?.name || '';
-    loadAll().then(()=>{ renderTeam();renderTimesheets();renderApprovals();renderManagersTab();renderRoster();setDefaultDates();tsAutoLockSweep(); });
+    loadAll().then(()=>{ renderTeam();renderTimesheets();renderApprovals();renderManagersTab();renderRoster();setDefaultDates();tsAutoLockSweep();reqExpirySweep(); });
   }
 }
 
@@ -1944,6 +2157,7 @@ let buf='',rfidT=null;
 let _kioskRefreshInterval=null, _srRefreshInterval=null, _srNowLineInterval=null, _preRFIDView=null;
 function focusRFID(){
   if(document.activeElement===document.getElementById('test-rfid')) return;
+  if(document.activeElement===document.getElementById('test-rfid-req')) return;
   rfidEl.value='';rfidEl.focus();
 }
 function returnOrFocusRFID(){
@@ -1969,10 +2183,11 @@ function returnOrFocusRFID(){
 document.addEventListener('click',e=>{
   const kioskActive=document.getElementById('view-kiosk').classList.contains('active');
   const srActive=document.getElementById('view-staff-roster')?.classList.contains('active');
-  if(!kioskActive&&!srActive)return;
+  const reqActive=document.getElementById('view-requests')?.classList.contains('active');
+  if(!kioskActive&&!srActive&&!reqActive)return;
   if(e.target.closest('.kiosk-footer-nav'))return;
   if(e.target.closest('.reason-card'))return;
-  if(e.target.id==='test-rfid'||e.target.closest('[id="test-rfid"]'))return;
+  if(e.target.id==='test-rfid'||e.target.id==='test-rfid-req')return;
   if(e.target.tagName==='BUTTON'&&e.target.onclick?.toString().includes('testScan'))return;
   if(!document.getElementById('reason-overlay').classList.contains('show'))focusRFID();
 });
@@ -1991,6 +2206,10 @@ rfidEl.addEventListener('keydown',e=>{
 let pending=null;
 
 async function processRFID(card){
+  // If scanning from Requests view, authenticate for requests
+  if(document.getElementById('view-requests').classList.contains('active')){
+    await processRequestsRFID(card); return;
+  }
   // If scanning from Who's On, redirect to kiosk, process, then return
   if(!document.getElementById('view-kiosk').classList.contains('active')){
     _preRFIDView=document.querySelector('.view.active')?.id.replace('view-','')||null;
@@ -2335,7 +2554,8 @@ function switchTab(name,btn){
   if(name==='notes')      renderApprovals();
   if(name==='team')       renderTeam();
   if(name==='roster')     renderRoster();
-  if(name==='settings'){  renderManagersTab(); wosInitPinBoxes(); renderAnchorDate(); populatePrintFnChecks(); }
+  if(name==='requests'){  renderRequests(); reqExpirySweep(); }
+  if(name==='settings'){  renderManagersTab(); wosInitPinBoxes(); renderAnchorDate(); populatePrintFnChecks(); renderRequestSettings(); }
 }
 
 /* ═══════════════════════════════════════════
@@ -3597,6 +3817,13 @@ function testScan(){
   else{el.style.borderColor='var(--wine)';setTimeout(()=>{el.style.borderColor='';el.focus();},1200);}
 }
 
+function testScanReq(){
+  const el=document.getElementById('test-rfid-req');
+  const val=el.value.replace(/\D/g,'').trim();
+  if(val.length>=4){processRequestsRFID(val);el.value='';setTimeout(()=>el.focus(),100);}
+  else{el.style.borderColor='var(--wine)';setTimeout(()=>{el.style.borderColor='';el.focus();},1200);}
+}
+
 /* ═══════════════════════════════════════════
    STAFF ROSTER VIEW (public)
 ═══════════════════════════════════════════ */
@@ -4240,7 +4467,8 @@ function renderFnGridForRole(role){
       return`<div class="rb-shift-pill">${emp?dnMap[emp.id]||empFirstName(emp):'?'} ${(s.start_time||'').slice(0,5)}</div>`;
     }).join('');
     const more=dayShifts.length>3?`<div class="rb-shift-pill" style="opacity:0.55;">+${dayShifts.length-3}</div>`:'';
-    return`<div class="rb-day-cell${isToday?' today':''}${isPast?' past':''}" onclick="rbOpenDay('${key}')">
+    const isHighlighted=_rbHighlightDates.has(key)&&_rbHighlightRole===role;
+    return`<div class="rb-day-cell${isToday?' today':''}${isPast?' past':''}${isHighlighted?' req-highlight':''}" data-date="${key}" onclick="rbOpenDay('${key}')">
       <div class="rb-day-hdr">${dayName} ${monthStr}</div>
       <div class="rb-day-date">${d.getDate()}</div>
       ${pills}${more}
@@ -4895,6 +5123,707 @@ function printRoster(){
   // Clean up after print dialog closes
   setTimeout(()=>{document.getElementById('roster-print-area').innerHTML='';},1000);
 }
+
+/* ═══════════════════════════════════════════
+   REQUESTS — KIOSK SIDE
+═══════════════════════════════════════════ */
+
+function openRequestsView(){
+  _reqEmployee=null;
+  document.getElementById('req-panel-auth').style.display='';
+  document.getElementById('req-panel-list').style.display='none';
+  document.getElementById('req-panel-form').style.display='none';
+  document.getElementById('req-panel-detail').style.display='none';
+  showView('requests');
+}
+
+async function processRequestsRFID(card){
+  let emp=_emps.find(e=>e.rfid===card);
+  if(!emp){
+    try{ _emps=(await db.get('employees')).filter(e=>e.active!==false); }catch(e){}
+    emp=_emps.find(e=>e.rfid===card);
+  }
+  if(!emp){ showToast('Card not recognised'); return; }
+  _reqEmployee=emp;
+  await reqShowList();
+}
+
+async function reqShowList(){
+  if(!_reqEmployee) return;
+  // Refresh requests and notifications for this employee
+  try{
+    const [reqs,notifs]=await Promise.all([db.get('requests'),db.get('notifications')]);
+    _requests=reqs.map(normaliseRequest);
+    _notifications=notifs.map(normaliseNotif);
+  }catch(e){}
+  // Mark unseen notifications as seen
+  const unseen=_notifications.filter(n=>n.employeeId===_reqEmployee.id&&!n.seenAt);
+  for(const n of unseen){
+    try{
+      await db.update('notifications',n.id,{seen_at:new Date().toISOString()});
+      n.seenAt=new Date().toISOString();
+    }catch(e){}
+  }
+  renderRequestsList();
+  document.getElementById('req-panel-auth').style.display='none';
+  document.getElementById('req-panel-list').style.display='';
+  document.getElementById('req-panel-form').style.display='none';
+  document.getElementById('req-panel-detail').style.display='none';
+  setTimeout(focusRFID,80);
+}
+
+function renderRequestsList(){
+  if(!_reqEmployee) return;
+  const emp=_reqEmployee;
+  const now=Date.now();
+  const sevenDays=7*86400000;
+  const empReqs=_requests
+    .filter(r=>r.initiatorId===emp.id||r.colleagueId===emp.id)
+    .filter(r=>!['approved','declined','expired'].includes(r.status)||(r.managerDecidedAt&&now-new Date(r.managerDecidedAt).getTime()<sevenDays))
+    .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const empNotifs=_notifications.filter(n=>n.employeeId===emp.id&&!n.seenAt).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  let html=`<div class="req-emp-greeting">Hi, ${escHtml(emp.name.split(' ')[0])}!</div><div class="req-role-badge">${emp.role}</div>`;
+  if(empNotifs.length){
+    html+=`<div class="req-section-label">Notifications (${empNotifs.length})</div>`;
+    empNotifs.forEach(n=>{
+      html+=`<div class="req-notif-card" onclick="reqShowDetail('${n.requestId}')">
+        <div class="req-notif-label">New notification</div>
+        <div class="req-notif-msg">${escHtml(n.message)}</div>
+        <div class="req-notif-time">${reqFmtDate(n.createdAt)}</div>
+      </div>`;
+    });
+  }
+  if(empReqs.length){
+    html+=`<div class="req-section-label">Your Requests</div>`;
+    empReqs.forEach(r=>{
+      const isInitiator=r.initiatorId===emp.id;
+      html+=`<div class="req-status-card" onclick="reqShowDetail('${r.id}')">
+        <span class="req-status-pill ${r.status}">${reqStatusLabel(r.status)}</span>
+        <div class="req-status-title">${escHtml(reqTitle(r,isInitiator))}</div>
+        <div class="req-status-sub">${escHtml(reqStatusSub(r,isInitiator))}</div>
+      </div>`;
+    });
+  }
+  if(!empNotifs.length&&!empReqs.length){
+    html+=`<div class="req-empty">📭 No pending requests</div>`;
+  }
+  document.getElementById('req-list-content').innerHTML=html;
+}
+
+function reqTitle(r,isInitiator){
+  if(r.type==='leave') return `${formatLeaveType(r.leaveType)} — ${reqFmtDate(r.leaveStartDate)} to ${reqFmtDate(r.leaveEndDate)}`;
+  if(r.type==='swap') return isInitiator?`Swap: your ${reqFmtDate(r.initiatorShiftDate)} shift ↔ ${r.colleagueName}`:`Swap request from ${r.initiatorName}`;
+  if(r.type==='giveaway') return isInitiator?`Give away: your ${reqFmtDate(r.initiatorShiftDate)} shift → ${r.colleagueName}`:`Shift offer from ${r.initiatorName}`;
+  return r.type;
+}
+
+function reqStatusLabel(status){
+  if(status==='pending_peer') return 'Awaiting colleague';
+  if(status==='pending_manager') return 'Awaiting manager';
+  if(status==='approved') return 'Approved ✓';
+  if(status==='declined') return 'Declined';
+  if(status==='expired') return 'Expired';
+  return status;
+}
+
+function reqStatusSub(r,isInitiator){
+  if(r.type==='leave') return `Submitted ${reqFmtDate(r.createdAt)}`;
+  if(r.status==='pending_peer') return isInitiator?`Waiting for ${r.colleagueName} to respond`:`${r.initiatorName} is requesting this`;
+  if(r.status==='pending_manager') return 'Peer approved · Waiting for manager';
+  if(r.status==='approved') return `Approved by ${r.managerName||'manager'} on ${reqFmtDate(r.managerDecidedAt)}`;
+  if(r.status==='declined'){
+    if(SHOW_DECLINE_REASON&&r.managerReason) return `Declined: ${r.managerReason}`;
+    return 'Request declined';
+  }
+  if(r.status==='expired') return 'No response received — request expired';
+  return `Submitted ${reqFmtDate(r.createdAt)}`;
+}
+
+function reqShowDetail(requestId){
+  _reqDetailId=requestId;
+  const r=_requests.find(x=>x.id===requestId);
+  if(!r){ reqShowList(); return; }
+  const emp=_reqEmployee;
+  const isInitiator=r.initiatorId===emp.id;
+  const isPeer=r.colleagueId===emp.id;
+  const canRespond=isPeer&&r.status==='pending_peer';
+  let html=`<div style="margin-bottom:1rem;">
+    <span class="req-status-pill ${r.status}" style="display:inline-block;">${reqStatusLabel(r.status)}</span>
+    <div style="font-family:'Lora',serif;font-size:1.05rem;font-weight:600;color:var(--charcoal);margin-top:0.5rem;">${escHtml(reqTitle(r,isInitiator))}</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">Submitted ${reqFmtDate(r.createdAt)}</div>
+  </div>`;
+  if(r.type==='leave'){
+    html+=`<div class="req-admin-shifts">
+      <strong>Leave type:</strong> ${formatLeaveType(r.leaveType)}<br>
+      <strong>Dates:</strong> ${reqFmtDate(r.leaveStartDate)} – ${reqFmtDate(r.leaveEndDate)}
+      ${r.reason?`<br><strong>Reason:</strong> ${escHtml(r.reason)}`:''}
+    </div>`;
+  } else {
+    html+=`<div class="req-admin-shifts">
+      <strong>${escHtml(r.initiatorName)}:</strong> ${reqFmtDate(r.initiatorShiftDate)} ${r.initiatorShiftStart}–${r.initiatorShiftEnd}<br>
+      ${r.type==='swap'?`<strong>${escHtml(r.colleagueName)}:</strong> ${reqFmtDate(r.colleagueShiftDate)} ${r.colleagueShiftStart}–${r.colleagueShiftEnd}`
+        :`<strong>Receiving:</strong> ${escHtml(r.colleagueName)}`}
+      ${r.reason?`<br><strong>Reason:</strong> ${escHtml(r.reason)}`:''}
+    </div>`;
+    if(r.type==='giveaway'&&isPeer) html+=`<div class="req-giveaway-notice">⚠ You are receiving this shift — ${escHtml(r.initiatorName)} gives away their ${reqFmtDate(r.initiatorShiftDate)} shift to you. You will not give anything in return.</div>`;
+  }
+  if(r.type!=='leave'&&r.peerResponse){
+    html+=`<div style="font-size:0.8rem;color:${r.peerResponse==='accepted'?'var(--success)':'var(--burgundy)'};font-weight:600;margin-bottom:0.5rem;">
+      Colleague: ${r.peerResponse==='accepted'?'✓ Accepted':'✗ Declined'}${r.peerReason?` — ${escHtml(r.peerReason)}`:''}
+    </div>`;
+  }
+  if(r.status==='declined'&&r.managerReason&&SHOW_DECLINE_REASON){
+    html+=`<div style="font-size:0.8rem;color:var(--burgundy);font-weight:600;margin-bottom:0.5rem;">Manager declined: ${escHtml(r.managerReason)}</div>`;
+  }
+  if(canRespond){
+    html+=`<div id="req-respond-area-${r.id}"><div class="req-detail-actions">
+      <button class="req-accept-btn" onclick="reqPeerAcceptConfirm('${r.id}')">✓ Accept</button>
+      <button class="req-decline-peer-btn" onclick="reqPeerDeclinePrompt('${r.id}')">✗ Decline</button>
+    </div></div>`;
+  }
+  document.getElementById('req-detail-content').innerHTML=html;
+  document.getElementById('req-panel-auth').style.display='none';
+  document.getElementById('req-panel-list').style.display='none';
+  document.getElementById('req-panel-form').style.display='none';
+  document.getElementById('req-panel-detail').style.display='';
+}
+
+function reqPeerAcceptConfirm(requestId){
+  const r=_requests.find(x=>x.id===requestId);
+  if(!r) return;
+  const emp=_reqEmployee;
+  let rows='';
+  if(r.type==='swap'){
+    // Colleague loses their shift, gains initiator's shift
+    rows+=`<div class="req-accept-confirm-row lose">
+      <span class="icon">✕</span>
+      <span>You will <strong>no longer</strong> be working <strong>${reqFmtDate(r.colleagueShiftDate)}, ${r.colleagueShiftStart}–${r.colleagueShiftEnd}</strong></span>
+    </div>
+    <div class="req-accept-confirm-row lose">
+      <span class="icon">→</span>
+      <span><strong>${escHtml(r.initiatorName)}</strong> will now be working <strong>${reqFmtDate(r.colleagueShiftDate)}, ${r.colleagueShiftStart}–${r.colleagueShiftEnd}</strong></span>
+    </div>
+    <div class="req-accept-confirm-row gain">
+      <span class="icon">✓</span>
+      <span>You <strong>will be working</strong> <strong>${reqFmtDate(r.initiatorShiftDate)}, ${r.initiatorShiftStart}–${r.initiatorShiftEnd}</strong></span>
+    </div>`;
+  } else if(r.type==='giveaway'){
+    // Colleague only gains a shift
+    rows+=`<div class="req-accept-confirm-row gain">
+      <span class="icon">✓</span>
+      <span>You <strong>will be working</strong> <strong>${reqFmtDate(r.initiatorShiftDate)}, ${r.initiatorShiftStart}–${r.initiatorShiftEnd}</strong></span>
+    </div>
+    <div class="req-accept-confirm-row lose">
+      <span class="icon">→</span>
+      <span><strong>${escHtml(r.initiatorName)}</strong> will <strong>no longer</strong> be working this shift</span>
+    </div>`;
+  }
+  const html=`<div class="req-accept-confirm">
+    <div class="req-accept-confirm-title">Please confirm — here's what will change:</div>
+    ${rows}
+    <div class="req-accept-confirm-actions">
+      <button class="req-accept-btn" onclick="reqPeerRespond('${requestId}','accepted')">✓ Confirm Accept</button>
+      <button class="req-decline-peer-btn" onclick="reqShowDetail('${requestId}')">← Go Back</button>
+    </div>
+  </div>`;
+  document.getElementById('req-respond-area-'+requestId).innerHTML=html;
+}
+
+async function reqPeerRespond(requestId,response,reason=''){
+  const r=_requests.find(x=>x.id===requestId);
+  if(!r) return;
+  const now=new Date().toISOString();
+  const newStatus=response==='accepted'?'pending_manager':'declined';
+  try{
+    await db.update('requests',requestId,{status:newStatus,peer_response:response,peer_response_at:now,peer_reason:reason||null});
+    r.status=newStatus; r.peerResponse=response; r.peerResponseAt=now; r.peerReason=reason||null;
+    const typeLabel=r.type==='swap'?'swap':'shift offer';
+    const msg=response==='accepted'
+      ?`${r.colleagueName} accepted your ${typeLabel} request — waiting for manager approval`
+      :`${r.colleagueName} declined your ${typeLabel} request${reason?': '+reason:''}`;
+    await reqCreateNotification(r.initiatorId,requestId,msg,'peer_'+response);
+    showToast(response==='accepted'?'Request accepted — sent to manager':'Request declined');
+    await reqShowList();
+  }catch(e){ showToast('Error — please try again'); console.error(e); }
+}
+
+function reqPeerDeclinePrompt(requestId){
+  const reason=prompt('Optional: add a reason for declining (leave blank to skip)');
+  if(reason===null) return;
+  reqPeerRespond(requestId,'declined',reason||'');
+}
+
+function reqShowForm(){
+  _reqFormType='leave';
+  renderRequestForm();
+  document.getElementById('req-panel-auth').style.display='none';
+  document.getElementById('req-panel-list').style.display='none';
+  document.getElementById('req-panel-form').style.display='';
+  document.getElementById('req-panel-detail').style.display='none';
+}
+
+function reqSetFormType(type){
+  _reqFormType=type;
+  renderRequestForm();
+}
+
+async function renderRequestForm(){
+  const emp=_reqEmployee;
+  const today=rbDateKey(new Date());
+  try{
+    const allShifts=await db.get('roster_shifts');
+    _reqMyShifts=allShifts.filter(s=>s.employee_id===emp.id&&s.date>=today&&!s.leave_type).sort((a,b)=>a.date.localeCompare(b.date));
+  }catch(e){ _reqMyShifts=[]; }
+  const myShiftOptions=_reqMyShifts.length
+    ?_reqMyShifts.map(s=>`<option value="${s.id}">${reqFmtDate(s.date)} ${s.start_time}–${s.end_time}</option>`).join('')
+    :'<option value="">No upcoming shifts found</option>';
+  const sameRoleEmps=_emps.filter(e=>e.role===emp.role&&e.id!==emp.id&&e.active!==false);
+  const colleagueOptions=sameRoleEmps.length
+    ?'<option value="">Select colleague…</option>'+sameRoleEmps.map(e=>`<option value="${e.id}">${escHtml(e.name)}</option>`).join('')
+    :'<option value="">No colleagues of same role found</option>';
+  const leaveTypeOptions=Object.entries(LEAVE_TYPES).filter(([k])=>k!=='public_holiday').map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  let formBody='';
+  if(_reqFormType==='leave'){
+    formBody=`<div class="form-group"><label class="form-label">Leave type</label><select class="form-input" id="req-leave-type">${leaveTypeOptions}</select></div>
+      <div class="form-group"><label class="form-label">Start date</label><input class="form-input" type="date" id="req-leave-start" min="${today}" /></div>
+      <div class="form-group"><label class="form-label">End date</label><input class="form-input" type="date" id="req-leave-end" min="${today}" /></div>
+      <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. medical appointment"></textarea></div>
+      <button class="req-new-btn" onclick="reqSubmitLeave()">Submit Leave Request</button>`;
+  } else if(_reqFormType==='swap'){
+    formBody=`<div class="form-group"><label class="form-label">Your shift to swap</label><select class="form-input" id="req-my-shift">${myShiftOptions}</select></div>
+      <div class="form-group"><label class="form-label">Swap with (same role only)</label><select class="form-input" id="req-colleague" onchange="reqLoadColleagueShifts(this.value)">${colleagueOptions}</select></div>
+      <div class="form-group" id="req-colleague-shift-group" style="display:none;"><label class="form-label">Their shift to swap</label><select class="form-input" id="req-colleague-shift"><option value="">Loading…</option></select></div>
+      <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. family commitment"></textarea></div>
+      <button class="req-new-btn" onclick="reqSubmitSwap()">Submit Swap Request</button>`;
+  } else {
+    formBody=`<div class="req-giveaway-notice">⚠ You are giving away your shift. The selected colleague will receive it — you will not receive anything in return.</div>
+      <div class="form-group"><label class="form-label">Your shift to give away</label><select class="form-input" id="req-my-shift">${myShiftOptions}</select></div>
+      <div class="form-group"><label class="form-label">Give to (same role only)</label><select class="form-input" id="req-colleague">${colleagueOptions}</select></div>
+      <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. personal commitment"></textarea></div>
+      <button class="req-new-btn" onclick="reqSubmitGiveaway()">Submit Give Away Request</button>`;
+  }
+  const typeTitle=_reqFormType==='leave'?'Leave Request':_reqFormType==='swap'?'Shift Swap Request':'Give Away Shift';
+  document.getElementById('req-form-content').innerHTML=`
+    <div class="req-type-tabs">
+      <button class="req-type-tab${_reqFormType==='leave'?' active':''}" onclick="reqSetFormType('leave')">Leave</button>
+      <button class="req-type-tab${_reqFormType==='swap'?' active':''}" onclick="reqSetFormType('swap')">Shift Swap</button>
+      <button class="req-type-tab${_reqFormType==='giveaway'?' active':''}" onclick="reqSetFormType('giveaway')">Give Away</button>
+    </div>
+    <div style="font-family:'Lora',serif;font-size:1rem;font-weight:600;color:var(--charcoal);margin-bottom:1rem;">${typeTitle}</div>
+    ${formBody}`;
+}
+
+async function reqLoadColleagueShifts(colleagueId){
+  if(!colleagueId){ document.getElementById('req-colleague-shift-group').style.display='none'; return; }
+  const today=rbDateKey(new Date());
+  try{
+    const allShifts=await db.get('roster_shifts');
+    _reqColleagueShifts=allShifts.filter(s=>s.employee_id===colleagueId&&s.date>=today&&!s.leave_type).sort((a,b)=>a.date.localeCompare(b.date));
+  }catch(e){ _reqColleagueShifts=[]; }
+  const opts=_reqColleagueShifts.length
+    ?_reqColleagueShifts.map(s=>`<option value="${s.id}">${reqFmtDate(s.date)} ${s.start_time}–${s.end_time}</option>`).join('')
+    :'<option value="">No upcoming shifts found</option>';
+  document.getElementById('req-colleague-shift').innerHTML=opts;
+  document.getElementById('req-colleague-shift-group').style.display='';
+}
+
+async function reqSubmitLeave(){
+  const emp=_reqEmployee;
+  const leaveType=document.getElementById('req-leave-type').value;
+  const startDate=document.getElementById('req-leave-start').value;
+  const endDate=document.getElementById('req-leave-end').value;
+  const reason=document.getElementById('req-reason').value.trim();
+  if(!startDate||!endDate){ showToast('Please select start and end dates'); return; }
+  if(endDate<startDate){ showToast('End date must be after start date'); return; }
+  const id='REQ'+Date.now();
+  const now=new Date().toISOString();
+  try{
+    await db.insert('requests',{id,type:'leave',status:'pending_manager',initiator_id:emp.id,initiator_name:emp.name,initiator_role:emp.role,leave_type:leaveType,leave_start_date:startDate,leave_end_date:endDate,reason:reason||null,created_at:now});
+    _requests.push(normaliseRequest({id,type:'leave',status:'pending_manager',initiator_id:emp.id,initiator_name:emp.name,initiator_role:emp.role,leave_type:leaveType,leave_start_date:startDate,leave_end_date:endDate,reason:reason||null,created_at:now}));
+    showToast('Leave request submitted');
+    await reqShowList();
+  }catch(e){ showToast('Error: '+((e?.message)||'Could not submit')); console.error(e); }
+}
+
+async function reqSubmitSwap(){
+  const emp=_reqEmployee;
+  const myShiftId=document.getElementById('req-my-shift')?.value;
+  const colleagueId=document.getElementById('req-colleague')?.value;
+  const colleagueShiftId=document.getElementById('req-colleague-shift')?.value;
+  const reason=document.getElementById('req-reason').value.trim();
+  if(!myShiftId){ showToast('Please select your shift'); return; }
+  if(!colleagueId){ showToast('Please select a colleague'); return; }
+  if(!colleagueShiftId){ showToast('Please select your colleague\'s shift'); return; }
+  const myShift=_reqMyShifts.find(s=>s.id===myShiftId);
+  const colShift=_reqColleagueShifts.find(s=>s.id===colleagueShiftId);
+  const colleague=_emps.find(e=>e.id===colleagueId);
+  if(!myShift||!colShift||!colleague){ showToast('Could not find shift data'); return; }
+  if(colleague.role!==emp.role){ showToast('Swaps can only be with staff of the same role'); return; }
+  const id='REQ'+Date.now();
+  const now=new Date().toISOString();
+  const expiresAt=new Date(Date.now()+SWAP_EXPIRY_DAYS*86400000).toISOString();
+  try{
+    await db.insert('requests',{id,type:'swap',status:'pending_peer',initiator_id:emp.id,initiator_name:emp.name,initiator_role:emp.role,initiator_shift_id:myShift.id,initiator_shift_date:myShift.date,initiator_shift_start:myShift.start_time,initiator_shift_end:myShift.end_time,colleague_id:colleague.id,colleague_name:colleague.name,colleague_shift_id:colShift.id,colleague_shift_date:colShift.date,colleague_shift_start:colShift.start_time,colleague_shift_end:colShift.end_time,reason:reason||null,created_at:now,expires_at:expiresAt});
+    await reqCreateNotification(colleague.id,id,`${emp.name} wants to swap their ${reqFmtDate(myShift.date)} shift with your ${reqFmtDate(colShift.date)} shift`,'incoming_swap');
+    _requests.push(normaliseRequest({id,type:'swap',status:'pending_peer',initiator_id:emp.id,initiator_name:emp.name,initiator_role:emp.role,initiator_shift_id:myShift.id,initiator_shift_date:myShift.date,initiator_shift_start:myShift.start_time,initiator_shift_end:myShift.end_time,colleague_id:colleague.id,colleague_name:colleague.name,colleague_shift_id:colShift.id,colleague_shift_date:colShift.date,colleague_shift_start:colShift.start_time,colleague_shift_end:colShift.end_time,reason:reason||null,created_at:now,expires_at:expiresAt}));
+    showToast('Swap request sent to '+colleague.name);
+    await reqShowList();
+  }catch(e){ showToast('Error submitting request'); console.error(e); }
+}
+
+async function reqSubmitGiveaway(){
+  const emp=_reqEmployee;
+  const myShiftId=document.getElementById('req-my-shift')?.value;
+  const colleagueId=document.getElementById('req-colleague')?.value;
+  const reason=document.getElementById('req-reason').value.trim();
+  if(!myShiftId){ showToast('Please select your shift'); return; }
+  if(!colleagueId){ showToast('Please select a colleague'); return; }
+  const myShift=_reqMyShifts.find(s=>s.id===myShiftId);
+  const colleague=_emps.find(e=>e.id===colleagueId);
+  if(!myShift||!colleague){ showToast('Could not find shift data'); return; }
+  if(colleague.role!==emp.role){ showToast('Can only give a shift to someone of the same role'); return; }
+  const id='REQ'+Date.now();
+  const now=new Date().toISOString();
+  const expiresAt=new Date(Date.now()+SWAP_EXPIRY_DAYS*86400000).toISOString();
+  try{
+    await db.insert('requests',{id,type:'giveaway',status:'pending_peer',initiator_id:emp.id,initiator_name:emp.name,initiator_role:emp.role,initiator_shift_id:myShift.id,initiator_shift_date:myShift.date,initiator_shift_start:myShift.start_time,initiator_shift_end:myShift.end_time,colleague_id:colleague.id,colleague_name:colleague.name,reason:reason||null,created_at:now,expires_at:expiresAt});
+    await reqCreateNotification(colleague.id,id,`${emp.name} wants to give you their ${reqFmtDate(myShift.date)} shift (${myShift.start_time}–${myShift.end_time})`,'incoming_giveaway');
+    showToast('Give away request sent to '+colleague.name);
+    await reqShowList();
+  }catch(e){ showToast('Error submitting request'); console.error(e); }
+}
+
+function reqLogout(){
+  _reqEmployee=null;
+  document.getElementById('req-panel-auth').style.display='';
+  document.getElementById('req-panel-list').style.display='none';
+  document.getElementById('req-panel-form').style.display='none';
+  document.getElementById('req-panel-detail').style.display='none';
+  showView('kiosk');
+}
+
+async function reqCreateNotification(employeeId,requestId,message,type){
+  const id='N'+Date.now();
+  try{
+    await db.insert('notifications',{id,employee_id:employeeId,request_id:requestId,message,type,created_at:new Date().toISOString()});
+    _notifications.push(normaliseNotif({id,employee_id:employeeId,request_id:requestId,message,type,seen_at:null,created_at:new Date().toISOString()}));
+  }catch(e){ console.error('Notification create error:',e); }
+}
+
+/* ═══════════════════════════════════════════
+   REQUESTS — ADMIN SIDE
+═══════════════════════════════════════════ */
+
+function reqSetRole(role, btn){
+  reqRole=role;
+  document.querySelectorAll('.ts-role-tab[id^="req-tab-"]').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderRequests();
+}
+
+function renderRequests(){
+  const pending=_requests.filter(r=>r.status==='pending_manager'&&r.initiatorRole===reqRole);
+  const sevenDays=7*86400000;
+  const recentlyClosed=_requests.filter(r=>['approved','declined'].includes(r.status)&&r.initiatorRole===reqRole&&r.managerDecidedAt&&Date.now()-new Date(r.managerDecidedAt).getTime()<sevenDays);
+  const totalPending=_requests.filter(r=>r.status==='pending_manager').length;
+  const badge=document.getElementById('req-admin-badge');
+  if(badge){ badge.style.display=totalPending?'':'none'; badge.textContent=totalPending; }
+  let html='';
+  if(pending.length){
+    html+=`<div style="font-size:0.78rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Pending (${pending.length})</div>`;
+    pending.forEach(r=>{ html+=buildReqAdminCard(r,true); });
+  }
+  if(recentlyClosed.length){
+    html+=`<div style="font-size:0.78rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin:1.5rem 0 0.75rem;">Recent Decisions (last 7 days)</div>`;
+    recentlyClosed.forEach(r=>{ html+=buildReqAdminCard(r,false); });
+  }
+  if(!pending.length&&!recentlyClosed.length){
+    html=`<div class="req-empty" style="padding:3rem 1rem;">✓ No pending requests</div>`;
+  }
+  document.getElementById('req-admin-content').innerHTML=html;
+}
+
+function buildReqAdminCard(r,isPending){
+  const typeLabel=r.type==='leave'?'Leave Request':r.type==='swap'?'Shift Swap':'Shift Give Away';
+  let shiftsHtml='';
+  if(r.type==='leave'){
+    shiftsHtml=`<strong>Employee:</strong> ${escHtml(r.initiatorName)} (${r.initiatorRole})<br>
+      <strong>Leave type:</strong> ${formatLeaveType(r.leaveType)}<br>
+      <strong>Dates:</strong> ${reqFmtDate(r.leaveStartDate)} – ${reqFmtDate(r.leaveEndDate)}
+      ${r.reason?`<br><strong>Reason:</strong> ${escHtml(r.reason)}`:''}`;
+  } else {
+    shiftsHtml=`<strong>${escHtml(r.initiatorName)}</strong> (${r.initiatorRole}) — ${reqFmtDate(r.initiatorShiftDate)} ${r.initiatorShiftStart}–${r.initiatorShiftEnd}<br>
+      ${r.type==='swap'?`<strong>${escHtml(r.colleagueName)}</strong> — ${reqFmtDate(r.colleagueShiftDate)} ${r.colleagueShiftStart}–${r.colleagueShiftEnd}`:`<strong>Receiving:</strong> ${escHtml(r.colleagueName)}`}
+      ${r.reason?`<br><strong>Reason:</strong> ${escHtml(r.reason)}`:''}
+      ${r.peerResponse==='accepted'?`<br><em style="color:var(--success);">✓ Peer approved</em>`:''}`;
+  }
+  const viewInRosterBtn=`<button onclick="reqViewInRoster('${r.id}')" style="background:none;border:none;color:var(--muted);font-size:0.75rem;font-weight:700;cursor:pointer;padding:0.2rem 0;font-family:'Nunito',sans-serif;text-decoration:underline;text-underline-offset:2px;" title="Jump to these dates in the Roster tab">📅 View in Roster</button>`;
+  let coverageWarn='';
+  if(r.type==='leave'){
+    const warn=reqCheckCoverage(r);
+    if(warn) coverageWarn=`<div class="req-coverage-warn">⚠ ${escHtml(warn)}</div>`;
+  }
+  const actions=isPending
+    ?`<div class="req-admin-actions">
+        <button class="req-approve-btn" onclick="managerApproveRequest('${r.id}')">✓ Approve</button>
+        <button class="req-decline-btn" onclick="managerDeclineRequest('${r.id}')">✗ Decline</button>
+      </div>`
+    :`<div style="font-size:0.8rem;color:${r.status==='approved'?'var(--success)':'var(--burgundy)'};font-weight:600;">
+        ${r.status==='approved'?'✓ Approved':'✗ Declined'} by ${escHtml(r.managerName||'manager')} · ${reqFmtDate(r.managerDecidedAt)}
+        ${r.managerReason?`<br>Reason: ${escHtml(r.managerReason)}`:''}
+      </div>`;
+  return `<div class="req-admin-card">
+    <div class="req-admin-header">
+      <div>
+        <div class="req-admin-names">${escHtml(r.initiatorName)}${r.type!=='leave'?` ↔ ${escHtml(r.colleagueName||'')}`:''}
+        </div>
+        <div class="req-admin-meta">Submitted ${reqFmtDate(r.createdAt)}</div>
+      </div>
+      <span class="req-admin-type-pill">${typeLabel}</span>
+    </div>
+    <div class="req-admin-shifts">${shiftsHtml}<br>${viewInRosterBtn}</div>
+    ${coverageWarn}
+    ${actions}
+  </div>`;
+}
+
+function reqCheckCoverage(r){
+  if(!r.leaveStartDate||!r.leaveEndDate) return null;
+  const rule=_coverageRules.find(cr=>cr.role===r.initiatorRole);
+  if(!rule) return null;
+  const minWarn=rule.min_yellow??rule.min_warn??2;
+  const dates=[];
+  const cur=new Date(r.leaveStartDate+'T12:00:00');
+  const end=new Date(r.leaveEndDate+'T12:00:00');
+  while(cur<=end){ dates.push(rbDateKey(cur)); cur.setDate(cur.getDate()+1); }
+  const atRisk=dates.filter(d=>{
+    const onThatDay=_rosterShifts.filter(s=>s.date===d&&s.role===r.initiatorRole&&s.employee_id!==r.initiatorId&&!s.leave_type);
+    return onThatDay.length<minWarn;
+  });
+  if(!atRisk.length) return null;
+  if(atRisk.length===1) return `Low coverage on ${reqFmtDate(atRisk[0])} after this leave`;
+  return `Low coverage on ${atRisk.length} days during this leave period`;
+}
+
+function reqViewInRoster(requestId){
+  const r=_requests.find(x=>x.id===requestId);
+  if(!r) return;
+
+  // Collect affected dates
+  const dates=[];
+  if(r.type==='leave'&&r.leaveStartDate&&r.leaveEndDate){
+    const cur=new Date(r.leaveStartDate+'T12:00:00');
+    const end=new Date(r.leaveEndDate+'T12:00:00');
+    while(cur<=end){ dates.push(rbDateKey(cur)); cur.setDate(cur.getDate()+1); }
+  } else {
+    if(r.initiatorShiftDate) dates.push(r.initiatorShiftDate);
+    if(r.type==='swap'&&r.colleagueShiftDate&&r.colleagueShiftDate!==r.initiatorShiftDate) dates.push(r.colleagueShiftDate);
+  }
+  if(!dates.length){ showToast('No dates to show'); return; }
+
+  // Find which fortnight offset contains the first date
+  const firstDate=dates.slice().sort()[0];
+  let targetOffset=null;
+  for(let o=-2;o<=12;o++){
+    const fnStart=getFortnightStart(o);
+    const fnDays=getFortnight14Days(fnStart);
+    if(fnDays.includes(firstDate)){ targetOffset=o; break; }
+  }
+  if(targetOffset===null){ showToast('Dates are outside the viewable roster range'); return; }
+
+  // Check if any dates fall in a different fortnight
+  const fnDaysForTarget=getFortnight14Days(getFortnightStart(targetOffset));
+  const hasOverflow=dates.some(d=>!fnDaysForTarget.includes(d));
+  if(hasOverflow) showToast('Dates span two fortnights — showing the first');
+
+  // Set highlights — only for the initiator's role
+  _rbHighlightDates.clear();
+  _rbHighlightRole=r.initiatorRole;
+  dates.filter(d=>fnDaysForTarget.includes(d)).forEach(d=>_rbHighlightDates.add(d));
+
+  // Switch to Roster tab and navigate to correct fortnight
+  rFnOffset=targetOffset;
+  rbSelectedDay=null;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  const rosterTabBtn=document.querySelector('.tab[onclick*="roster"]');
+  if(rosterTabBtn) rosterTabBtn.classList.add('active');
+  document.getElementById('tab-roster').classList.add('active');
+  renderRoster();
+
+  // Clear highlights after animation completes
+  setTimeout(()=>{ _rbHighlightDates.clear(); _rbHighlightRole=null; },3200);
+}
+
+async function managerApproveRequest(id){
+  const r=_requests.find(x=>x.id===id);
+  if(!r) return;
+  const mgr=currentManager?.name||'Manager';
+  const now=new Date().toISOString();
+  try{
+    await applyRosterWriteback(r);
+    await db.update('requests',id,{status:'approved',manager_id:currentManager?.id||null,manager_name:mgr,manager_decision:'approved',manager_decided_at:now});
+    r.status='approved'; r.managerName=mgr; r.managerDecision='approved'; r.managerDecidedAt=now;
+    if(r.type==='leave'){
+      await reqCreateNotification(r.initiatorId,id,`Your leave request (${formatLeaveType(r.leaveType)}, ${reqFmtDate(r.leaveStartDate)}–${reqFmtDate(r.leaveEndDate)}) was approved by ${mgr}`,'manager_approved');
+    } else {
+      await reqCreateNotification(r.initiatorId,id,`Your ${r.type} request was approved by ${mgr} — roster has been updated`,'manager_approved');
+      if(r.colleagueId) await reqCreateNotification(r.colleagueId,id,`${r.type==='swap'?'Shift swap':'Shift give away'} with ${r.initiatorName} was approved by ${mgr} — roster has been updated`,'manager_approved');
+    }
+    showToast('Request approved');
+    renderRequests();
+  }catch(e){ showToast('Error: '+(e?.message||String(e)).slice(0,120)); console.error('Approve error:',e); }
+}
+
+async function managerDeclineRequest(id){
+  const reason=prompt('Reason for declining (optional — leave blank to skip):');
+  if(reason===null) return;
+  const r=_requests.find(x=>x.id===id);
+  if(!r) return;
+  const mgr=currentManager?.name||'Manager';
+  const now=new Date().toISOString();
+  try{
+    await db.update('requests',id,{status:'declined',manager_id:currentManager?.id||null,manager_name:mgr,manager_decision:'declined',manager_reason:reason||null,manager_decided_at:now});
+    r.status='declined'; r.managerName=mgr; r.managerDecision='declined'; r.managerReason=reason||null; r.managerDecidedAt=now;
+    const declineMsg=SHOW_DECLINE_REASON&&reason?`Your ${r.type} request was declined by ${mgr}: ${reason}`:`Your ${r.type} request was declined`;
+    await reqCreateNotification(r.initiatorId,id,declineMsg,'manager_declined');
+    if(r.type!=='leave'&&r.colleagueId) await reqCreateNotification(r.colleagueId,id,`The ${r.type} request with ${r.initiatorName} was declined`,'manager_declined');
+    showToast('Request declined');
+    renderRequests();
+  }catch(e){ showToast('Error declining request'); console.error(e); }
+}
+
+async function applyRosterWriteback(req){
+  if(req.type==='leave'){
+    const dates=[];
+    const cur=new Date(req.leaveStartDate+'T12:00:00');
+    const end=new Date(req.leaveEndDate+'T12:00:00');
+    while(cur<=end){ dates.push(rbDateKey(cur)); cur.setDate(cur.getDate()+1); }
+    for(const date of dates){
+      // Leave is stored in entries table (not roster_shifts which has no leave_type column)
+      const rShift=_rosterShifts.find(s=>s.employee_id===req.initiatorId&&s.date===date);
+      if(!rShift) continue;
+      const clockIn=(rShift.start_time||'').slice(0,5);
+      const clockOut=(rShift.end_time||'').slice(0,5);
+      const mins=timeStrToMin(rShift.end_time)-timeStrToMin(rShift.start_time);
+      const hours=(mins/60).toFixed(2);
+      const existingLeave=_entries.find(e=>e.employeeId===req.initiatorId&&e.date===date&&e.leaveType);
+      if(existingLeave){
+        await db.update('entries',existingLeave.id,{leave_type:req.leaveType,clock_in:clockIn,clock_out:clockOut,hours});
+        Object.assign(existingLeave,{leaveType:req.leaveType,clockIn,clockOut,hours});
+      } else {
+        const row={id:'L'+Date.now()+'_'+date,employee_id:req.initiatorId,employee_name:req.initiatorName,role:req.initiatorRole,date,clock_in:clockIn,clock_out:clockOut,hours,leave_type:req.leaveType,status:'normal'};
+        const returned=await db.insert('entries',row);
+        const saved=Array.isArray(returned)?returned[0]:returned;
+        _entries.push(normaliseEntry({...row,id:saved?.id||row.id}));
+      }
+    }
+  } else if(req.type==='swap'){
+    // Fetch fresh shifts from DB to avoid stale cache issues
+    const freshShifts=await db.get('roster_shifts');
+    const initShift=freshShifts.find(s=>s.id===req.initiatorShiftId);
+    const colShift=freshShifts.find(s=>s.id===req.colleagueShiftId);
+    if(!initShift||!colShift) throw new Error('One or both shifts no longer exist in the roster — they may have been modified. Please check the roster and update manually.');
+    // Insert new cross-swapped shifts before deleting originals
+    const rowA={id:'SH'+Date.now(),employee_id:req.initiatorId,date:req.colleagueShiftDate,start_time:req.colleagueShiftStart,end_time:req.colleagueShiftEnd,is_day_off:false};
+    await db.insert('roster_shifts',rowA);
+    const rowB={id:'SH'+(Date.now()+1),employee_id:req.colleagueId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false};
+    await db.insert('roster_shifts',rowB);
+    await db.delete('roster_shifts',initShift.id);
+    await db.delete('roster_shifts',colShift.id);
+    // Sync local cache
+    _rosterShifts=freshShifts.filter(s=>s.id!==initShift.id&&s.id!==colShift.id);
+    _rosterShifts.push(rowA,rowB);
+  } else if(req.type==='giveaway'){
+    const freshShifts=await db.get('roster_shifts');
+    const initShift=freshShifts.find(s=>s.id===req.initiatorShiftId);
+    if(!initShift) throw new Error('Shift no longer exists in the roster — it may have been modified. Please check the roster and update manually.');
+    const newRow={id:'SH'+Date.now(),employee_id:req.colleagueId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false};
+    await db.insert('roster_shifts',newRow);
+    await db.delete('roster_shifts',initShift.id);
+    _rosterShifts=freshShifts.filter(s=>s.id!==initShift.id);
+    _rosterShifts.push(newRow);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   REQUESTS — EXPIRY SWEEP
+═══════════════════════════════════════════ */
+
+async function reqExpirySweep(){
+  if(!_requests.length) return;
+  const now=new Date();
+  const expired=_requests.filter(r=>r.status==='pending_peer'&&r.expiresAt&&new Date(r.expiresAt)<=now);
+  for(const r of expired){
+    try{
+      await db.update('requests',r.id,{status:'expired'});
+      r.status='expired';
+      await reqCreateNotification(r.initiatorId,r.id,`Your ${r.type} request expired — no response received from ${r.colleagueName}`,'request_expired');
+      if(r.colleagueId) await reqCreateNotification(r.colleagueId,r.id,`A ${r.type} request from ${r.initiatorName} has expired`,'request_expired');
+    }catch(e){ console.error('Expiry sweep error:',e); }
+  }
+}
+
+/* ═══════════════════════════════════════════
+   REQUESTS — SETTINGS
+═══════════════════════════════════════════ */
+
+function renderRequestSettings(){
+  const daysEl=document.getElementById('swap-expiry-days');
+  const reasonEl=document.getElementById('show-decline-reason');
+  if(daysEl) daysEl.value=SWAP_EXPIRY_DAYS;
+  if(reasonEl) reasonEl.value=String(SHOW_DECLINE_REASON);
+}
+
+async function saveRequestSettings(){
+  const days=parseInt(document.getElementById('swap-expiry-days').value)||7;
+  const showReason=document.getElementById('show-decline-reason').value==='true';
+  try{
+    if(_rosterConfig) await db.update('roster_config','default',{swap_expiry_days:days,show_decline_reason:showReason});
+    else await db.insert('roster_config',{id:'default',swap_expiry_days:days,show_decline_reason:showReason});
+    SWAP_EXPIRY_DAYS=days; SHOW_DECLINE_REASON=showReason;
+    if(_rosterConfig){ _rosterConfig.swap_expiry_days=days; _rosterConfig.show_decline_reason=showReason; }
+    showToast('Request settings saved');
+  }catch(e){ showToast('Error saving settings'); console.error(e); }
+}
+
+async function loadReqAudit(){
+  try{
+    const allReqs=(await db.get('requests')).map(normaliseRequest).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    if(!allReqs.length){ document.getElementById('req-audit-content').innerHTML='<div style="font-size:0.85rem;color:var(--muted);">No requests on record.</div>'; return; }
+    const rows=allReqs.map(r=>{
+      const typeLabel=r.type==='leave'?'Leave':r.type==='swap'?'Swap':'Give Away';
+      const parties=r.type==='leave'?escHtml(r.initiatorName):`${escHtml(r.initiatorName)} ↔ ${escHtml(r.colleagueName||'—')}`;
+      const detail=r.type==='leave'?`${formatLeaveType(r.leaveType)} ${reqFmtDate(r.leaveStartDate)}–${reqFmtDate(r.leaveEndDate)}`:`${reqFmtDate(r.initiatorShiftDate||'')} shift`;
+      const rosterChange=r.status==='approved'?`Roster updated`:'—';
+      return `<tr>
+        <td>${reqFmtDate(r.createdAt)}</td>
+        <td><span class="req-admin-type-pill">${typeLabel}</span></td>
+        <td>${parties}</td><td>${detail}</td>
+        <td><span class="req-status-pill ${r.status}" style="display:inline-block;">${reqStatusLabel(r.status)}</span></td>
+        <td style="font-size:0.78rem;color:var(--muted);">${escHtml(r.managerName||'—')}</td>
+        <td style="font-size:0.78rem;color:var(--muted);">${r.managerDecidedAt?reqFmtDate(r.managerDecidedAt):'—'}</td>
+        <td style="font-size:0.78rem;color:var(--muted);">${rosterChange}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('req-audit-content').innerHTML=`<div class="table-wrap"><table class="timesheet-table">
+      <thead><tr><th>Submitted</th><th>Type</th><th>Staff</th><th>Details</th><th>Status</th><th>Manager</th><th>Decided</th><th>Roster</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  }catch(e){ showToast('Error loading audit'); console.error(e); }
+}
+
+/* ═══════════════════════════════════════════
+   REQUESTS — UTILITIES
+═══════════════════════════════════════════ */
+
+function reqFmtDate(dateStr){
+  if(!dateStr) return '—';
+  const d=new Date(dateStr.includes('T')?dateStr:dateStr+'T12:00:00');
+  if(isNaN(d)) return String(dateStr);
+  return d.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function escHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 </script>
 <div id="roster-print-area"></div>
