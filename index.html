@@ -891,6 +891,10 @@
   .rb-shift-handle.left { left:0; border-radius:6px 0 0 6px; } .rb-shift-handle.right { right:0; border-radius:0 6px 6px 0; }
   .rb-shift-del { position:absolute; top:-5px; right:-5px; width:15px; height:15px; border-radius:50%; background:#c0392b; color:#fff; border:none; cursor:pointer; font-size:9px; display:none; align-items:center; justify-content:center; z-index:5; line-height:1; padding:0; font-family:'Nunito',sans-serif; }
   .rb-shift-bar:hover .rb-shift-del { display:flex; }
+  .rb-shift-split { position:absolute; bottom:-5px; right:-5px; width:15px; height:15px; border-radius:50%; background:#555; color:#fff; border:none; cursor:pointer; font-size:8px; display:none; align-items:center; justify-content:center; z-index:5; line-height:1; padding:0; font-family:'Nunito',sans-serif; }
+  .rb-shift-bar:hover .rb-shift-split { display:flex; }
+  .rb-shift-lane-btn { position:absolute; top:-6px; left:4px; height:13px; border-radius:4px; background:rgba(36,113,163,0.88); color:#fff; border:none; cursor:pointer; font-size:6.5px; font-weight:800; display:none; align-items:center; justify-content:center; z-index:5; padding:0 4px; white-space:nowrap; letter-spacing:0.03em; font-family:'Nunito',sans-serif; }
+  .rb-shift-bar:hover .rb-shift-lane-btn { display:flex; }
   .rb-lane-badge { flex-shrink:0; font-size:0.58rem; font-weight:700; color:var(--muted); background:rgba(0,0,0,0.05); border:1px solid rgba(0,0,0,0.1); border-radius:4px; padding:2px 5px; cursor:pointer; white-space:nowrap; transition:background 0.15s,color 0.15s; line-height:1.3; }
   .rb-lane-badge:hover { background:rgba(0,0,0,0.1); color:var(--charcoal); }
   .rb-shift-bar.on-leave { cursor:move; }
@@ -1092,6 +1096,27 @@
 
     /* Past day cards: slightly less faded so they're still readable */
     .sr-day-card.past { opacity: 0.55; }
+
+    /* ── Kiosk view ── */
+    #view-kiosk { padding: 1.25rem 1rem; gap: 1rem; justify-content: flex-start; padding-top: 1.75rem; }
+    .scan-card { padding: 1.5rem 1.25rem; border-radius: 18px; }
+    .scan-emoji { font-size: 2rem; margin-bottom: 0.6rem; }
+    .scan-sub { margin-bottom: 1.25rem; }
+    .nav-btn { padding: 0.85rem 0.75rem; font-size: 0.95rem; min-height: 44px; }
+
+    /* ── Staff requests view ── */
+    #view-requests { padding: 1.25rem 0.75rem 1.5rem; }
+    .req-kiosk-header { margin-bottom: 0.85rem; }
+    .req-scan-card { padding: 1.5rem 1.25rem; border-radius: 18px; }
+    .req-type-tabs { gap: 0.25rem; }
+    .req-type-tab { font-size: 0.68rem; padding: 0.5rem 0.25rem; }
+    .req-new-btn { min-height: 44px; }
+    .req-back-btn { min-height: 44px; }
+    .req-detail-actions { flex-direction: column; }
+    .req-detail-actions button { width: 100%; min-height: 44px; }
+    .req-accept-confirm-actions { flex-direction: column; }
+    .req-accept-btn, .req-decline-peer-btn { min-height: 44px; }
+    .req-accept-confirm-row { font-size: 0.78rem; }
   }
 </style>
 </head>
@@ -2020,7 +2045,7 @@ function normaliseEntry(r) {
     role: r.role, date: r.date, clockIn: r.clock_in, clockInISO: r.clock_in_iso,
     clockOut: r.clock_out, clockOutISO: r.clock_out_iso, hours: r.hours,
     reasonIn: r.reason_in, reasonOut: r.reason_out, status: r.status,
-    leaveType: r.leave_type || null,
+    leaveType: r.leave_type || null, shiftId: r.shift_id || null,
     finalStart: r.final_start || null, finalEnd: r.final_end || null,
     locked: r.locked || false, lockedBy: r.locked_by || null, lockedAt: r.locked_at || null,
     manuallyAdjusted: r.manually_adjusted || false,
@@ -3426,11 +3451,13 @@ async function rbMarkLeave(empId, date, shiftId, leaveType){
   const shift=_rosterShifts.find(s=>s.id==shiftId);
   const emp=_emps.find(e=>e.id===empId);
   if(!shift||!emp) return;
-  // Block if employee has actually clocked in (real entry, not a leave entry)
+  // Block if employee has actually clocked in on this specific shift (real entry, not a leave entry)
   const realEntry=_entries.find(e=>e.employeeId===empId&&e.date===date&&!e.leaveType&&e.clockIn);
   const role=rbRoleForEmp(empId);
   if(realEntry){showToast('Cannot mark leave — employee has already clocked in');renderDayTimelineForRole(role);return;}
-  const existingLeave=_entries.find(e=>e.employeeId===empId&&e.date===date&&e.leaveType);
+  // Per-shift leave lookup: match by shift_id first, fall back to employee+date for legacy entries
+  const existingLeave=_entries.find(e=>e.shiftId===shiftId&&e.leaveType)
+    ||_entries.find(e=>!e.shiftId&&e.employeeId===empId&&e.date===date&&e.leaveType);
   if(!leaveType){
     if(existingLeave){
       await db.delete('entries',existingLeave.id);
@@ -3446,10 +3473,10 @@ async function rbMarkLeave(empId, date, shiftId, leaveType){
   const clockOut=(shift.end_time||'').slice(0,5);
   try{
     if(existingLeave){
-      await db.update('entries',existingLeave.id,{leave_type:leaveType,clock_in:clockIn,clock_out:clockOut,hours});
-      Object.assign(existingLeave,{leaveType,clockIn,clockOut,hours});
+      await db.update('entries',existingLeave.id,{leave_type:leaveType,clock_in:clockIn,clock_out:clockOut,hours,shift_id:shiftId});
+      Object.assign(existingLeave,{leaveType,clockIn,clockOut,hours,shiftId});
     }else{
-      const row={id:'L'+Date.now(),employee_id:empId,employee_name:emp.name,role:emp.role,date,clock_in:clockIn,clock_out:clockOut,hours,leave_type:leaveType,status:'normal'};
+      const row={id:'L'+Date.now(),employee_id:empId,employee_name:emp.name,role:emp.role,date,clock_in:clockIn,clock_out:clockOut,hours,leave_type:leaveType,shift_id:shiftId,status:'normal'};
       const returned=await db.insert('entries',row);
       const saved=Array.isArray(returned)?returned[0]:returned;
       _entries.push(normaliseEntry({...row,id:saved?.id||row.id}));
@@ -4468,7 +4495,7 @@ function renderFnGridForRole(role){
     }).join('');
     const more=dayShifts.length>3?`<div class="rb-shift-pill" style="opacity:0.55;">+${dayShifts.length-3}</div>`:'';
     const isHighlighted=_rbHighlightDates.has(key)&&_rbHighlightRole===role;
-    return`<div class="rb-day-cell${isToday?' today':''}${isPast?' past':''}${isHighlighted?' req-highlight':''}" data-date="${key}" onclick="rbOpenDay('${key}')">
+    return`<div class="rb-day-cell${isToday?' today':''}${isPast?' past':''}${isHighlighted?' req-highlight':''}" data-date="${key}" onclick="rbOpenDay('${key}','${role}')">
       <div class="rb-day-hdr">${dayName} ${monthStr}</div>
       <div class="rb-day-date">${d.getDate()}</div>
       ${pills}${more}
@@ -4477,9 +4504,10 @@ function renderFnGridForRole(role){
   }).join('');
 }
 
-function rbOpenDay(dateKey){
+function rbOpenDay(dateKey, fromRole){
   if(dateKey<rbDateKey(new Date())) return; // past — locked
   rbSelectedDay=dateKey;
+  if(fromRole) RB_ROLES.forEach(r=>{ rbState[r].collapsed=(r!==fromRole); });
   renderRoster();
 }
 
@@ -4548,17 +4576,22 @@ function renderDayTimelineForRole(role){
     const sMin=timeStrToMin(s.start_time)||TL_START, eMin=timeStrToMin(s.end_time)||TL_END;
     const lPct=((sMin-TL_START)/TL_RANGE)*100, wPct=((eMin-sMin)/TL_RANGE)*100;
     const lbl=`${(s.start_time||'').slice(0,5)}–${(s.end_time||'').slice(0,5)}`;
-    const leaveEntry=_entries.find(e=>e.employeeId===emp.id&&e.date===selectedDay&&e.leaveType);
+    // Per-shift leave lookup: match by shift_id first, fall back to employee+date for legacy entries
+    const leaveEntry=_entries.find(e=>e.shiftId===s.id&&e.leaveType)
+      ||_entries.find(e=>!e.shiftId&&e.employeeId===emp.id&&e.date===selectedDay&&e.leaveType);
     const currentLeave=leaveEntry?.leaveType||'';
     const drag=readOnly?'':` onmousedown="rbStartDrag(event,'${s.id}','move')"`;
     const delBtn=!readOnly?`<button class="rb-shift-del" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();rbDeleteShift('${s.id}','${role}')" title="Remove">&#215;</button>`:'';
+    const splitBtn=!readOnly?`<button class="rb-shift-split" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();rbSplitShift('${s.id}','${role}')" title="Split shift">✂</button>`:'';
     const lHandle=!readOnly?`<div class="rb-shift-handle left" onmousedown="event.stopPropagation();rbStartDrag(event,'${s.id}','left')"></div>`:'';
     const rHandle=!readOnly?`<div class="rb-shift-handle right" onmousedown="event.stopPropagation();rbStartDrag(event,'${s.id}','right')"></div>`:'';
+    const laneLabel=s.lane==='75plus'?'← Floor':'→ 75+';
+    const laneBtn=!readOnly&&isNurse?`<button class="rb-shift-lane-btn" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();rbToggleLane('${s.id}','${role}')" title="${laneLabel}">${laneLabel}</button>`:'';
     const leaveOpts=`<option value="">Worked Shift</option>`+Object.entries(LEAVE_TYPES).map(([v,l])=>`<option value="${v}"${currentLeave===v?' selected':''}>${l}</option>`).join('');
     const leaveBtn=!readOnly?`<select class="rb-leave-select" onmousedown="event.stopPropagation()" onchange="event.stopPropagation();rbMarkLeave('${emp.id}','${selectedDay}','${s.id}',this.value)">${leaveOpts}</select>`:`<span style="font-size:0.68rem;color:var(--muted);font-style:italic;margin-left:4px;">${currentLeave?formatLeaveType(currentLeave):''}</span>`;
     const leaveClass=currentLeave?' on-leave '+currentLeave.replace(/_/g,'-'):'';
     return`<div class="rb-shift-bar${leaveClass}" data-shift-id="${s.id}" style="left:${lPct.toFixed(2)}%;width:${wPct.toFixed(2)}%"${drag} title="${emp.name}: ${lbl}${currentLeave?' ('+formatLeaveType(currentLeave)+')':''}">
-      ${lHandle}<span class="rb-shift-label">${lbl}</span>${rHandle}${leaveBtn}${delBtn}
+      ${lHandle}${laneBtn}<span class="rb-shift-label">${lbl}</span>${rHandle}${leaveBtn}${splitBtn}${delBtn}
     </div>`;
   }
   // Staff rows
@@ -4569,18 +4602,16 @@ function renderDayTimelineForRole(role){
       const floorShifts=getFloor(emp.id);
       const bars=floorShifts.map(s=>makeBar(s,emp)).join('');
       const addBtn=!readOnly&&!floorShifts.length?`<button class="rb-add-shift-btn" onclick="rbAddShift('${emp.id}','${selectedDay}','${role}')" title="Add shift">+</button>`:'';
-      const badge=!readOnly&&floorShifts.length?`<button class="rb-lane-badge" onclick="rbToggleLane('${floorShifts[0].id}','${role}')" title="Move to 75+ Clinic">→ 75+</button>`:'';
-      return`<div class="rb-tl-row"><div class="rb-tl-name"><span class="rb-tl-name-text">${emp.name}</span>${addBtn}${badge}</div><div class="rb-tl-track" data-emp-id="${emp.id}">${bars}</div></div>`;
+      return`<div class="rb-tl-row"><div class="rb-tl-name"><span class="rb-tl-name-text">${emp.name}</span>${addBtn}</div><div class="rb-tl-track" data-emp-id="${emp.id}">${bars}</div></div>`;
     }).join('');
     const has75=emps.some(emp=>getClinic(emp.id).length>0);
     const clinicEmps=has75?emps.filter(emp=>getClinic(emp.id).length>0):[];
     const clinicRows=clinicEmps.map((emp,i)=>{
       const clinicShifts=getClinic(emp.id);
       const bars=clinicShifts.map(s=>makeBar(s,emp)).join('');
-      const badge=!readOnly?`<button class="rb-lane-badge" onclick="rbToggleLane('${clinicShifts[0].id}','${role}')" title="Move back to Floor">← Floor</button>`:'';
       const pill=i===0?`<span style="position:absolute;top:0;left:0.6rem;transform:translateY(-50%);background:var(--white);border:1.5px solid rgba(91,122,94,0.5);border-radius:999px;padding:1px 9px;font-size:0.58rem;font-weight:700;color:#5B7A5E;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;z-index:2;">75+ Clinic</span>`:'';
       const borderTop=i===0?'position:relative;border-top:2px solid rgba(91,122,94,0.35);':'';
-      return`<div class="rb-tl-row clinic" style="${borderTop}">${pill}<div class="rb-tl-name"><span class="rb-tl-name-text">${emp.name}</span>${badge}</div><div class="rb-tl-track" data-emp-id="${emp.id}-75plus">${bars}</div></div>`;
+      return`<div class="rb-tl-row clinic" style="${borderTop}">${pill}<div class="rb-tl-name"><span class="rb-tl-name-text">${emp.name}</span></div><div class="rb-tl-track" data-emp-id="${emp.id}-75plus">${bars}</div></div>`;
     }).join('');
     rows.innerHTML=
       `${floorRows}`+
@@ -4611,11 +4642,6 @@ function rbRoleForEmp(empId){ const e=_emps.find(e=>e.id===empId); return e?.rol
 async function rbAddShift(empId,date,role){
   if(date<rbDateKey(new Date())) return; // past — locked
   const r=role||rbRoleForEmp(empId);
-  const isNurseRole=r==='Nurse';
-  // For nurses, only block if a floor shift already exists (75+ shifts don't block adding a floor shift)
-  const existing=_rosterShifts.find(s=>s.employee_id===empId&&s.date===date&&!s.is_day_off
-    &&(!isNurseRole||(s.lane==='floor'||!s.lane)));
-  if(existing){showToast('Already has a shift on this day');return;}
   const sched=getScheduledTimes(empId,date);
   const start=sched?.startMin!=null?minToTimeStr(sched.startMin):'09:00';
   const end=sched?.endMin!=null?minToTimeStr(sched.endMin):'17:00';
@@ -4630,6 +4656,37 @@ async function rbAddShift(empId,date,role){
     renderDayTimelineForRole(role||rbRoleForEmp(empId));
     showToast('Could not add shift');
     console.error(e);
+  }
+}
+
+async function rbSplitShift(shiftId,role){
+  const shift=_rosterShifts.find(s=>s.id==shiftId);
+  if(!shift) return;
+  const sMin=timeStrToMin(shift.start_time)||TL_START;
+  const eMin=timeStrToMin(shift.end_time)||TL_END;
+  if(eMin-sMin<=TL_SNAP){showToast('Shift too short to split');return;}
+  // Split at midpoint, snapped to nearest 15 min
+  const splitTime=minToTimeStr(Math.round((sMin+eMin)/2/TL_SNAP)*TL_SNAP);
+  const originalEnd=shift.end_time;
+  const prevEnd=shift.end_time;
+  shift.end_time=splitTime;
+  const newRow={id:'SH'+Date.now(),employee_id:shift.employee_id,date:shift.date,start_time:splitTime,end_time:originalEnd,is_day_off:false,lane:shift.lane||null};
+  _rosterShifts.push(newRow);
+  renderDayTimelineForRole(role||rbRoleForEmp(shift.employee_id));
+  try{
+    await db.update('roster_shifts',shiftId,{end_time:splitTime});
+    const returned=await db.insert('roster_shifts',newRow);
+    const saved=Array.isArray(returned)?returned[0]:returned;
+    if(saved?.id&&saved.id!==newRow.id){
+      const local=_rosterShifts.find(s=>s.id===newRow.id);
+      if(local) local.id=saved.id;
+    }
+    showToast('Shift split ✓');
+  }catch(e){
+    shift.end_time=prevEnd;
+    _rosterShifts=_rosterShifts.filter(s=>s.id!==newRow.id);
+    renderDayTimelineForRole(role||rbRoleForEmp(shift.employee_id));
+    showToast('Could not split shift');console.error(e);
   }
 }
 
@@ -5388,7 +5445,11 @@ async function renderRequestForm(){
       <div class="form-group"><label class="form-label">Start date</label><input class="form-input" type="date" id="req-leave-start" min="${today}" /></div>
       <div class="form-group"><label class="form-label">End date</label><input class="form-input" type="date" id="req-leave-end" min="${today}" /></div>
       <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. medical appointment"></textarea></div>
-      <button class="req-new-btn" onclick="reqSubmitLeave()">Submit Leave Request</button>`;
+      <label style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.8rem;color:var(--charcoal);line-height:1.4;margin:0.5rem 0 1rem;cursor:pointer;">
+        <input type="checkbox" id="req-leave-confirm" onchange="reqLeaveConfirmToggle()" style="margin-top:2px;flex-shrink:0;accent-color:var(--burgundy);width:16px;height:16px;">
+        I confirm I have checked and have sufficient hours of leave to proceed with this request. If unsure, please check with your manager before proceeding.
+      </label>
+      <button class="req-new-btn" id="req-leave-submit-btn" onclick="reqSubmitLeave()" disabled style="opacity:0.45;cursor:not-allowed;">Submit Leave Request</button>`;
   } else if(_reqFormType==='swap'){
     formBody=`<div class="form-group"><label class="form-label">Your shift to swap</label><select class="form-input" id="req-my-shift">${myShiftOptions}</select></div>
       <div class="form-group"><label class="form-label">Swap with (same role only)</label><select class="form-input" id="req-colleague" onchange="reqLoadColleagueShifts(this.value)">${colleagueOptions}</select></div>
@@ -5427,7 +5488,14 @@ async function reqLoadColleagueShifts(colleagueId){
   document.getElementById('req-colleague-shift-group').style.display='';
 }
 
+function reqLeaveConfirmToggle(){
+  const checked=document.getElementById('req-leave-confirm')?.checked;
+  const btn=document.getElementById('req-leave-submit-btn');
+  if(btn){ btn.disabled=!checked; btn.style.opacity=checked?'':'0.45'; btn.style.cursor=checked?'':'not-allowed'; }
+}
+
 async function reqSubmitLeave(){
+  if(!document.getElementById('req-leave-confirm')?.checked) return;
   const emp=_reqEmployee;
   const leaveType=document.getElementById('req-leave-type').value;
   const startDate=document.getElementById('req-leave-start').value;
