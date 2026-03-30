@@ -254,6 +254,17 @@
   .reason-input::placeholder { color: var(--muted); }
   .reason-btns { display: flex; gap: 0.75rem; }
 
+  .break-expected-item { font-size:0.92rem; color:var(--charcoal); font-weight:600; padding:0.35rem 0; }
+  .break-timer-wrap { width:100%; height:5px; background:rgba(0,0,0,0.08); border-radius:3px; margin-top:1.5rem; overflow:hidden; }
+  .break-timer-bar { height:100%; width:100%; background:var(--burgundy); border-radius:3px; transition:width 1s linear; }
+  .break-counter-row { display:flex; align-items:center; gap:0.6rem; margin:0.5rem 0; text-align:left; }
+  .break-counter-label { flex:1; font-size:0.88rem; color:var(--charcoal); font-weight:600; }
+  .break-counter-btn { width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border); background:var(--warm-white); cursor:pointer; font-size:1rem; font-weight:700; line-height:1; display:flex; align-items:center; justify-content:center; }
+  .break-counter-btn:hover { background:var(--blush-lt); }
+  .break-counter-input { width:52px; text-align:center; padding:0.35rem 0.25rem; border:1.5px solid var(--border); border-radius:8px; font-size:0.95rem; font-weight:700; font-family:'Nunito',sans-serif; color:var(--charcoal); }
+  .ts-break-input { width:52px; text-align:center; padding:0.2rem 0.25rem; border:1.5px solid var(--border); border-radius:6px; font-size:0.82rem; font-weight:700; font-family:'Nunito',sans-serif; color:var(--charcoal); }
+  .ts-break-warn { font-size:0.7rem; color:var(--burgundy); font-weight:700; margin-left:0.4rem; }
+
   /* ══════════════════════════════
      BUTTONS
   ══════════════════════════════ */
@@ -625,6 +636,8 @@
   .sr-day-card-header { padding: 0.65rem 0.9rem; background: var(--warm-white); border-bottom: 1px solid var(--border); }
   .sr-day-name { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
   .sr-day-date { font-family: 'Lora',serif; font-size: 1rem; font-weight: 600; color: var(--charcoal); margin-top: 0.05rem; }
+  .sr-day-card.public-holiday { background:rgba(52,120,196,0.07); }
+  .sr-day-card.public-holiday .sr-day-card-header { background:rgba(52,120,196,0.1); border-bottom-color:rgba(52,120,196,0.2); }
   .sr-day-card.today .sr-day-card-header { background: var(--blush); border-bottom-color: var(--dusty); }
   .sr-day-card.today .sr-day-name { color: var(--burgundy); }
   .sr-day-card.today .sr-day-date { color: var(--burgundy); }
@@ -779,6 +792,12 @@
   .rb-day-cell.today { border-top:3px solid var(--burgundy); background:rgba(212,137,154,0.08); }
   .rb-day-cell.today:hover { border-color:var(--burgundy); }
   .rb-day-cell.past { opacity:0.45; cursor:default; pointer-events:none; }
+  .rb-day-cell.public-holiday { background:rgba(52,120,196,0.07); border-color:rgba(52,120,196,0.3); }
+  .rb-ph-btn { font-size:0.5rem; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; border-radius:3px; padding:1px 5px; cursor:pointer; border:none; margin-top:3px; display:inline-block; }
+  .rb-ph-btn.active { background:var(--burgundy); color:#fff; }
+  .rb-ph-btn.inactive { background:transparent; border:1px dashed var(--muted); color:var(--muted); opacity:0.7; }
+  .rb-ph-btn.inactive:hover { border-color:var(--burgundy); color:var(--burgundy); opacity:1; }
+  .rb-day-cell.past .rb-ph-btn { pointer-events:all; cursor:pointer; }
   .rb-day-cell.req-highlight { animation: reqCellPulse 3s ease forwards; }
   @keyframes reqCellPulse {
     0%   { box-shadow: 0 0 0 3px rgba(160,114,40,0.8), inset 0 0 0 2000px rgba(253,243,226,0.55); }
@@ -1369,6 +1388,40 @@
   </div>
 </div>
 
+<!-- BREAK CONFIRMATION OVERLAY -->
+<div class="flash-overlay reason-bg" id="break-overlay">
+  <div class="reason-card">
+    <div class="reason-icon">☕</div>
+    <div class="reason-title" id="break-title">Did you get your break?</div>
+    <div id="break-expected-list" style="margin:0.75rem 0 0;display:flex;flex-direction:column;gap:0.4rem;"></div>
+    <div style="display:flex;gap:0.75rem;justify-content:center;margin-top:1.5rem;">
+      <button class="btn-ghost" onclick="breakNo()">No — it was different</button>
+      <button class="btn-primary" onclick="breakYes()">Yes, as expected</button>
+    </div>
+    <div class="break-timer-wrap">
+      <div class="break-timer-bar" id="break-timer-bar"></div>
+    </div>
+    <div style="text-align:center;font-size:0.75rem;color:var(--muted);margin-top:0.5rem;" id="break-timer-label">Assuming yes in 15s…</div>
+  </div>
+</div>
+
+<!-- BREAK EDIT OVERLAY -->
+<div class="flash-overlay reason-bg" id="break-edit-overlay">
+  <div class="reason-card">
+    <div class="reason-icon">✏️</div>
+    <div class="reason-title">Tell us about your break</div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem;">Enter how much break you actually took:</div>
+    <div id="break-edit-fields"></div>
+    <div style="margin-top:1rem;">
+      <label class="form-label">What happened?</label>
+      <textarea class="reason-input" id="break-edit-reason" rows="2" placeholder="e.g. Clinic was too busy, couldn't step away…"></textarea>
+    </div>
+    <div style="display:flex;justify-content:center;margin-top:1.25rem;">
+      <button class="btn-primary" onclick="submitBreakEdit()">Submit &amp; check out</button>
+    </div>
+  </div>
+</div>
+
 <!-- LOGIN -->
 <div id="view-login" class="view">
   <div class="login-card">
@@ -1901,20 +1954,23 @@
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">MYOB Classification</label>
+      <label class="form-label">Classification</label>
       <select class="form-select" id="emp-classification">
         <option value="">— Not set —</option>
-        <option>HSSE Level 3</option>
-        <option>HSSE Level 4</option>
-        <option>HSSE Level 5</option>
-        <option>Registered Nurse</option>
-        <option>Enrolled Nurse</option>
-        <option>Nurse Manager</option>
-        <option>Office Manager</option>
-        <option>Practice Manager</option>
-        <option>Casual</option>
+        <optgroup label="Reception">
+          <option>Receptionist</option>
+          <option>HSSE Level 3</option>
+          <option>HSSE Level 4</option>
+          <option>HSSE Level 5</option>
+          <option>Office Manager</option>
+          <option>Practice Manager</option>
+        </optgroup>
+        <optgroup label="Nursing">
+          <option>Registered Nurse</option>
+          <option>Enrolled Nurse</option>
+        </optgroup>
       </select>
-      <div class="form-hint">Determines which MYOB payroll category strings are used on export.</div>
+      <div class="form-hint">Clinical or award classification — used for break rules and payroll rates.</div>
     </div>
     <div class="form-group">
       <label class="form-label">MYOB Employee ID</label>
@@ -2039,6 +2095,7 @@ let _emps=[], _entries=[], _notes=[], _mgrs=[];
 let _editingEmpId=null;
 let _rosterConfig=null, _rosterTemplates=[], _rosterOverrides=[];
 let _rosterShifts=[], _rosterFortnights=[], _coverageRules=[];
+let _publicHolidays=new Set(); // dates (YYYY-MM-DD) flagged as public holidays
 
 // Roster builder state
 const TL_START=465, TL_END=1290, TL_RANGE=825, TL_SNAP=15;
@@ -2053,7 +2110,7 @@ let rbState={Receptionist:{collapsed:false},Nurse:{collapsed:false},Manager:{col
 async function loadAll() {
   showLoading(true);
   try {
-    const [emps, entries, notes, mgrs, rosterCfg, rosterTmpl, rosterOv, rosterShifts, rosterFn, covRules, reqs, notifs] = await Promise.all([
+    const [emps, entries, notes, mgrs, rosterCfg, rosterTmpl, rosterOv, rosterShifts, rosterFn, covRules, reqs, notifs, phs] = await Promise.all([
       db.get('employees'),
       db.get('entries'),
       db.get('notes'),
@@ -2065,7 +2122,8 @@ async function loadAll() {
       db.get('roster_fortnights'),
       db.get('coverage_rules'),
       db.get('requests').catch(()=>[]),
-      db.get('notifications').catch(()=>[])
+      db.get('notifications').catch(()=>[]),
+      db.get('public_holidays').catch(()=>[])
     ]);
     _emps    = emps.filter(e=>e.active!==false);
     _entries = entries.map(normaliseEntry);
@@ -2084,6 +2142,7 @@ async function loadAll() {
     _coverageRules   = covRules;
     _requests        = reqs.map(normaliseRequest);
     _notifications   = notifs.map(normaliseNotif);
+    _publicHolidays  = new Set((phs||[]).map(r=>r.date));
   } catch(e) {
     showToast('⚠ Could not connect to database — check your internet connection');
     console.error(e);
@@ -2103,6 +2162,9 @@ function normaliseEntry(r) {
     manuallyAdjusted: r.manually_adjusted || false,
     adjustmentReason: r.adjustment_reason || null, adjustedBy: r.adjusted_by || null,
     payrollType: r.payroll_type || null,
+    unpaidBreakMins: r.unpaid_break_mins ?? null,
+    paidBreakMins: r.paid_break_mins ?? null,
+    breakNote: r.break_note || null,
   };
 }
 
@@ -2135,6 +2197,16 @@ function normaliseRequest(r) {
 function normaliseNotif(r) {
   return { id:r.id, employeeId:r.employee_id, requestId:r.request_id, message:r.message, type:r.type, seenAt:r.seen_at, createdAt:r.created_at };
 }
+
+/* ═══════════════════════════════════════════
+   BREAK HELPERS
+═══════════════════════════════════════════ */
+function expectedUnpaidBreakMins(shiftHours){ return shiftHours>=6?30:0; }
+function expectedPaidBreakMins(shiftHours){ return shiftHours>=4?10:0; }
+
+let _breakCommitArgs=null;
+let _breakTimerInterval=null;
+let _breakTimerSecs=15;
 
 function normaliseMgr(r) {
   return { id: r.id, name: r.name, pinHash: r.pin_hash, lastLogin: r.last_login };
@@ -2247,8 +2319,8 @@ function returnOrFocusRFID(){
       focusRFID();
       _srRefreshInterval=setInterval(async()=>{
         try{
-          const [emps,shifts,fortnights]=await Promise.all([db.get('employees'),db.get('roster_shifts'),db.get('roster_fortnights')]);
-          _emps=emps.filter(e=>e.active!==false); _rosterShifts=shifts; _rosterFortnights=fortnights;
+          const [emps,shifts,fortnights,phs]=await Promise.all([db.get('employees'),db.get('roster_shifts'),db.get('roster_fortnights'),db.get('public_holidays').catch(()=>[])]);
+          _emps=emps.filter(e=>e.active!==false); _rosterShifts=shifts; _rosterFortnights=fortnights; _publicHolidays=new Set((phs||[]).map(r=>r.date));
         }catch(e){}
         renderStaffRoster();
       },120000);
@@ -2298,7 +2370,7 @@ async function processRFID(card){
     try { _emps = (await db.get('employees')).filter(e=>e.active!==false); } catch(e){}
     emp=_emps.find(e=>e.rfid===card);
   }
-  if(!emp){showFlash('error','🤷','','Card not recognised','Please see reception');return;}
+  if(!emp){showFlash('error','🤷','','Card not recognised','Please see your manager');return;}
   // Fresh fetch before committing — prevents duplicate entries when multiple kiosks are in use
   try{ _entries=(await db.get('entries')).map(normaliseEntry); }catch(e){}
   const now=new Date();
@@ -2322,7 +2394,7 @@ async function processRFID(card){
     pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType};
     showReasonPrompt(emp.name.split(' ')[0],action,label);
   }else{
-    await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,null,null);
+    await maybeBreakConfirm(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,null,null);
   }
   // Silently refresh cache in background for next scan
   Promise.all([db.get('employees'),db.get('entries')]).then(([emps,entries])=>{
@@ -2330,7 +2402,7 @@ async function processRFID(card){
   }).catch(()=>{});
 }
 
-async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType){
+async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidBreakMins=null,paidBreakMins=null,breakNote=null){
   try {
     if(action==='in'){
       // If a leave entry exists for today, convert it to a clock-in and alert manager
@@ -2356,13 +2428,21 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
       const[oh,om]=sheetTimeStr.split(':').map(Number);
       const hrs=((oh*60+om)-(ih*60+im))/60;
       const hoursStr=hrs>0?hrs.toFixed(2):'0.00';
+      const unpaidExpected=expectedUnpaidBreakMins(hrs);
+      const breakFlagged=unpaidBreakMins!==null&&unpaidBreakMins<unpaidExpected;
       const patch = {
         clock_out:sheetTimeStr, clock_out_iso:isoNow,
         hours:hoursStr, reason_out:reason||null,
-        status:reason?'pending':open.status
+        status:(reason||breakFlagged)?'pending':open.status,
+        unpaid_break_mins:unpaidBreakMins,
+        paid_break_mins:paidBreakMins,
+        break_note:breakNote||null
       };
       await db.update('entries', open.id, patch);
+      const cached=_entries.find(e=>e.id===open.id);
+      if(cached) Object.assign(cached,{clockOut:sheetTimeStr,hours:hoursStr,unpaidBreakMins,paidBreakMins,breakNote:breakNote||null});
       if(reason) await addNote(emp,noteType||'Departure note',timeStr,reason,open.id,todayKey);
+      if(breakFlagged) await addNote(emp,'Break note',timeStr,`Break shorter than expected — unpaid: ${unpaidBreakMins} min (expected ${unpaidExpected} min)${breakNote?' · '+breakNote:''}`,open.id,todayKey);
       showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],'Checked out · '+timeStr+' · '+hoursStr+'h');
     }
   } catch(e) {
@@ -2415,9 +2495,111 @@ async function submitReason(){
   document.getElementById('reason-overlay').classList.remove('show');
   if(pending){
     const{emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType}=pending;
-    await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,txt,noteType);
+    await maybeBreakConfirm(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,txt,noteType);
     pending=null;
   }
+}
+
+/* ═══════════════════════════════════════════
+   BREAK CONFIRMATION POPUP
+═══════════════════════════════════════════ */
+async function maybeBreakConfirm(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType){
+  if(action!=='out'||!open?.clockIn){
+    await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType);
+    return;
+  }
+  const[ih,im]=open.clockIn.split(':').map(Number);
+  const[oh,om]=sheetTimeStr.split(':').map(Number);
+  const shiftHours=((oh*60+om)-(ih*60+im))/60;
+  const unpaidExpected=expectedUnpaidBreakMins(shiftHours);
+  const paidExpected=expectedPaidBreakMins(shiftHours);
+  if(!unpaidExpected&&!paidExpected){
+    await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType);
+    return;
+  }
+  _breakCommitArgs={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,shiftHours,unpaidExpected,paidExpected};
+  showBreakConfirm(emp.name.split(' ')[0],unpaidExpected,paidExpected);
+}
+
+function showBreakConfirm(firstName,unpaidMins,paidMins){
+  const items=[];
+  if(unpaidMins) items.push(`<div class="break-expected-item">🍽 <strong>${unpaidMins} min</strong> unpaid meal break</div>`);
+  if(paidMins)   items.push(`<div class="break-expected-item">☕ <strong>${paidMins} min</strong> paid rest break</div>`);
+  document.getElementById('break-title').textContent=`Before you go, ${firstName} — did you get your break?`;
+  document.getElementById('break-expected-list').innerHTML=items.join('');
+  document.getElementById('break-timer-bar').style.transition='none';
+  document.getElementById('break-timer-bar').style.width='100%';
+  document.getElementById('break-timer-label').textContent='Assuming yes in 15s…';
+  document.getElementById('break-overlay').classList.add('show');
+  _breakTimerSecs=15;
+  // Start transition on next frame so the reset above lands first
+  requestAnimationFrame(()=>{
+    document.getElementById('break-timer-bar').style.transition='width 1s linear';
+    _breakTimerInterval=setInterval(()=>{
+      _breakTimerSecs--;
+      const pct=(_breakTimerSecs/15)*100;
+      document.getElementById('break-timer-bar').style.width=pct+'%';
+      document.getElementById('break-timer-label').textContent=`Assuming yes in ${_breakTimerSecs}s…`;
+      if(_breakTimerSecs<=0) breakYes();
+    },1000);
+  });
+}
+
+function _clearBreakTimer(){
+  if(_breakTimerInterval){clearInterval(_breakTimerInterval);_breakTimerInterval=null;}
+}
+
+async function breakYes(){
+  _clearBreakTimer();
+  document.getElementById('break-overlay').classList.remove('show');
+  if(!_breakCommitArgs) return;
+  const{emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidExpected,paidExpected}=_breakCommitArgs;
+  _breakCommitArgs=null;
+  await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidExpected,paidExpected,null);
+}
+
+function breakNo(){
+  _clearBreakTimer();
+  document.getElementById('break-overlay').classList.remove('show');
+  if(!_breakCommitArgs) return;
+  const{unpaidExpected,paidExpected}=_breakCommitArgs;
+  let fields='';
+  if(unpaidExpected) fields+=`<div class="break-counter-row">
+    <span class="break-counter-label">🍽 Unpaid meal break</span>
+    <button class="break-counter-btn" onclick="adjustBreak('unpaid',-5)">−</button>
+    <input class="break-counter-input" id="break-unpaid-input" type="number" min="0" max="120" value="${unpaidExpected}">
+    <button class="break-counter-btn" onclick="adjustBreak('unpaid',5)">+</button>
+    <span style="font-size:0.8rem;color:var(--muted)">min</span>
+  </div>`;
+  if(paidExpected) fields+=`<div class="break-counter-row">
+    <span class="break-counter-label">☕ Paid rest break</span>
+    <button class="break-counter-btn" onclick="adjustBreak('paid',-5)">−</button>
+    <input class="break-counter-input" id="break-paid-input" type="number" min="0" max="60" value="${paidExpected}">
+    <button class="break-counter-btn" onclick="adjustBreak('paid',5)">+</button>
+    <span style="font-size:0.8rem;color:var(--muted)">min</span>
+  </div>`;
+  document.getElementById('break-edit-fields').innerHTML=fields;
+  document.getElementById('break-edit-reason').value='';
+  document.getElementById('break-edit-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('break-edit-reason').focus(),120);
+}
+
+function adjustBreak(type,delta){
+  const el=document.getElementById(type==='unpaid'?'break-unpaid-input':'break-paid-input');
+  if(el) el.value=Math.max(0,(parseInt(el.value)||0)+delta);
+}
+
+async function submitBreakEdit(){
+  if(!_breakCommitArgs) return;
+  const{emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidExpected,paidExpected}=_breakCommitArgs;
+  const unpaidEl=document.getElementById('break-unpaid-input');
+  const paidEl=document.getElementById('break-paid-input');
+  const unpaidTaken=unpaidEl?(parseInt(unpaidEl.value)||0):unpaidExpected;
+  const paidTaken=paidEl?(parseInt(paidEl.value)||0):paidExpected;
+  const breakReason=document.getElementById('break-edit-reason').value.trim();
+  _breakCommitArgs=null;
+  document.getElementById('break-edit-overlay').classList.remove('show');
+  await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidTaken,paidTaken,breakReason||null);
 }
 
 /* ═══════════════════════════════════════════
@@ -2674,7 +2856,7 @@ function renderTeam(){
   const cardHtml=emp=>{
     const initials=emp.name.replace(/^(Dr\.|Nurse|Reception|Practice Mgr)\s*/i,'').split(' ').slice(0,2).map(n=>n[0]).join('');
     const cc=ROLE_C[emp.role]||'c-doctor'; const isIn=inNow.has(emp.id);
-    return`<div class="employee-card"><div class="emp-avatar ${cc}">${initials}</div><div class="emp-info"><div class="emp-name">${emp.name}</div><div class="emp-meta">${emp.role} · ${emp.type}</div><div class="emp-rfid">${emp.rfid}${emp.myob_record_id?` · MYOB #${emp.myob_record_id}`:' · <span style="color:var(--burgundy);font-size:0.7rem;">No MYOB ID</span>'}</div>${emp.classification?`<div class="emp-rfid" style="color:var(--muted)">${emp.classification}</div>`:`<div class="emp-rfid"><span style="color:var(--burgundy);font-size:0.7rem;">No classification set</span></div>`}</div><button class="emp-edit-btn" onclick="openEditEmployee('${emp.id}')">Edit</button><div class="status-dot ${isIn?'in':'out'}" title="${isIn?'Checked in':'Not in today'}"></div></div>`;
+    return`<div class="employee-card"><div class="emp-avatar ${cc}">${initials}</div><div class="emp-info"><div class="emp-name">${emp.name}</div><div class="emp-meta">${emp.role} · ${emp.type}</div><div class="emp-rfid">${emp.rfid||'<span style="color:var(--muted);font-size:0.7rem;">No RFID</span>'}${emp.myob_record_id?` · MYOB #${emp.myob_record_id}`:' · <span style="color:var(--burgundy);font-size:0.7rem;">No MYOB ID</span>'}</div>${emp.classification?`<div class="emp-rfid" style="color:var(--muted)">${emp.classification}</div>`:`<div class="emp-rfid"><span style="color:var(--burgundy);font-size:0.7rem;">No classification set</span></div>`}</div><button class="emp-edit-btn" onclick="openEditEmployee('${emp.id}')">Edit</button><div class="status-dot ${isIn?'in':'out'}" title="${isIn?'Checked in':'Not in today'}"></div></div>`;
   };
   const visibleGroups=TEAM_GROUPS.filter(g=>teamRoles.has(g.role));
   document.getElementById('employees-grid').innerHTML=visibleGroups.map((g,i)=>{
@@ -2693,6 +2875,7 @@ function openAddEmployee(){
   ['emp-firstname','emp-surname','emp-rfid','emp-myob-id'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('emp-role').value='Doctor';
   document.getElementById('emp-type').value='Full Time';
+  document.getElementById('emp-classification').value='';
   document.getElementById('emp-remove-btn').style.display='none';
   document.getElementById('emp-modal').classList.add('show');
   document.getElementById('emp-firstname').focus();
@@ -2802,8 +2985,10 @@ async function removeEmployee(){
 function setDefaultDates(){
   const today=new Date().toISOString().slice(0,10);
   const wkAgo=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
-  if(!document.getElementById('filter-from').value)document.getElementById('filter-from').value=wkAgo;
-  if(!document.getElementById('filter-to').value)document.getElementById('filter-to').value=today;
+  const from=document.getElementById('filter-from');
+  const to=document.getElementById('filter-to');
+  if(from&&!from.value) from.value=wkAgo;
+  if(to&&!to.value) to.value=today;
 }
 
 function groupEntriesByDay(entries){
@@ -2874,7 +3059,8 @@ function tsGetFlag(locked, noEntry, finalStart, finalEnd, autoApproved, entrySta
 
 function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const d=new Date(date+'T12:00:00');
-  const dateLabel=d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+  const _phBadge=_publicHolidays?.has(date)?'<div style="font-size:0.55rem;font-weight:800;background:var(--burgundy);color:#fff;border-radius:3px;padding:1px 4px;margin-top:2px;display:inline-block;">Public Holiday</div>':'';
+  const dateLabel=`<div>${d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'})}</div>${_phBadge}`;
   const rostStart=shift?.start_time||null;
   const rostEnd=shift?.end_time||null;
   const clockStart=entry?.clockIn||null;
@@ -2917,7 +3103,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
 
   const safeEmpId=emp.id;
   const safeEmpName=emp.name.replace(/'/g,"\\'");
-  const needsMgrAutoLock=noClockExpected&&!(entry?.finalStart&&entry?.finalEnd);
+  const needsMgrAutoLock=(noClockExpected||(!entry&&!!rostStart&&!!rostEnd))&&!(entry?.finalStart&&entry?.finalEnd);
   const lockBtn=locked
     ?`<button class="ts-lock-btn locked" onclick="tsUnlockRow('${entryId}',event)" title="Locked by ${lockedBy||'manager'}">🔒 Locked</button>`
     :needsMgrAutoLock
@@ -2929,14 +3115,16 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const rowClass=['ts-shift-row',locked?'ts-locked':'',`ts-flag-${flag}`].filter(Boolean).join(' ');
 
   const finalMins=(effectiveFinalStart&&effectiveFinalEnd)?timeToMin(effectiveFinalEnd)-timeToMin(effectiveFinalStart):0;
-  const hoursText=finalMins>0?`${(finalMins/60).toFixed(1)}h`:'';
+  const billableMins=Math.max(0,finalMins-(entry?.unpaidBreakMins!=null?entry.unpaidBreakMins:expectedUnpaidBreakMins(finalMins/60)));
+  const hoursText=billableMins>0?`${(billableMins/60).toFixed(1)}h`:''; // paid hours after unpaid break deduction
 
   const PAYROLL_TYPES=[['','Worked'],['annual_leave','Annual Leave'],['personal_leave','Personal Leave'],['public_holiday','Public Holiday'],['compassionate_leave','Compassionate Leave'],['unpaid_leave','Unpaid Leave']];
   const fmtH=h=>h===Math.round(h)?h+'h':h.toFixed(1)+'h';
+  const isPH=_publicHolidays?.has(date)||false;
   const myobEntry=splitSegment&&!isLeaveShift&&shift?.start_time
     ?{...(entry||{}),date,clockIn:shift.start_time,clockOut:shift.end_time,finalStart:null,finalEnd:null}
     :entry;
-  const myobPreviewText=(locked||effectiveAutoApproved)&&myobEntry?calcMYOBRows(myobEntry,emp).map(r=>`${fmtH(r.hours)} ${r.cat}`).join(' · '):'';
+  const myobPreviewText=(locked||effectiveAutoApproved)&&myobEntry?calcMYOBRows(myobEntry,emp,isPH).map(r=>`${fmtH(r.hours)} ${r.cat}`).join(' · '):'';
   const payrollDone=locked||effectiveAutoApproved;
   const payrollInner=payrollDone
     ?`<span class="ts-payroll-label">${PAYROLL_TYPES.find(([v])=>v===payrollType)?.[1]||'Worked'}</span>`
@@ -2972,6 +3160,31 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     ?`<span class="ts-sub-time" style="font-family:'Courier New',monospace;font-weight:800;font-size:0.88rem;">${effectiveFinalStart||'—'} – ${effectiveFinalEnd||'—'}</span>`
     :`${mkPair(effectiveFinalStart,'start')}<span class="ts-sub-dash">–</span>${mkPair(effectiveFinalEnd,'end')}`;
 
+  // Break row calculations
+  const breakShiftHours=finalMins/60;
+  const unpaidExpected=expectedUnpaidBreakMins(breakShiftHours);
+  const paidExpected=expectedPaidBreakMins(breakShiftHours);
+  const unpaidActual=entry?.unpaidBreakMins!=null?entry.unpaidBreakMins:unpaidExpected;
+  const paidActual=entry?.paidBreakMins??null;
+  const showBreakRow=!!entry&&(unpaidExpected>0||paidExpected>0||entry.unpaidBreakMins!=null||entry.paidBreakMins!=null);
+  const breakUnderExpected=unpaidExpected>0&&unpaidActual<unpaidExpected;
+  const breakEditable=!locked&&!(effectiveAutoApproved&&!autoOverridden);
+  const breakRowHtml=!showBreakRow?'':
+    `<div class="ts-sub-row" style="align-items:flex-start;">
+      <span class="ts-sub-label">Breaks</span>
+      <div style="display:flex;flex-direction:column;gap:0.2rem;">
+        <div style="display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;">
+          <span style="font-size:0.78rem;color:var(--muted);">Unpaid:</span>
+          ${breakEditable
+            ?`<input class="ts-break-input" type="number" min="0" max="120" value="${unpaidActual}" onclick="event.stopPropagation()" onchange="tsSaveBreak('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',this.value,event)">`
+            :`<span style="font-weight:700;font-size:0.82rem;">${unpaidActual} min</span>`}
+          ${breakUnderExpected?`<span class="ts-break-warn">⚠ ${unpaidExpected} min expected</span>`:''}
+          ${paidActual!=null?`<span style="font-size:0.75rem;color:var(--muted);margin-left:0.25rem;">· ☕ Paid: ${paidActual} min ✓</span>`:''}
+        </div>
+        ${entry?.breakNote?`<div style="font-size:0.72rem;color:var(--muted);font-style:italic;">${entry.breakNote}</div>`:''}
+      </div>
+    </div>`;
+
   const detailSection=`<div class="ts-row-detail" style="display:${autoExpand?'block':'none'}">
     <div class="ts-sub-row ts-sub-rostered">
       <span class="ts-sub-label">Rostered</span>
@@ -2988,13 +3201,16 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
         ${finalInputs}
       </div>
       <div class="ts-sub-final-right">
-        ${effectiveAutoApproved&&!autoOverridden
-          ?`<button class="ts-lock-btn locked" onclick="tsOverrideAutoApproved('${overrideKey}',event)" title="Click to override auto-approval">🔒 Locked</button>`
-          :entry||noClockExpected?lockBtn:''}
+        ${locked
+          ?lockBtn
+          :effectiveAutoApproved&&!autoOverridden
+            ?`<button class="ts-lock-btn locked" onclick="tsOverrideAutoApproved('${overrideKey}',event)" title="Click to override auto-approval">🔒 Locked</button>`
+            :entry||shift?lockBtn:''}
         <div style="flex:1"></div>
         ${entry?deleteBtn:''}
       </div>
     </div>
+    ${breakRowHtml}
     ${manuallyAdjusted&&entry?.adjustedBy?`<div class="ts-sub-adj-note">Adjusted by ${entry.adjustedBy}${entry.adjustmentReason?' · '+entry.adjustmentReason:''}</div>`:''}
   </div>`;
 
@@ -3006,6 +3222,20 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
 function tsToggleRow(row){
   const detail=row?.querySelector('.ts-row-detail');
   if(detail) detail.style.display=detail.style.display==='none'?'block':'none';
+}
+
+async function tsSaveBreak(entryId,empId,empName,role,date,value,e){
+  e?.stopPropagation?.();
+  if(!entryId){showToast('Save final times first before editing break');return;}
+  const mins=Math.max(0,parseInt(value)||0);
+  try{
+    await db.update('entries',entryId,{unpaid_break_mins:mins});
+    const entry=_entries.find(en=>en.id===entryId);
+    if(entry) entry.unpaidBreakMins=mins;
+    _tsExpandEntryId=String(entryId);
+    renderTimesheets();
+    _tsExpandEntryId=null;
+  }catch(err){showToast('Could not save break');console.error(err);}
 }
 
 async function tsAutoLockSweep(){
@@ -3273,8 +3503,10 @@ async function tsUnlockRow(entryId, e){
     await db.update('entries',entryId,{locked:false,locked_by:null,locked_at:null});
     const entry=_entries.find(en=>en.id===entryId);
     if(entry){entry.locked=false;entry.lockedBy=null;}
-    // No-clock entries (created via roster lock) re-approve instantly — force override so row stays editable
-    if(entry&&!entry.clockIn) _tsAutoOverride.add(String(entryId));
+    // Force override so row stays editable after unlock:
+    // - no-clock entries (created via roster lock, clockIn is null)
+    // - leave entries (clockIn is set to roster time, not a real clock-in)
+    if(entry&&(!entry.clockIn||entry.leaveType)) _tsAutoOverride.add(String(entryId));
     else _tsAutoOverride.delete(String(entryId));
     _tsExpandEntryId=String(entryId);
     renderTimesheets();
@@ -3459,14 +3691,20 @@ const MYOB_CATS={
   'Casual':          {day:'casual Day CE',evening:'Casual evening CE',saturday:'Casual WoW weekend',sunday:'Casual WoW weekend',publicHoliday:null,annualLeave:null,personalLeave:null,compassionateLeave:null,unpaidLeave:null,isNurse:false},
 };
 
-function calcMYOBRows(entry, emp){
+function calcMYOBRows(entry, emp, isPH=false){
   const start=entry.finalStart||entry.clockIn;
   const end=entry.finalEnd||entry.clockOut;
   if(!start||!end) return [];
   const startMins=timeToMin(start);
   const endMins=timeToMin(end);
   if(endMins<=startMins) return [];
-  const totalHours=(endMins-startMins)/60;
+  const rawHours=(endMins-startMins)/60;
+  // Subtract unpaid break: use recorded value if set, otherwise apply auto-rule
+  const unpaidBreakMins=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:expectedUnpaidBreakMins(rawHours);
+  // effectiveEndMins trims the break from the end of the shift for rate-split calculations
+  const effectiveEndMins=endMins-unpaidBreakMins;
+  const totalHours=Math.max(0,(effectiveEndMins-startMins)/60);
+  if(totalHours<=0) return [];
   const payrollType=entry.payrollType||entry.leaveType||'';
   const dow=new Date(entry.date+'T12:00:00').getDay();
   const isSaturday=dow===6;
@@ -3474,8 +3712,10 @@ function calcMYOBRows(entry, emp){
   const SPLIT=18*60;
   const cats=emp?.classification?MYOB_CATS[emp.classification]:null;
 
-  // Leave overrides — use classification-specific strings where available
-  if(payrollType==='public_holiday')      return [{cat:cats?.publicHoliday||'Public Holiday',hours:totalHours}];
+  // public_holiday leave = rostered but did not work → paid at base rate
+  if(payrollType==='public_holiday')      return [{cat:cats?.day||'Base Hourly',hours:totalHours}];
+  // Worked on a public holiday → PH rate (2.5x applied by MYOB), takes priority over day-of-week
+  if(isPH&&!payrollType)                  return [{cat:cats?.publicHoliday||'Public Holiday',hours:totalHours}];
   if(payrollType==='annual_leave')        return [{cat:cats?.annualLeave||'Annual Leave',hours:totalHours}];
   if(payrollType==='personal_leave')      return [{cat:cats?.personalLeave||'Personal Leave',hours:totalHours}];
   if(payrollType==='compassionate_leave') return [{cat:cats?.compassionateLeave||'Compassionate Leave',hours:totalHours}];
@@ -3486,21 +3726,21 @@ function calcMYOBRows(entry, emp){
   if(isSunday)   return [{cat:cats?.sunday||'Sunday Rate (2x)',hours:totalHours}];
 
   if(!cats){
-    // No classification set — fall back to role-based logic
+    // No classification set — fall back to role-based logic (use original endMins for evening trigger)
     const role=emp?.role||'';
     if(role==='Nurse'||role==='Manager') return [{cat:endMins>=SPLIT?'Nurse Evening Hours':'Base Hourly',hours:totalHours}];
-    if(endMins<=SPLIT)   return [{cat:'Base Hourly',hours:totalHours}];
-    if(startMins>=SPLIT) return [{cat:'Evening Rate',hours:totalHours}];
-    return [{cat:'Base Hourly',hours:(SPLIT-startMins)/60},{cat:'Evening Rate',hours:(endMins-SPLIT)/60}];
+    if(effectiveEndMins<=SPLIT)   return [{cat:'Base Hourly',hours:totalHours}];
+    if(startMins>=SPLIT)          return [{cat:'Evening Rate',hours:totalHours}];
+    return [{cat:'Base Hourly',hours:(SPLIT-startMins)/60},{cat:'Evening Rate',hours:(effectiveEndMins-SPLIT)/60}];
   }
 
-  // Nurse rule: entire shift at evening if ends at or after 18:00 (no split)
+  // Nurse rule: entire shift at evening if original end is at or after 18:00 (no split)
   if(cats.isNurse) return [{cat:endMins>=SPLIT?cats.evening:cats.day,hours:totalHours}];
 
-  // Receptionist / Manager rule: split at 18:00
-  if(endMins<=SPLIT)   return [{cat:cats.day,hours:totalHours}];
-  if(startMins>=SPLIT) return [{cat:cats.evening||cats.day,hours:totalHours}];
-  return [{cat:cats.day,hours:(SPLIT-startMins)/60},{cat:cats.evening||cats.day,hours:(endMins-SPLIT)/60}];
+  // Receptionist / Manager rule: split at 18:00, break trimmed from end
+  if(effectiveEndMins<=SPLIT)   return [{cat:cats.day,hours:totalHours}];
+  if(startMins>=SPLIT)          return [{cat:cats.evening||cats.day,hours:totalHours}];
+  return [{cat:cats.day,hours:(SPLIT-startMins)/60},{cat:cats.evening||cats.day,hours:(effectiveEndMins-SPLIT)/60}];
 }
 
 function exportMYOB(){
@@ -3526,7 +3766,7 @@ function exportMYOB(){
     const firstName=nameParts[0]||'';
     const lastName=nameParts.slice(1).join(' ')||'';
     const dateF=entry.date.split('-').reverse().join('/');
-    const myobRows=calcMYOBRows(entry,emp);
+    const myobRows=calcMYOBRows(entry,emp,_publicHolidays?.has(entry.date)||false);
     myobRows.forEach(({cat,hours})=>{
       const units=hours.toFixed(2);
       const row=[dateF,cat,units,firstName,lastName,'','','','','','*None',emp?.myob_record_id||'','',''];
@@ -4095,12 +4335,12 @@ async function showStaffRoster(){
   if(srSel) srSel.value='';
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-staff-roster').classList.add('active');
-  renderStaffRoster();
+  db.get('public_holidays').catch(()=>[]).then(phs=>{ _publicHolidays=new Set((phs||[]).map(r=>r.date)); renderStaffRoster(); });
   requestAnimationFrame(srSyncRightWidth);
   _srRefreshInterval=setInterval(async()=>{
     try{
-      const [emps,shifts,fortnights]=await Promise.all([db.get('employees'),db.get('roster_shifts'),db.get('roster_fortnights')]);
-      _emps=emps.filter(e=>e.active!==false); _rosterShifts=shifts; _rosterFortnights=fortnights;
+      const [emps,shifts,fortnights,phs]=await Promise.all([db.get('employees'),db.get('roster_shifts'),db.get('roster_fortnights'),db.get('public_holidays').catch(()=>[])]);
+      _emps=emps.filter(e=>e.active!==false); _rosterShifts=shifts; _rosterFortnights=fortnights; _publicHolidays=new Set((phs||[]).map(r=>r.date));
     }catch(e){}
     renderStaffRoster();
   },120000);
@@ -4350,8 +4590,12 @@ function srByDay(days,emps,today){
       ?shifts.map(({emp,shift})=>`<div class="sr-shift-item"><div class="sr-shift-dot" style="background:${SR_ROLE_COLORS[emp.role]||'var(--dusty)'}"></div><span class="sr-shift-name">${_srDnMap[emp.id]||empFirstName(emp)}</span><span class="sr-shift-time">${shift.start}–${shift.end}</span></div>`).join('')
       :`<div class="sr-no-staff">No staff scheduled</div>`;
     const isPast=date<today;
+    const isSrPH=_publicHolidays?.has(date)||false;
     const colStyle=i===0?` style="grid-column-start:${startCol}"`:'';
-    return`<div class="sr-day-card${isToday?' today':''}${isPast?' past':''}"${colStyle}><div class="sr-day-card-header"><div class="sr-day-name">${SR_DAYS[d.getDay()]}${isToday?' · Today':''}</div><div class="sr-day-date">${d.getDate()} ${SR_MONTHS[d.getMonth()]}</div></div><div class="sr-day-shifts">${items}</div></div>`;
+    const phStyle='font-size:0.6rem;font-weight:800;color:var(--burgundy);font-family:\'Nunito\',sans-serif;letter-spacing:0.08em;text-transform:uppercase;';
+    const nameLine=isSrPH?`<div class="sr-day-name" style="display:flex;justify-content:space-between;align-items:baseline;">${SR_DAYS[d.getDay()]}${isToday?' · Today':''}<span style="${phStyle}">Public</span></div>`:`<div class="sr-day-name">${SR_DAYS[d.getDay()]}${isToday?' · Today':''}</div>`;
+    const dateLine=isSrPH?`<div class="sr-day-date" style="display:flex;justify-content:space-between;align-items:baseline;">${d.getDate()} ${SR_MONTHS[d.getMonth()]}<span style="${phStyle}">Holiday</span></div>`:`<div class="sr-day-date">${d.getDate()} ${SR_MONTHS[d.getMonth()]}</div>`;
+    return`<div class="sr-day-card${isToday?' today':''}${isPast?' past':''}${isSrPH?' public-holiday':''}"${colStyle}><div class="sr-day-card-header">${nameLine}${dateLine}</div><div class="sr-day-shifts">${items}</div></div>`;
   }).join('');
   return`<div class="sr-day-grid">${headers}${cards}</div>`;
 }
@@ -4422,7 +4666,17 @@ function renderRoster(){
   document.getElementById('rb-day-group')?.classList.toggle('rb-ctrl-disabled',!inDayView);
   document.getElementById('rb-all-days-btn')?.classList.toggle('rb-ctrl-disabled',!inDayView);
   const dayLabel=document.getElementById('rb-day-label');
-  if(dayLabel) dayLabel.textContent=rbSelectedDay?new Date(rbSelectedDay+'T12:00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'—';
+  if(dayLabel){
+    if(rbSelectedDay){
+      const dateStr=new Date(rbSelectedDay+'T12:00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      const isDayPH=_publicHolidays.has(rbSelectedDay);
+      dayLabel.innerHTML=isDayPH
+        ?`<span style="background:rgba(52,120,196,0.12);border:1.5px solid rgba(52,120,196,0.3);border-radius:999px;padding:0.15rem 0.75rem;color:var(--charcoal);">${dateStr}</span>`
+        :dateStr;
+    } else {
+      dayLabel.textContent='—';
+    }
+  }
   renderRosterPanels();
 }
 
@@ -4636,11 +4890,14 @@ function renderFnGridForRole(role){
     }).join('');
     const more=dayShifts.length>3?`<div class="rb-shift-pill" style="opacity:0.55;">+${dayShifts.length-3}</div>`:'';
     const isHighlighted=_rbHighlightDates.has(key)&&_rbHighlightRole===role;
-    return`<div class="rb-day-cell${isToday?' today':''}${isPast?' past':''}${isHighlighted?' req-highlight':''}" data-date="${key}" onclick="rbOpenDay('${key}','${role}')">
+    const isCellPH=_publicHolidays.has(key);
+    const phBtn=`<button class="rb-ph-btn ${isCellPH?'active':'inactive'}" onclick="rbTogglePH('${key}',event)" title="${isCellPH?'Remove public holiday flag':'Mark as public holiday'}">${isCellPH?'✓ Public Holiday':'+ Public Holiday'}</button>`;
+    return`<div class="rb-day-cell${isToday?' today':''}${isPast?' past':''}${isCellPH?' public-holiday':''}${isHighlighted?' req-highlight':''}" data-date="${key}" onclick="rbOpenDay('${key}','${role}')">
       <div class="rb-day-hdr">${dayName} ${monthStr}</div>
       <div class="rb-day-date">${d.getDate()}</div>
       ${pills}${more}
       <div class="rb-cov-row"><span class="rb-cov-dot ${covCls}" title="${covCount} staff rostered"></span><span style="font-size:0.58rem;color:var(--muted);font-weight:700;">${covCount}</span></div>
+      ${phBtn}
     </div>`;
   }).join('');
 }
@@ -4655,6 +4912,22 @@ function rbOpenDay(dateKey, fromRole){
 function rbCloseAllDays(){
   rbSelectedDay=null;
   renderRoster();
+}
+
+async function rbTogglePH(dateKey, e){
+  e.stopPropagation();
+  try{
+    if(_publicHolidays.has(dateKey)){
+      await db.deleteWhere('public_holidays','date',dateKey);
+      _publicHolidays.delete(dateKey);
+    } else {
+      await db.insert('public_holidays',{id:'PH'+Date.now(),date:dateKey});
+      _publicHolidays.add(dateKey);
+    }
+    RB_ROLES.forEach(r=>renderFnGridForRole(r));
+    renderRoster(); // refreshes day label PH button if in day view
+    showToast(_publicHolidays.has(dateKey)?'Marked as public holiday':'Public holiday removed');
+  }catch(err){showToast('Could not update public holiday');console.error(err);}
 }
 
 function rbGoToday(){
