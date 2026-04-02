@@ -869,26 +869,29 @@
   /* ── Print roster ── */
   #roster-print-area { display:none; }
   @media print {
-    body > * { display:none !important; }
-    #roster-print-area { display:block !important; }
-    .rp-page { width:100%; page-break-after:always; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
-    .rp-page:last-child { page-break-after:auto; }
-    .rp-header { display:flex; align-items:center; justify-content:space-between; border-bottom:2.5px solid #8B2535; padding-bottom:6px; margin-bottom:8px; }
+    body { visibility:hidden !important; background:none !important; }
+    #roster-print-area { visibility:visible !important; display:block !important; width:100%; }
+    #roster-print-area * { visibility:visible !important; }
+    @page { size:A4 landscape; margin:10mm; }
+    .rp-sheet { page-break-after:always; break-after:page; }
+    .rp-sheet:last-child { page-break-after:auto; break-after:auto; }
+    .rp-page { width:100%; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; padding:0; margin-bottom:12mm; }
+    .rp-page:last-child { margin-bottom:0; }
+    .rp-header { display:flex; align-items:center; justify-content:space-between; border-bottom:2.5px solid #000; padding-bottom:6px; margin-bottom:8px; }
     .rp-header-left { display:flex; align-items:center; gap:10px; }
     .rp-header-logo { height:36px; width:auto; }
-    .rp-header-clinic { font-size:11pt; font-weight:800; color:#2D2426; }
-    .rp-header-sub { font-size:8pt; color:#8A7A7D; font-weight:600; }
-    .rp-header-right { text-align:right; font-size:8pt; color:#8A7A7D; font-weight:600; }
-    .rp-role-label { font-size:13pt; font-weight:900; color:#8B2535; margin-bottom:6px; }
-    .rp-table { width:100%; border-collapse:collapse; font-size:7pt; }
-    .rp-table th { background:#8B2535; color:#fff; padding:3px 4px; text-align:center; font-weight:700; white-space:nowrap; font-size:6.5pt; border:1px solid #8B2535; }
-    .rp-table th.rp-name-col { text-align:left; min-width:70px; }
-    .rp-table td { border:1px solid #EAD9DC; padding:3px 4px; text-align:center; font-size:6.5pt; vertical-align:middle; }
-    .rp-table td.rp-name-cell { text-align:left; font-weight:700; white-space:nowrap; font-size:7pt; }
-    .rp-table tr:nth-child(even) td { background:#FAF0F2; }
-    .rp-shift { color:#2D2426; font-weight:600; }
-    .rp-leave { color:#A07228; font-weight:700; font-style:italic; }
-    .rp-off { color:#C8B8BB; }
+    .rp-header-clinic { font-size:11pt; font-weight:800; color:#000; }
+    .rp-header-sub { font-size:8pt; color:#444; font-weight:600; }
+    .rp-header-right { text-align:right; font-size:8pt; color:#444; font-weight:600; }
+    .rp-role-label { font-size:13pt; font-weight:900; color:#000; margin-bottom:6px; }
+    .rp-table { width:100%; border-collapse:collapse; font-size:7pt; table-layout:fixed; }
+    .rp-table th { color:#000; background:none !important; padding:3px 4px; text-align:center; font-weight:800; font-size:6.5pt; border:1.5px solid #000; overflow:hidden; }
+    .rp-table th.rp-name-col { text-align:left; }
+    .rp-table td { border:1px solid #888; padding:3px 4px; text-align:center; font-size:6.5pt; vertical-align:middle; color:#000; overflow:hidden; }
+    .rp-table td.rp-name-cell { text-align:left; font-weight:700; font-size:7pt; color:#000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .rp-shift { color:#000; font-weight:600; }
+    .rp-leave { color:#000; font-weight:700; font-style:italic; }
+    .rp-off { color:#888; }
   }
   .rb-day-hdr { font-size:0.58rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); }
   .rb-day-date { font-size:1.1rem; font-weight:900; color:var(--charcoal); line-height:1.1; }
@@ -913,6 +916,8 @@
   .rb-tl-row:last-child { border-bottom:none; }
   .rb-tl-row.clinic .rb-tl-name { background:rgba(91,122,94,0.09); border-right:1px solid rgba(91,122,94,0.25); }
   .rb-tl-row.clinic .rb-tl-track { background-image:repeating-linear-gradient(to right,rgba(91,122,94,0.18) 0px,rgba(91,122,94,0.18) 1px,transparent 1px,transparent calc(100% / 55)); background-color:rgba(91,122,94,0.04); }
+  .rb-tl-row.admin .rb-tl-name { background:rgba(125,60,152,0.08); border-right:1px solid rgba(125,60,152,0.22); }
+  .rb-tl-row.admin .rb-tl-track { background-image:repeating-linear-gradient(to right,rgba(125,60,152,0.15) 0px,rgba(125,60,152,0.15) 1px,transparent 1px,transparent calc(100% / 55)); background-color:rgba(125,60,152,0.04); }
   .rb-tl-name { width:150px; flex-shrink:0; font-size:0.72rem; font-weight:700; color:var(--charcoal); padding:0 0.4rem 0 0.6rem; display:flex; align-items:center; gap:0.25rem; border-right:1px solid rgba(234,217,220,0.6); background:var(--warm-white); }
   .rb-tl-name-text { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .rb-add-shift-btn { flex-shrink:0; background:transparent; border:1.5px solid rgba(180,160,165,0.5); border-radius:5px; width:20px; height:20px; font-size:0.8rem; font-weight:900; color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; font-family:'Nunito',sans-serif; transition:all 0.15s; line-height:1; }
@@ -1176,6 +1181,7 @@
 </style>
 </head>
 <body>
+<div id="roster-print-area"></div>
 
 <!-- KIOSK -->
 <div id="view-kiosk" class="view active">
@@ -1236,8 +1242,22 @@
 <!-- REQUESTS VIEW -->
 <div class="view" id="view-requests">
   <div class="req-kiosk-header">
-    <img src="Logo.png" alt="Running Well" style="height:38px;object-fit:contain;margin-bottom:0.2rem;" />
+    <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-bottom:0.5rem;">
+      <img src="Logo.png" alt="Wellness on Wellington" style="height:38px;width:auto;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
+      <div style="width:1px;height:36px;background:var(--border);flex-shrink:0;"></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
+        <div style="font-family:'Lora',serif;font-size:1.1rem;font-weight:600;color:var(--charcoal);letter-spacing:-0.02em;line-height:1;white-space:nowrap;">
+          Running <span style="font-style:italic;color:var(--burgundy);font-weight:400;">Well</span>
+        </div>
+        <svg width="90" height="11" viewBox="0 0 90 11" fill="none" style="margin-top:2px;">
+          <path d="M 0 7 C 15 7, 30 1, 48 1 C 63 1, 76 4, 88 1" stroke="#8B2535" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+          <path d="M 0 9 C 15 9, 30 4, 48 4 C 63 4, 76 7, 88 4" stroke="#D4899A" stroke-width="0.8" stroke-linecap="round" fill="none" opacity="0.55"/>
+          <path d="M 82 0 L 88 1 L 83 6" stroke="#8B2535" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+    </div>
     <div class="req-view-title">Staff Requests</div>
+    <div id="req-user-label" style="display:none;font-size:0.72rem;font-weight:600;color:var(--muted);margin-top:0.2rem;"></div>
   </div>
   <!-- Auth panel: scan card -->
   <div class="req-panel" id="req-panel-auth">
@@ -1492,8 +1512,8 @@
       <button class="tab active" onclick="switchTab('team',this)">Team</button>
       <button class="tab"        onclick="switchTab('roster',this)">Roster</button>
       <button class="tab"        onclick="switchTab('notes',this)">Notes<span class="notif-badge" id="notif-badge" style="display:none"></span></button>
-      <button class="tab"        onclick="switchTab('timesheets',this)">Timesheets</button>
       <button class="tab"        onclick="switchTab('requests',this)">Requests<span class="notif-badge" id="req-admin-badge" style="display:none"></span></button>
+      <button class="tab"        onclick="switchTab('timesheets',this)">Timesheets</button>
       <button class="tab"        onclick="switchTab('settings',this)">Settings</button>
     </div>
     <div class="admin-kiosk-btn-wrap">
@@ -1584,15 +1604,6 @@
         </div>
         <div class="settings-section-body" id="ss-body-roster" style="display:none;">
           <div class="roster-section" style="margin-bottom:1.5rem;">
-            <div class="roster-section-title">Fortnight Cycle Start Date</div>
-            <div class="roster-anchor-bar">
-              <label class="form-label" style="margin:0;white-space:nowrap;">Cycle starts</label>
-              <input class="form-input" type="date" id="anchor-date" style="width:auto;" />
-              <button class="add-emp-btn" onclick="saveAnchorDate()">Save</button>
-              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Sets the Monday that Week A begins. All fortnights are calculated from this date.</span>
-            </div>
-          </div>
-          <div class="roster-section" style="margin-bottom:1.5rem;">
             <div class="roster-section-title">Clock-in Grace Period</div>
             <div class="roster-anchor-bar">
               <label class="form-label" style="margin:0;white-space:nowrap;">Grace period</label>
@@ -1623,6 +1634,32 @@
               </div>
             </div>
           </div>
+          <div class="roster-section" style="margin-bottom:1.5rem;">
+            <div class="roster-section-title">Coverage Bar Thresholds</div>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.9rem;">
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;line-height:1.5;">Red below yellow, yellow between yellow and green, green at or above the green value. Configured per role.</span>
+              <div style="display:flex;gap:0.4rem;" id="cov-role-tabs">
+                <button class="rb-role-tab active" onclick="switchCovRole('Receptionist')" id="cov-tab-Receptionist">Receptionists</button>
+                <button class="rb-role-tab" onclick="switchCovRole('Nurse')" id="cov-tab-Nurse">Nurses</button>
+                <button class="rb-role-tab" onclick="switchCovRole('Manager')" id="cov-tab-Manager">Managers</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <span style="width:12px;height:12px;border-radius:50%;background:#f5a623;display:inline-block;flex-shrink:0;"></span>
+                  <label class="form-label" style="margin:0;white-space:nowrap;">Yellow at</label>
+                  <input class="form-input" type="number" id="cov-yellow" min="1" max="20" step="1" style="width:65px;" oninput="const g=document.getElementById('cov-green');if(g&&parseInt(this.value)>=parseInt(g.value))this.value=parseInt(g.value)-1;" />
+                  <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">staff</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <span style="width:12px;height:12px;border-radius:50%;background:#4CAF7D;display:inline-block;flex-shrink:0;"></span>
+                  <label class="form-label" style="margin:0;white-space:nowrap;">Green at</label>
+                  <input class="form-input" type="number" id="cov-green" min="2" max="20" step="1" style="width:65px;" oninput="const y=document.getElementById('cov-yellow');if(y&&parseInt(this.value)<=parseInt(y.value))y.value=parseInt(this.value)-1;" />
+                  <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">staff</span>
+                </div>
+                <button class="add-emp-btn" onclick="saveCoverageThresholds()">Save</button>
+              </div>
+            </div>
+          </div>
           <div class="roster-section" style="margin-bottom:1rem;">
             <div class="roster-section-title">Who's On PIN</div>
             <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:1rem;">
@@ -1642,6 +1679,68 @@
               <div id="whos-on-pin-feedback" style="font-size:0.78rem;font-weight:600;min-height:1rem;"></div>
             </div>
           </div>
+          <div class="roster-section" style="margin-bottom:1rem;">
+            <div class="roster-section-title">Fortnight Cycle Start Date</div>
+            <div class="roster-anchor-bar" style="border-color:#e6a817;">
+              <div style="width:100%;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;background:#fff8e1;border:1.5px solid #f9c825;border-radius:8px;padding:0.45rem 0.75rem;">
+                <span style="font-size:1rem;flex-shrink:0;">⚠</span>
+                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all fortnight boundaries across the entire app. Only change this during initial setup or if advised to do so.</span>
+              </div>
+              <label class="form-label" style="margin:0;white-space:nowrap;">Cycle starts</label>
+              <input class="form-input" type="date" id="anchor-date" style="width:auto;border-color:#e6a817;" />
+              <button class="add-emp-btn" style="background:#e6a817;border-color:#e6a817;" onclick="saveAnchorDate()">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Request Settings -->
+      <div class="settings-section" id="ss-requests">
+        <div class="settings-section-header" onclick="toggleSettingsSection('requests')">
+          <div class="settings-section-chevron" id="ss-chevron-requests">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Request Settings</div>
+            <div class="settings-section-hint">Configure shift swap expiry and notification behaviour.</div>
+          </div>
+        </div>
+        <div class="settings-section-body" id="ss-body-requests" style="display:none;">
+          <div class="roster-section" style="margin-bottom:1.5rem;">
+            <div class="roster-section-title">Swap Request Expiry</div>
+            <div class="roster-anchor-bar">
+              <label class="form-label" style="margin:0;white-space:nowrap;">Auto-expire after</label>
+              <input class="form-input" type="number" id="swap-expiry-days" min="1" max="30" step="1" style="width:70px;" />
+              <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">days</span>
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Swap requests with no peer response after this many days will auto-expire.</span>
+            </div>
+          </div>
+          <div class="roster-section" style="margin-bottom:1.5rem;">
+            <div class="roster-section-title">Decline Reason Visibility</div>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
+              <div style="font-size:0.8rem;color:var(--muted);font-weight:500;line-height:1.5;">Choose whether staff see the manager's reason when a request is declined.</div>
+              <select class="form-input" id="show-decline-reason" style="width:auto;">
+                <option value="true">Show decline reason to employee</option>
+                <option value="false">Show only "Request declined"</option>
+              </select>
+            </div>
+          </div>
+          <div class="roster-section" style="margin-bottom:1.5rem;">
+            <div class="roster-section-title">Give Away Shift</div>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;line-height:1.5;">Choose which staff roles can submit Give Away shift requests.</span>
+              <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                <label style="display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:600;color:var(--charcoal);cursor:pointer;">
+                  <input type="checkbox" id="giveaway-Receptionist" style="accent-color:var(--burgundy);width:16px;height:16px;"> Receptionists
+                </label>
+                <label style="display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:600;color:var(--charcoal);cursor:pointer;">
+                  <input type="checkbox" id="giveaway-Nurse" style="accent-color:var(--burgundy);width:16px;height:16px;"> Nurses
+                </label>
+                <label style="display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:600;color:var(--charcoal);cursor:pointer;">
+                  <input type="checkbox" id="giveaway-Manager" style="accent-color:var(--burgundy);width:16px;height:16px;"> Managers
+                </label>
+              </div>
+            </div>
+          </div>
+          <button class="add-emp-btn" onclick="saveRequestSettings()">Save Request Settings</button>
         </div>
       </div>
 
@@ -1677,39 +1776,41 @@
           </div>
         </div>
         <div class="settings-section-body" id="ss-body-rosterexport" style="display:none;">
-          <div class="roster-section" style="margin-bottom:2rem;">
-            <div class="roster-section-title">Export to CSV (Excel)</div>
-            <div style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem;">One row per rostered shift. Opens in Excel.</div>
-            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-              <div style="display:flex;align-items:center;gap:0.5rem;">
-                <label class="form-label" style="margin:0;white-space:nowrap;">From</label>
-                <input class="form-input" type="date" id="roster-export-from" style="width:auto;" />
+          <div style="display:flex;gap:3rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+            <div style="width:210px;flex-shrink:0;">
+              <div class="form-label" style="margin-bottom:0.6rem;">Fortnight</div>
+              <div id="export-fn-checkboxes" style="display:flex;flex-direction:column;gap:0.45rem;">
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="export-fn-0" checked onchange="toggleExportCustomDates()" style="accent-color:var(--burgundy);"> This Fortnight</label>
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="export-fn-1" onchange="toggleExportCustomDates()" style="accent-color:var(--burgundy);"> Next Fortnight</label>
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="export-fn-2" onchange="toggleExportCustomDates()" style="accent-color:var(--burgundy);"> Fortnight After</label>
               </div>
-              <div style="display:flex;align-items:center;gap:0.5rem;">
-                <label class="form-label" style="margin:0;white-space:nowrap;">To</label>
-                <input class="form-input" type="date" id="roster-export-to" style="width:auto;" />
+              <div style="margin-top:0.6rem;border-top:1px solid var(--border);padding-top:0.6rem;">
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="export-fn-custom" onchange="toggleExportCustomDates()" style="accent-color:var(--burgundy);"> Custom date range</label>
               </div>
-              <button class="add-emp-btn" onclick="exportRosterCSV()">&#8595; Download CSV</button>
-            </div>
-          </div>
-          <div class="roster-section">
-            <div class="roster-section-title">Print Roster</div>
-            <div style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem;">One A4 landscape page per role per fortnight. Select fortnights and roles to print.</div>
-            <div style="display:flex;gap:3rem;flex-wrap:wrap;margin-bottom:1.25rem;">
-              <div>
-                <div class="form-label" style="margin-bottom:0.6rem;">Fortnights</div>
-                <div style="display:flex;flex-direction:column;gap:0.45rem;" id="print-fn-checks"></div>
-              </div>
-              <div>
-                <div class="form-label" style="margin-bottom:0.6rem;">Roles</div>
-                <div style="display:flex;flex-direction:column;gap:0.45rem;">
-                  <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="print-role-Receptionist" checked /> Receptionists</label>
-                  <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="print-role-Nurse" checked /> Nurses</label>
-                  <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="print-role-Manager" /> Managers</label>
+              <div id="export-custom-dates" style="display:none;margin-top:0.75rem;padding:0.75rem;background:var(--warm-white);border:1.5px solid var(--border);border-radius:var(--radius-sm);flex-direction:column;gap:0.4rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <label class="form-label" style="margin:0;white-space:nowrap;width:40px;">From</label>
+                  <input class="form-input" type="date" id="roster-export-from" style="width:auto;" />
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <label class="form-label" style="margin:0;white-space:nowrap;width:40px;">To</label>
+                  <input class="form-input" type="date" id="roster-export-to" style="width:auto;" />
                 </div>
               </div>
             </div>
-            <button class="add-emp-btn" onclick="printRoster()">&#128438; Print Roster</button>
+            <div>
+              <div class="form-label" style="margin-bottom:0.6rem;">Roles</div>
+              <div style="display:flex;flex-direction:column;gap:0.45rem;">
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="print-role-Receptionist" checked style="accent-color:var(--burgundy);"> Receptionists</label>
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="print-role-Nurse" checked style="accent-color:var(--burgundy);"> Nurses</label>
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="print-role-Manager" checked style="accent-color:var(--burgundy);"> Managers</label>
+              </div>
+            </div>
+          </div>
+          <div style="border-top:1.5px solid var(--border);margin-bottom:1.25rem;"></div>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <button class="add-emp-btn" onclick="exportRosterCSV()">&#8595; Download CSV</button>
+            <button class="add-emp-btn" onclick="printRoster()">&#9113; Print Roster</button>
           </div>
         </div>
       </div>
@@ -1743,46 +1844,6 @@
         </div>
       </div>
 
-      <!-- Request Settings -->
-      <div class="settings-section" id="ss-requests">
-        <div class="settings-section-header" onclick="toggleSettingsSection('requests')">
-          <div class="settings-section-chevron" id="ss-chevron-requests">&#9658;</div>
-          <div style="flex:1;">
-            <div class="settings-section-title">Request Settings</div>
-            <div class="settings-section-hint">Configure shift swap expiry and notification behaviour.</div>
-          </div>
-        </div>
-        <div class="settings-section-body" id="ss-body-requests" style="display:none;">
-          <div class="roster-section" style="margin-bottom:1.5rem;">
-            <div class="roster-section-title">Swap Request Expiry</div>
-            <div class="roster-anchor-bar">
-              <label class="form-label" style="margin:0;white-space:nowrap;">Auto-expire after</label>
-              <input class="form-input" type="number" id="swap-expiry-days" min="1" max="30" step="1" style="width:70px;" />
-              <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">days</span>
-              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Swap requests with no peer response after this many days will auto-expire.</span>
-            </div>
-          </div>
-          <div class="roster-section" style="margin-bottom:1.5rem;">
-            <div class="roster-section-title">Decline Reason Visibility</div>
-            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
-              <div style="font-size:0.8rem;color:var(--muted);font-weight:500;line-height:1.5;">Choose whether staff see the manager's reason when a request is declined.</div>
-              <select class="form-input" id="show-decline-reason" style="width:auto;">
-                <option value="true">Show decline reason to employee</option>
-                <option value="false">Show only "Request declined"</option>
-              </select>
-            </div>
-          </div>
-          <button class="add-emp-btn" onclick="saveRequestSettings()">Save Request Settings</button>
-          <div class="roster-section" style="margin-top:1.5rem;">
-            <div class="roster-section-title">Request Audit Log</div>
-            <div style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem;">Complete history of all requests, peer responses, manager decisions and roster changes.</div>
-            <div id="req-audit-content">
-              <button class="add-emp-btn" onclick="loadReqAudit()">Load Audit Log</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Notes Audit -->
       <div class="settings-section" id="ss-notesaudit">
         <div class="settings-section-header" onclick="toggleSettingsSection('notesaudit')">
@@ -1812,6 +1873,43 @@
         </div>
       </div>
 
+      <!-- Request Audit -->
+      <div class="settings-section" id="ss-reqaudit">
+        <div class="settings-section-header" onclick="toggleSettingsSection('reqaudit')">
+          <div class="settings-section-chevron" id="ss-chevron-reqaudit">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Request Audit</div>
+            <div class="settings-section-hint">Complete history of all requests, peer responses, manager decisions and roster changes.</div>
+          </div>
+        </div>
+        <div class="settings-section-body" id="ss-body-reqaudit" style="display:none;">
+          <div class="page-ribbon" style="margin-bottom:1rem;box-shadow:none;border-color:var(--border);">
+            <select class="form-select" id="raq-filter-emp" onchange="renderReqAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);"><option value="">All staff</option></select>
+            <select class="form-select" id="raq-filter-role" onchange="renderReqAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);">
+              <option value="">All roles</option>
+              <option>Receptionist</option><option>Nurse</option><option>Manager</option>
+            </select>
+            <input class="form-input" type="date" id="raq-filter-from" onchange="renderReqAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
+            <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">to</span>
+            <input class="form-input" type="date" id="raq-filter-to" onchange="renderReqAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
+            <select class="form-select" id="raq-filter-type" onchange="renderReqAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);">
+              <option value="">All types</option>
+              <option value="leave">Leave</option>
+              <option value="swap">Swap</option>
+              <option value="giveaway">Give Away</option>
+            </select>
+          </div>
+          <div id="req-audit-content">
+            <div class="table-wrap">
+              <table class="timesheet-table">
+                <thead><tr><th>Submitted</th><th>Type</th><th>Staff</th><th>Details</th><th>Status</th><th>Manager</th><th>Decided</th><th>Roster</th></tr></thead>
+                <tbody id="req-audit-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Timesheet Audit -->
       <div class="settings-section" id="ss-tsaudit">
         <div class="settings-section-header" onclick="toggleSettingsSection('tsaudit')">
@@ -1824,6 +1922,13 @@
         <div class="settings-section-body" id="ss-body-tsaudit" style="display:none;">
           <div class="page-ribbon" style="margin-bottom:1rem;box-shadow:none;border-color:var(--border);">
             <select class="form-select" id="tsa-filter-emp" onchange="renderTimesheetAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);"><option value="">All staff</option></select>
+            <select class="form-select" id="tsa-filter-role" onchange="renderTimesheetAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);">
+              <option value="">All roles</option>
+              <option>Receptionist</option><option>Nurse</option><option>Manager</option>
+            </select>
+            <input class="form-input" type="date" id="tsa-filter-from" onchange="renderTimesheetAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
+            <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">to</span>
+            <input class="form-input" type="date" id="tsa-filter-to" onchange="renderTimesheetAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
             <select class="form-select" id="tsa-filter-action" onchange="renderTimesheetAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);">
               <option value="">All actions</option>
               <option value="manual_entry">Manual entry</option>
@@ -1831,9 +1936,6 @@
               <option value="delete">Delete</option>
               <option value="lock">Lock</option>
             </select>
-            <input class="form-input" type="date" id="tsa-filter-from" onchange="renderTimesheetAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
-            <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">to</span>
-            <input class="form-input" type="date" id="tsa-filter-to" onchange="renderTimesheetAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
           </div>
           <div class="table-wrap">
             <table class="timesheet-table">
@@ -2135,6 +2237,16 @@ async function loadAll() {
   if(_rosterConfig?.red_threshold!=null) RED_THRESHOLD=_rosterConfig.red_threshold;
   if(_rosterConfig?.swap_expiry_days!=null) SWAP_EXPIRY_DAYS=_rosterConfig.swap_expiry_days;
   if(_rosterConfig?.show_decline_reason!=null) SHOW_DECLINE_REASON=_rosterConfig.show_decline_reason;
+  if(_rosterConfig?.giveaway_enabled_roles!=null){
+    const enabled=_rosterConfig.giveaway_enabled_roles.split(',').map(s=>s.trim());
+    ['Receptionist','Nurse','Manager'].forEach(r=>{ GIVEAWAY_ENABLED[r]=enabled.includes(r); });
+  }
+  if(_rosterConfig?.coverage_thresholds){
+    try{
+      const parsed=JSON.parse(_rosterConfig.coverage_thresholds);
+      ['Receptionist','Nurse','Manager'].forEach(r=>{ if(parsed[r]) COVERAGE_THRESHOLDS[r]=parsed[r]; });
+    }catch(e){}
+  }
     _rosterTemplates = rosterTmpl;
     _rosterOverrides = rosterOv;
     _rosterShifts    = rosterShifts;
@@ -2209,7 +2321,7 @@ let _breakTimerInterval=null;
 let _breakTimerSecs=15;
 
 function normaliseMgr(r) {
-  return { id: r.id, name: r.name, pinHash: r.pin_hash, lastLogin: r.last_login };
+  return { id: r.id, name: r.name, pinHash: r.pin_hash, lastLogin: r.last_login, employeeId: r.employee_id||null };
 }
 
 function showLoading(on) {
@@ -2226,6 +2338,11 @@ function showLoading(on) {
 let GRACE = 10;
 let YELLOW_THRESHOLD = 10;
 let RED_THRESHOLD = 20;
+let COVERAGE_THRESHOLDS = {
+  Receptionist: {yellow:2, green:3},
+  Nurse:        {yellow:2, green:3},
+  Manager:      {yellow:1, green:2}
+};
 let tsOffset = 0;
 let tsRole = 'Receptionist';
 let _tsExpandEntryId = null;
@@ -2242,6 +2359,7 @@ let _reqMyShifts = [];
 let _reqColleagueShifts = [];
 let SWAP_EXPIRY_DAYS = 7;
 let SHOW_DECLINE_REASON = true;
+let GIVEAWAY_ENABLED = {Receptionist: true, Nurse: true, Manager: true};
 let reqRole = 'Receptionist';
 const ROUND_WINDOW = 5; // minutes — clock times within this window of rostered time are rounded to roster time on timesheets
 const LEAVE_TYPES = { annual_leave:'Annual Leave', personal_leave:'Personal Leave', public_holiday:'Public Holiday', unpaid_leave:'Unpaid Leave', compassionate_leave:'Compassionate Leave' };
@@ -2647,7 +2765,7 @@ async function populateManagerSelect(){
     document.getElementById('login-step-pin').style.display='none';
     document.getElementById('login-btn').disabled=true;
     hint.textContent='';
-    _mgrs.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.name;sel.appendChild(o);});
+    _mgrs.filter(m=>m.pinHash).forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.name;sel.appendChild(o);});
   }
   document.getElementById('login-error').textContent='';
   document.getElementById('manager-pin').value='';
@@ -2793,15 +2911,40 @@ function renderManagersTab(){
   tbody.innerHTML=_mgrs.map(m=>{
     const last=m.lastLogin?new Date(m.lastLogin).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Never';
     const isMe=m.id===currentManager?.id;
+    const linkedBadge=m.employeeId?'<span style="font-size:0.68rem;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:0.1rem 0.45rem;border-radius:20px;font-weight:700;margin-left:0.4rem;">Linked</span>':'';
+    const noPinBadge=!m.pinHash?'<span style="font-size:0.68rem;background:#fff8e1;color:#7a5c00;border:1px solid #f9c825;padding:0.1rem 0.45rem;border-radius:20px;font-weight:700;margin-left:0.4rem;">PIN not set</span>':'';
+    const pinBtn=m.pinHash
+      ?`<button onclick="openChangePIN('${m.id}')" style="background:var(--blush);color:var(--burgundy);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-right:0.5rem;">Change PIN</button>`
+      :`<button onclick="openChangePIN('${m.id}')" style="background:#fff8e1;color:#7a5c00;border:1px solid #f9c825;border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-right:0.5rem;">Set PIN</button>`;
+    const unlinkableEmps=_emps.filter(e=>e.role==='Manager'&&!_mgrs.some(x=>x.employeeId===e.id));
+    const linkBtn=!m.employeeId&&unlinkableEmps.length?`<button onclick="openLinkManager('${m.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-right:0.5rem;">Link to card</button>`:'';
     return`<tr>
-      <td><strong>${m.name}</strong>${isMe?' <span style="font-size:0.7rem;background:var(--blush);color:var(--burgundy);padding:0.1rem 0.45rem;border-radius:20px;font-weight:700;">You</span>':''}</td>
-      <td style="color:var(--muted);font-size:0.8rem;">${last}</td>
+      <td><strong>${m.name}</strong>${isMe?' <span style="font-size:0.7rem;background:var(--blush);color:var(--burgundy);padding:0.1rem 0.45rem;border-radius:20px;font-weight:700;">You</span>':''}${linkedBadge}${noPinBadge}</td>
+      <td style="color:var(--muted);font-size:0.8rem;">${m.pinHash?last:'—'}</td>
       <td>
-        <button onclick="openChangePIN('${m.id}')" style="background:var(--blush);color:var(--burgundy);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-right:0.5rem;">Change PIN</button>
+        ${linkBtn}${pinBtn}
         ${!isMe?`<button onclick="deleteManager('${m.id}')" style="background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Remove</button>`:''}
       </td>
     </tr>`;
   }).join('');
+}
+
+async function openLinkManager(mgrId){
+  const unlinkableEmps=_emps.filter(e=>e.role==='Manager'&&!_mgrs.some(x=>x.employeeId===e.id));
+  if(!unlinkableEmps.length){showToast('No unlinked Manager employee cards found');return;}
+  const opts=unlinkableEmps.map(e=>`${e.id}: ${e.name}`).join('\n');
+  const choice=prompt(`Link this manager login to an employee card.\n\nEnter the number next to the name:\n${unlinkableEmps.map((e,i)=>`${i+1}. ${e.name}`).join('\n')}`);
+  if(!choice) return;
+  const idx=parseInt(choice)-1;
+  if(isNaN(idx)||idx<0||idx>=unlinkableEmps.length){showToast('Invalid selection');return;}
+  const emp=unlinkableEmps[idx];
+  try{
+    await db.update('managers',mgrId,{employee_id:emp.id});
+    const mgr=_mgrs.find(m=>m.id===mgrId);
+    if(mgr) mgr.employeeId=emp.id;
+    renderManagersTab();
+    showToast(`Linked to ${emp.name} ✓`);
+  }catch(e){showToast('Could not link — please try again.');console.error(e);}
 }
 
 function switchTab(name,btn){
@@ -2814,7 +2957,7 @@ function switchTab(name,btn){
   if(name==='team')       renderTeam();
   if(name==='roster')     renderRoster();
   if(name==='requests'){  renderRequests(); reqExpirySweep(); }
-  if(name==='settings'){  renderManagersTab(); wosInitPinBoxes(); renderAnchorDate(); populatePrintFnChecks(); renderRequestSettings(); }
+  if(name==='settings'){  renderManagersTab(); wosInitPinBoxes(); renderAnchorDate(); renderRequestSettings(); }
 }
 
 /* ═══════════════════════════════════════════
@@ -2902,6 +3045,29 @@ function openEditEmployee(empId){
 
 function closeModal(){document.querySelectorAll('.modal-bg').forEach(m=>m.classList.remove('show'));}
 
+async function syncManagerLogin(empId, name){
+  // Already linked to this employee?
+  let mgr=_mgrs.find(m=>m.employeeId===empId);
+  if(mgr){
+    if(mgr.name!==name){
+      await db.update('managers',mgr.id,{name});
+      mgr.name=name;
+    }
+    return;
+  }
+  // Standalone manager with matching name? Auto-link.
+  mgr=_mgrs.find(m=>!m.employeeId&&m.name.toLowerCase()===name.toLowerCase());
+  if(mgr){
+    await db.update('managers',mgr.id,{name,employee_id:empId});
+    mgr.name=name; mgr.employeeId=empId;
+    return;
+  }
+  // Create new manager record (no PIN yet — they'll set it in Manager Logins)
+  const row={id:'M'+Date.now(),name,employee_id:empId,pin_hash:null,last_login:null};
+  await db.insert('managers',row);
+  _mgrs.push(normaliseMgr(row));
+}
+
 async function saveEmployee(){
   const firstName=document.getElementById('emp-firstname').value.trim();
   const surname=document.getElementById('emp-surname').value.trim();
@@ -2920,12 +3086,15 @@ async function saveEmployee(){
       await db.update('employees',_editingEmpId,{name,role,rfid,type,classification,myob_record_id:myobRecordId});
       const emp=_emps.find(e=>e.id===_editingEmpId);
       if(emp){emp.name=name;emp.role=role;emp.rfid=rfid;emp.type=type;emp.classification=classification;emp.myob_record_id=myobRecordId;}
+      if(role==='Manager') syncManagerLogin(_editingEmpId,name).catch(e=>console.warn('Manager sync failed:',e));
       closeModal(); renderTeam();
       showToast(name+' updated ✓');
     } else {
       const row={id:'E'+Date.now(),name,role,rfid,type,classification,myob_record_id:myobRecordId};
       await db.insert('employees',row);
-      _emps.push(row); closeModal(); renderTeam();
+      _emps.push(row);
+      if(role==='Manager') syncManagerLogin(row.id,name).catch(e=>console.warn('Manager sync failed:',e));
+      closeModal(); renderTeam();
       showToast(name+' added to the team ✓');
     }
   }catch(e){showToast('Could not save — please try again.');console.error(e);}
@@ -3935,11 +4104,13 @@ function renderClockAudit(resetPage=false){
   const today=new Date().toISOString().slice(0,10);
   // Populate staff filter (always refresh); set default dates on first open
   const empSel=document.getElementById('ca-filter-emp');
+  const caRf0=document.getElementById('ca-filter-role')?.value;
   if(empSel){
     const prev=empSel.value;
+    const visibleEmps=caRf0?_emps.filter(e=>e.role===caRf0):_emps;
     empSel.innerHTML='<option value="">All staff</option>';
-    _emps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;empSel.appendChild(o);});
-    if(prev) empSel.value=prev;
+    visibleEmps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;empSel.appendChild(o);});
+    empSel.value=visibleEmps.some(e=>e.id===prev)?prev:'';
     const fromEl=document.getElementById('ca-filter-from');
     const toEl=document.getElementById('ca-filter-to');
     if(!fromEl.value) fromEl.value=today;
@@ -3999,13 +4170,16 @@ function renderNotesAudit(resetPage=false){
   const tbody=document.getElementById('notes-audit-body');
   if(!tbody) return;
   const today=new Date().toISOString().slice(0,10);
-  // Populate staff filter (always refresh); set default dates on first open
+  // Populate staff filter filtered by selected role; set default dates on first open
   const empSel=document.getElementById('na-filter-emp');
+  const rf0=document.getElementById('na-filter-role')?.value;
   if(empSel){
     const prev=empSel.value;
+    const visibleEmps=rf0?_emps.filter(e=>e.role===rf0):_emps;
     empSel.innerHTML='<option value="">All staff</option>';
-    _emps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;empSel.appendChild(o);});
-    if(prev) empSel.value=prev;
+    visibleEmps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;empSel.appendChild(o);});
+    // Keep previous selection only if still visible, otherwise reset
+    empSel.value=visibleEmps.some(e=>e.id===prev)?prev:'';
     const fromEl=document.getElementById('na-filter-from');
     const toEl=document.getElementById('na-filter-to');
     if(!fromEl.value) fromEl.value=today;
@@ -4065,11 +4239,13 @@ async function renderTimesheetAudit(resetPage=false){
   if(!tbody) return;
   const today=rbDateKey(new Date());
   const empSel=document.getElementById('tsa-filter-emp');
+  const tsaRf0=document.getElementById('tsa-filter-role')?.value;
   if(empSel){
     const prev=empSel.value;
+    const visibleEmps=tsaRf0?_emps.filter(e=>e.role===tsaRf0):_emps;
     empSel.innerHTML='<option value="">All staff</option>';
-    _emps.forEach(e=>{const o=document.createElement('option');o.value=e.name;o.textContent=e.name;empSel.appendChild(o);});
-    if(prev) empSel.value=prev;
+    visibleEmps.forEach(e=>{const o=document.createElement('option');o.value=e.name;o.textContent=e.name;empSel.appendChild(o);});
+    empSel.value=visibleEmps.some(e=>e.name===prev)?prev:'';
   }
   const fromEl=document.getElementById('tsa-filter-from');
   const toEl=document.getElementById('tsa-filter-to');
@@ -4081,10 +4257,12 @@ async function renderTimesheetAudit(resetPage=false){
     let url=`${SUPABASE_URL}/rest/v1/timesheet_audit?select=*&order=created_at.desc`;
     const df=fromEl?.value; const dt=toEl?.value;
     const ef=document.getElementById('tsa-filter-emp')?.value;
+    const rf=document.getElementById('tsa-filter-role')?.value;
     const af=document.getElementById('tsa-filter-action')?.value;
     if(df) url+=`&created_at=gte.${df}T00:00:00`;
     if(dt) url+=`&created_at=lte.${dt}T23:59:59`;
     if(ef) url+=`&employee_name=eq.${encodeURIComponent(ef)}`;
+    else if(rf){ const names=_emps.filter(e=>e.role===rf).map(e=>e.name); if(names.length) url+=`&employee_name=in.(${names.map(n=>encodeURIComponent(n)).join(',')})`; }
     if(af) url+=`&action=eq.${encodeURIComponent(af)}`;
     const r=await fetch(url,{headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY}});
     _tsAuditRows=await r.json();
@@ -4881,7 +5059,8 @@ function renderFnGridForRole(role){
     const isToday=key===todayKey;
     const isPast=key<todayKey;
     const covCount=dayShifts.length;
-    const covCls=covCount>=3?'green':covCount>=2?'yellow':'red';
+    const _ct=COVERAGE_THRESHOLDS[role]||{yellow:2,green:3};
+    const covCls=covCount>=_ct.green?'green':covCount>=_ct.yellow?'yellow':'red';
     const dayName=d.toLocaleDateString('en-AU',{weekday:'short'});
     const monthStr=d.toLocaleDateString('en-AU',{month:'short'});
     const pills=dayShifts.slice(0,3).map(s=>{
@@ -4970,6 +5149,7 @@ function renderDayTimelineForRole(role){
   const isPastDay=selectedDay<rbDateKey(new Date());
   const readOnly=isLocked||isPastDay;
   const isNurse=role==='Nurse';
+  const isReceptionist=role==='Receptionist';
   // Time axis — tick mark every 15 min, label every whole hour, edges at 7:45am/9:30pm
   let ticks='';
   for(let m=TL_START;m<=TL_END;m+=TL_SNAP){
@@ -4999,8 +5179,8 @@ function renderDayTimelineForRole(role){
     const splitBtn=!readOnly?`<button class="rb-shift-split" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();rbSplitShift('${s.id}','${role}')" title="Split shift">✂</button>`:'';
     const lHandle=!readOnly?`<div class="rb-shift-handle left" onmousedown="event.stopPropagation();rbStartDrag(event,'${s.id}','left')"></div>`:'';
     const rHandle=!readOnly?`<div class="rb-shift-handle right" onmousedown="event.stopPropagation();rbStartDrag(event,'${s.id}','right')"></div>`:'';
-    const laneLabel=s.lane==='75plus'?'← Floor':'→ 75+';
-    const laneBtn=!readOnly&&isNurse?`<button class="rb-shift-lane-btn" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();rbToggleLane('${s.id}','${role}')" title="${laneLabel}">${laneLabel}</button>`:'';
+    const laneLabel=isNurse?(s.lane==='75plus'?'← Floor':'→ Clinic'):(s.lane==='admin'?'← Floor':'→ Admin');
+    const laneBtn=!readOnly&&(isNurse||isReceptionist)?`<button class="rb-shift-lane-btn" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();rbToggleLane('${s.id}','${role}')" title="${laneLabel}">${laneLabel}</button>`:'';
     const leaveOpts=`<option value="">Worked Shift</option>`+Object.entries(LEAVE_TYPES).map(([v,l])=>`<option value="${v}"${currentLeave===v?' selected':''}>${l}</option>`).join('');
     const leaveBtn=!readOnly?`<select class="rb-leave-select" onmousedown="event.stopPropagation()" onchange="event.stopPropagation();rbMarkLeave('${emp.id}','${selectedDay}','${s.id}',this.value)">${leaveOpts}</select>`:`<span style="font-size:0.68rem;color:var(--muted);font-style:italic;margin-left:4px;">${currentLeave?formatLeaveType(currentLeave):''}</span>`;
     const leaveClass=currentLeave?' on-leave '+currentLeave.replace(/_/g,'-'):'';
@@ -5023,13 +5203,32 @@ function renderDayTimelineForRole(role){
     const clinicRows=clinicEmps.map((emp,i)=>{
       const clinicShifts=getClinic(emp.id);
       const bars=clinicShifts.map(s=>makeBar(s,emp)).join('');
-      const pill=i===0?`<span style="position:absolute;top:0;left:0.6rem;transform:translateY(-50%);background:var(--white);border:1.5px solid rgba(91,122,94,0.5);border-radius:999px;padding:1px 9px;font-size:0.58rem;font-weight:700;color:#5B7A5E;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;z-index:2;">75+ Clinic</span>`:'';
+      const pill=i===0?`<span style="position:absolute;top:0;left:0.6rem;transform:translateY(-50%);background:var(--white);border:1.5px solid rgba(91,122,94,0.5);border-radius:999px;padding:1px 9px;font-size:0.58rem;font-weight:700;color:#5B7A5E;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;z-index:2;">Clinic</span>`:'';
       const borderTop=i===0?'position:relative;border-top:2px solid rgba(91,122,94,0.35);':'';
       return`<div class="rb-tl-row clinic" style="${borderTop}">${pill}<div class="rb-tl-name"><span class="rb-tl-name-text">${emp.name}</span></div><div class="rb-tl-track" data-emp-id="${emp.id}-75plus">${bars}</div></div>`;
     }).join('');
     rows.innerHTML=
       `${floorRows}`+
       (has75?`${clinicRows}`:'');
+  } else if(isReceptionist){
+    const getFloor=id=>_rosterShifts.filter(s=>s.date===selectedDay&&s.employee_id===id&&!s.is_day_off&&(s.lane==='floor'||!s.lane));
+    const getAdmin=id=>_rosterShifts.filter(s=>s.date===selectedDay&&s.employee_id===id&&!s.is_day_off&&s.lane==='admin');
+    const floorRows=emps.map(emp=>{
+      const floorShifts=getFloor(emp.id);
+      const bars=floorShifts.map(s=>makeBar(s,emp)).join('');
+      const addBtn=!readOnly&&!floorShifts.length?`<button class="rb-add-shift-btn" onclick="rbAddShift('${emp.id}','${selectedDay}','${role}')" title="Add shift">+</button>`:'';
+      return`<div class="rb-tl-row"><div class="rb-tl-name"><span class="rb-tl-name-text">${emp.name}</span>${addBtn}</div><div class="rb-tl-track" data-emp-id="${emp.id}">${bars}</div></div>`;
+    }).join('');
+    const hasAdmin=emps.some(emp=>getAdmin(emp.id).length>0);
+    const adminEmps=hasAdmin?emps.filter(emp=>getAdmin(emp.id).length>0):[];
+    const adminRows=adminEmps.map((emp,i)=>{
+      const adminShifts=getAdmin(emp.id);
+      const bars=adminShifts.map(s=>makeBar(s,emp)).join('');
+      const pill=i===0?`<span style="position:absolute;top:0;left:0.6rem;transform:translateY(-50%);background:var(--white);border:1.5px solid rgba(125,60,152,0.5);border-radius:999px;padding:1px 9px;font-size:0.58rem;font-weight:700;color:#7D3C98;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;z-index:2;">Admin</span>`:'';
+      const borderTop=i===0?'position:relative;border-top:2px solid rgba(125,60,152,0.35);':'';
+      return`<div class="rb-tl-row admin" style="${borderTop}">${pill}<div class="rb-tl-name"><span class="rb-tl-name-text">${emp.name}</span></div><div class="rb-tl-track" data-emp-id="${emp.id}-admin">${bars}</div></div>`;
+    }).join('');
+    rows.innerHTML=`${floorRows}`+(hasAdmin?`${adminRows}`:'');
   } else {
     rows.innerHTML=emps.map(emp=>{
       const shifts=_rosterShifts.filter(s=>s.date===selectedDay&&s.employee_id===emp.id&&!s.is_day_off);
@@ -5042,7 +5241,7 @@ function renderDayTimelineForRole(role){
   let slots='';
   for(let m=TL_START;m<TL_END;m+=TL_SNAP){
     const cnt=_rosterShifts.filter(s=>s.date===selectedDay&&!s.is_day_off&&emps.some(e=>e.id===s.employee_id)
-      &&(!isNurse||s.lane==='floor'||!s.lane)
+      &&(!isNurse||s.lane==='floor'||!s.lane)&&(!isReceptionist||s.lane==='floor'||!s.lane)
       &&(timeStrToMin(s.start_time)||TL_START)<=m&&(timeStrToMin(s.end_time)||TL_END)>m).length;
     const col=cnt>=3?'#4CAF7D':cnt>=2?'#f5a623':'#c0392b';
     const lPct=((m-TL_START)/TL_RANGE)*100, wPct=(TL_SNAP/TL_RANGE)*100;
@@ -5118,7 +5317,8 @@ async function rbDeleteShift(shiftId,role){
 async function rbToggleLane(shiftId, role){
   const shift=_rosterShifts.find(s=>s.id==shiftId);
   if(!shift) return;
-  const newLane=shift.lane==='75plus'?'floor':'75plus';
+  const secondaryLane=role==='Receptionist'?'admin':'75plus';
+  const newLane=shift.lane===secondaryLane?'floor':secondaryLane;
   const prevLane=shift.lane;
   shift.lane=newLane;
   renderDayTimelineForRole(role);
@@ -5228,6 +5428,7 @@ function toggleSettingsSection(key){
   if(open&&key==='clockaudit') renderClockAudit();
   if(open&&key==='notesaudit') renderNotesAudit();
   if(open&&key==='tsaudit') renderTimesheetAudit();
+  if(open&&key==='reqaudit') loadReqAudit();
   if(open&&key==='inactive') renderInactiveStaff();
 }
 
@@ -5240,6 +5441,8 @@ function renderAnchorDate(){
   if(yEl) yEl.value=_rosterConfig?.yellow_threshold??YELLOW_THRESHOLD;
   const rEl=document.getElementById('red-threshold');
   if(rEl) rEl.value=_rosterConfig?.red_threshold??RED_THRESHOLD;
+  // Populate coverage thresholds for the currently active role tab
+  renderCovThresholdInputs();
 }
 
 function renderRosterGrid(){
@@ -5335,7 +5538,7 @@ async function saveWhosOnPIN(){
 async function saveAnchorDate(){
   const v=document.getElementById('anchor-date').value;
   if(!v){showToast('Please select a date');return;}
-  if(!confirm(`Set the fortnight cycle anchor to ${v}?\n\nThis will affect how all fortnights are calculated across the roster and Who's On view.`)) return;
+  if(!confirm(`⚠ Change fortnight cycle anchor to ${v}?\n\nThis will recalculate ALL fortnight boundaries across the roster, MYOB export, and Who's On view. Existing shifts will not move — they may appear in different fortnights than expected.\n\nOnly proceed if you are setting up the system for the first time or have been advised to do so.`)) return;
   try{
     if(_rosterConfig) await db.update('roster_config','default',{cycle_start_date:v});
     else await db.insert('roster_config',{id:'default',cycle_start_date:v});
@@ -5374,6 +5577,37 @@ async function saveDiscrepancyThresholds(){
     YELLOW_THRESHOLD=y;
     RED_THRESHOLD=r;
     showToast('Thresholds saved');
+  }catch(e){showToast('Could not save — check connection');console.error(e);}
+}
+
+let _covThreshRole='Receptionist';
+function switchCovRole(role){
+  _covThreshRole=role;
+  document.querySelectorAll('#cov-role-tabs .rb-role-tab').forEach(b=>b.classList.remove('active'));
+  const tab=document.getElementById('cov-tab-'+role);
+  if(tab) tab.classList.add('active');
+  renderCovThresholdInputs();
+}
+function renderCovThresholdInputs(){
+  const t=COVERAGE_THRESHOLDS[_covThreshRole]||{yellow:2,green:3};
+  const y=document.getElementById('cov-yellow'); if(y) y.value=t.yellow;
+  const g=document.getElementById('cov-green');  if(g) g.value=t.green;
+}
+async function saveCoverageThresholds(){
+  const y=parseInt(document.getElementById('cov-yellow').value,10);
+  const g=parseInt(document.getElementById('cov-green').value,10);
+  if(isNaN(y)||y<1){showToast('Yellow must be at least 1');return;}
+  if(isNaN(g)||g<1){showToast('Green must be at least 1');return;}
+  if(g<=y){showToast('Green threshold must be higher than yellow');return;}
+  COVERAGE_THRESHOLDS[_covThreshRole]={yellow:y,green:g};
+  const patch={coverage_thresholds:JSON.stringify(COVERAGE_THRESHOLDS)};
+  try{
+    if(_rosterConfig) await db.update('roster_config','default',patch);
+    else await db.insert('roster_config',{id:'default',...patch});
+    if(!_rosterConfig) _rosterConfig={id:'default'};
+    _rosterConfig.coverage_thresholds=patch.coverage_thresholds;
+    showToast(`${_covThreshRole} coverage thresholds saved ✓`);
+    renderRoster();
   }catch(e){showToast('Could not save — check connection');console.error(e);}
 }
 
@@ -5486,24 +5720,62 @@ try{ setDefaultDates(); }catch(e){ console.error('setDefaultDates error',e); }
 
 // ── Roster Export & Print ──────────────────────────────────────────────
 
-function populatePrintFnChecks(){
-  const el=document.getElementById('print-fn-checks');
-  if(!el) return;
-  const labels=['Current fortnight','+1 fortnight','+2 fortnights','+3 fortnights','+4 fortnights'];
-  el.innerHTML=labels.map((lbl,i)=>`
-    <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;">
-      <input type="checkbox" class="print-fn-check" data-offset="${i}" ${i===0?'checked':''}/> ${lbl}
-    </label>`).join('');
+function toggleExportCustomDates(){
+  const isCustom=document.getElementById('export-fn-custom')?.checked;
+  const boxes=document.getElementById('export-fn-checkboxes');
+  const el=document.getElementById('export-custom-dates');
+  if(isCustom){
+    // Uncheck fortnight boxes and disable them
+    [0,1,2].forEach(i=>{const cb=document.getElementById('export-fn-'+i);if(cb){cb.checked=false;cb.disabled=true;}});
+    if(boxes) boxes.style.opacity='0.4';
+    if(el) el.style.display='flex';
+  } else {
+    [0,1,2].forEach(i=>{const cb=document.getElementById('export-fn-'+i);if(cb) cb.disabled=false;});
+    if(boxes) boxes.style.opacity='';
+    if(el) el.style.display='none';
+  }
 }
 
-function exportRosterCSV(){
-  const from=document.getElementById('roster-export-from').value;
-  const to=document.getElementById('roster-export-to').value;
-  if(!from||!to){showToast('Please select a date range');return;}
-  if(to<from){showToast('End date must be after start date');return;}
-  const dates=[];
-  const d=new Date(from+'T12:00:00'), end=new Date(to+'T12:00:00');
-  while(d<=end){dates.push(rbDateKey(d));d.setDate(d.getDate()+1);}
+// Returns array of {dates, label} — one per selected fortnight (or one for custom range)
+function getExportDateRanges(){
+  const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
+  if(document.getElementById('export-fn-custom')?.checked){
+    const from=document.getElementById('roster-export-from').value;
+    const to=document.getElementById('roster-export-to').value;
+    if(!from||!to){showToast('Please select a date range');return null;}
+    if(to<from){showToast('End date must be after start date');return null;}
+    const dates=[];
+    const d=new Date(from+'T12:00:00'),end=new Date(to+'T12:00:00');
+    while(d<=end){dates.push(rbDateKey(d));d.setDate(d.getDate()+1);}
+    return[{dates,label:`${fmt(from)} – ${fmt(to)}`}];
+  }
+  const selected=[0,1,2].filter(i=>document.getElementById('export-fn-'+i)?.checked);
+  if(!selected.length){showToast('Select at least one fortnight');return null;}
+  return selected.map(offset=>{
+    const fnStart=getFortnightStart(offset);
+    const dates=getFortnight14Days(fnStart);
+    return{dates,label:`${fmt(dates[0])} – ${fmt(dates[dates.length-1])}`};
+  });
+}
+
+// Legacy single-range wrapper (used by MYOB export)
+function getExportDateRange(){
+  const ranges=getExportDateRanges();
+  if(!ranges) return null;
+  // Combine all dates into one range for CSV
+  const allDates=[...new Set(ranges.flatMap(r=>r.dates))].sort();
+  const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
+  return{dates:allDates,label:ranges.map(r=>r.label).join(', ')};
+}
+
+async function exportRosterCSV(){
+  const range=getExportDateRange();
+  if(!range) return;
+  const{dates}=range;
+  try{
+    const[freshShifts,freshEmps]=await Promise.all([db.get('roster_shifts'),db.get('employees')]);
+    _rosterShifts=freshShifts; _emps=freshEmps.filter(e=>e.active!==false);
+  }catch(e){ showToast('Could not load roster data'); return; }
   const shifts=_rosterShifts.filter(s=>!s.is_day_off&&dates.includes(s.date));
   shifts.sort((a,b)=>a.date.localeCompare(b.date)||((a.start_time||'').localeCompare(b.start_time||'')));
   const rows=[['Date','Employee','Role','Start','End','Hours']];
@@ -5518,39 +5790,42 @@ function exportRosterCSV(){
   const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download=`Roster_${from}_to_${to}.csv`;
+  a.download=`Roster_${dates[0]}_to_${dates[dates.length-1]}.csv`;
   a.click();
   showToast(`Exported ${shifts.length} shifts`);
 }
 
-function printRoster(){
-  const selectedOffsets=[...document.querySelectorAll('.print-fn-check:checked')].map(c=>parseInt(c.dataset.offset));
+async function printRoster(){
+  const ranges=getExportDateRanges();
+  if(!ranges) return;
   const selectedRoles=['Receptionist','Nurse','Manager'].filter(r=>document.getElementById('print-role-'+r)?.checked);
-  if(!selectedOffsets.length){showToast('Select at least one fortnight');return;}
   if(!selectedRoles.length){showToast('Select at least one role');return;}
+  try{
+    const[freshShifts,freshEmps,freshEntries]=await Promise.all([db.get('roster_shifts'),db.get('employees'),db.get('entries')]);
+    _rosterShifts=freshShifts; _emps=freshEmps.filter(e=>e.active!==false); _entries=freshEntries.map(normaliseEntry);
+  }catch(e){ showToast('Could not load roster data'); return; }
 
   const logoUrl=new URL('Logo.png',window.location.href).href;
+  const roleLabelMap={Receptionist:'Receptionists',Nurse:'Nurses',Manager:'Managers'};
+  const printed=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
   const pages=[];
 
-  selectedOffsets.forEach(offset=>{
-    const fnStart=getFortnightStart(offset);
-    const days=getFortnight14Days(fnStart);
-    const fnLabel=`${new Date(days[0]+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})} – ${new Date(days[13]+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}`;
+  ranges.forEach(range=>{
+    const days=range.dates;
+    const fnLabel=range.label;
 
     selectedRoles.forEach(role=>{
       const roleEmps=_emps.filter(e=>e.role===role&&e.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
       if(!roleEmps.length) return;
 
-      // Build column headers (day labels)
       const dayHeaders=days.map(d=>{
         const dt=new Date(d+'T12:00:00');
         return`<th>${dt.toLocaleDateString('en-AU',{weekday:'short'})}<br/>${dt.getDate()}/${dt.getMonth()+1}</th>`;
       }).join('');
 
-      // Build rows
       const empRows=roleEmps.map(emp=>{
         const cells=days.map(d=>{
-          const shifts=_rosterShifts.filter(s=>s.employee_id===emp.id&&s.date===d&&!s.is_day_off);
+          const shifts=_rosterShifts.filter(s=>s.employee_id==emp.id&&s.date===d&&!s.is_day_off);
           const leaveEntry=_entries.find(e=>e.employeeId===emp.id&&e.date===d&&e.leaveType);
           if(leaveEntry?.leaveType){
             const abbr={annual_leave:'AL',personal_leave:'PL',public_holiday:'PH',compassionate_leave:'CL',unpaid_leave:'UL'}[leaveEntry.leaveType]||'Leave';
@@ -5562,7 +5837,6 @@ function printRoster(){
         return`<tr><td class="rp-name-cell">${emp.name}</td>${cells}</tr>`;
       }).join('');
 
-      const roleLabelMap={Receptionist:'Receptionists',Nurse:'Nurses',Manager:'Managers'};
       pages.push(`
         <div class="rp-page">
           <div class="rp-header">
@@ -5576,11 +5850,15 @@ function printRoster(){
             <div class="rp-header-right">
               <strong>${roleLabelMap[role]||role}</strong><br/>
               ${fnLabel}<br/>
-              Printed ${new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}
+              <span style="font-size:7pt;font-weight:400;color:#888;">Printed ${printed}</span>
             </div>
           </div>
           <div class="rp-role-label">${roleLabelMap[role]||role}</div>
           <table class="rp-table">
+            <colgroup>
+              <col style="width:13%;">
+              ${days.map(()=>`<col style="width:${(87/days.length).toFixed(2)}%;">`).join('')}
+            </colgroup>
             <thead><tr><th class="rp-name-col">Name</th>${dayHeaders}</tr></thead>
             <tbody>${empRows}</tbody>
           </table>
@@ -5589,10 +5867,13 @@ function printRoster(){
   });
 
   if(!pages.length){showToast('No data to print');return;}
-  document.getElementById('roster-print-area').innerHTML=pages.join('');
-  window.print();
-  // Clean up after print dialog closes
-  setTimeout(()=>{document.getElementById('roster-print-area').innerHTML='';},1000);
+  const sheets=[];
+  for(let i=0;i<pages.length;i+=2) sheets.push(`<div class="rp-sheet">${pages.slice(i,i+2).join('')}</div>`);
+  document.getElementById('roster-print-area').innerHTML=sheets.join('');
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{ document.getElementById('roster-print-area').innerHTML=''; },1500);
+  },300);
 }
 
 /* ═══════════════════════════════════════════
@@ -5605,6 +5886,7 @@ function openRequestsView(){
   document.getElementById('req-panel-list').style.display='none';
   document.getElementById('req-panel-form').style.display='none';
   document.getElementById('req-panel-detail').style.display='none';
+  const lbl=document.getElementById('req-user-label'); if(lbl) lbl.style.display='none';
   showView('requests');
 }
 
@@ -5640,6 +5922,7 @@ async function reqShowList(){
   document.getElementById('req-panel-list').style.display='';
   document.getElementById('req-panel-form').style.display='none';
   document.getElementById('req-panel-detail').style.display='none';
+  const lbl=document.getElementById('req-user-label'); if(lbl) lbl.style.display='none';
   setTimeout(focusRFID,80);
 }
 
@@ -5831,6 +6114,8 @@ function reqShowForm(){
   document.getElementById('req-panel-list').style.display='none';
   document.getElementById('req-panel-form').style.display='';
   document.getElementById('req-panel-detail').style.display='none';
+  const lbl=document.getElementById('req-user-label');
+  if(lbl&&_reqEmployee){ lbl.textContent=`${_reqEmployee.name} · ${_reqEmployee.role}`; lbl.style.display=''; }
 }
 
 function reqSetFormType(type){
@@ -5840,6 +6125,8 @@ function reqSetFormType(type){
 
 async function renderRequestForm(){
   const emp=_reqEmployee;
+  const giveawayAllowed=GIVEAWAY_ENABLED[emp?.role]!==false;
+  if(_reqFormType==='giveaway'&&!giveawayAllowed) _reqFormType='leave';
   const today=rbDateKey(new Date());
   try{
     const allShifts=await db.get('roster_shifts');
@@ -5861,7 +6148,7 @@ async function renderRequestForm(){
       <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. medical appointment"></textarea></div>
       <label style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.8rem;color:var(--charcoal);line-height:1.4;margin:0.5rem 0 1rem;cursor:pointer;">
         <input type="checkbox" id="req-leave-confirm" onchange="reqLeaveConfirmToggle()" style="margin-top:2px;flex-shrink:0;accent-color:var(--burgundy);width:16px;height:16px;">
-        I confirm I have checked and have sufficient hours of leave to proceed with this request. If unsure, please check with your manager before proceeding.
+        I confirm I have checked and have sufficient hours of leave to proceed with this request. If unsure, please check with your manager before continuing.
       </label>
       <button class="req-new-btn" id="req-leave-submit-btn" onclick="reqSubmitLeave()" disabled style="opacity:0.45;cursor:not-allowed;">Submit Leave Request</button>`;
   } else if(_reqFormType==='swap'){
@@ -5882,7 +6169,7 @@ async function renderRequestForm(){
     <div class="req-type-tabs">
       <button class="req-type-tab${_reqFormType==='leave'?' active':''}" onclick="reqSetFormType('leave')">Leave</button>
       <button class="req-type-tab${_reqFormType==='swap'?' active':''}" onclick="reqSetFormType('swap')">Shift Swap</button>
-      <button class="req-type-tab${_reqFormType==='giveaway'?' active':''}" onclick="reqSetFormType('giveaway')">Give Away</button>
+      <button class="req-type-tab${_reqFormType==='giveaway'?' active':''}" ${giveawayAllowed?`onclick="reqSetFormType('giveaway')"`:` disabled title="Give Away is not enabled for your role" style="opacity:0.38;cursor:not-allowed;"`}>Give Away</button>
     </div>
     <div style="font-family:'Lora',serif;font-size:1rem;font-weight:600;color:var(--charcoal);margin-bottom:1rem;">${typeTitle}</div>
     ${formBody}`;
@@ -6255,43 +6542,105 @@ function renderRequestSettings(){
   const reasonEl=document.getElementById('show-decline-reason');
   if(daysEl) daysEl.value=SWAP_EXPIRY_DAYS;
   if(reasonEl) reasonEl.value=String(SHOW_DECLINE_REASON);
+  ['Receptionist','Nurse','Manager'].forEach(r=>{
+    const el=document.getElementById('giveaway-'+r);
+    if(el) el.checked=GIVEAWAY_ENABLED[r];
+  });
 }
 
 async function saveRequestSettings(){
   const days=parseInt(document.getElementById('swap-expiry-days').value)||7;
   const showReason=document.getElementById('show-decline-reason').value==='true';
+  const giveawayRoles=['Receptionist','Nurse','Manager'].filter(r=>{
+    const el=document.getElementById('giveaway-'+r);
+    return el?el.checked:GIVEAWAY_ENABLED[r];
+  }).join(',');
   try{
-    if(_rosterConfig) await db.update('roster_config','default',{swap_expiry_days:days,show_decline_reason:showReason});
-    else await db.insert('roster_config',{id:'default',swap_expiry_days:days,show_decline_reason:showReason});
+    const patch={swap_expiry_days:days,show_decline_reason:showReason,giveaway_enabled_roles:giveawayRoles};
+    if(_rosterConfig) await db.update('roster_config','default',patch);
+    else await db.insert('roster_config',{id:'default',...patch});
     SWAP_EXPIRY_DAYS=days; SHOW_DECLINE_REASON=showReason;
-    if(_rosterConfig){ _rosterConfig.swap_expiry_days=days; _rosterConfig.show_decline_reason=showReason; }
+    ['Receptionist','Nurse','Manager'].forEach(r=>{ GIVEAWAY_ENABLED[r]=giveawayRoles.split(',').includes(r); });
+    if(_rosterConfig) Object.assign(_rosterConfig,patch);
     showToast('Request settings saved');
   }catch(e){ showToast('Error saving settings'); console.error(e); }
 }
 
+let _raqPage=0;
+let _reqAuditRows=[];
+
 async function loadReqAudit(){
   try{
-    const allReqs=(await db.get('requests')).map(normaliseRequest).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    if(!allReqs.length){ document.getElementById('req-audit-content').innerHTML='<div style="font-size:0.85rem;color:var(--muted);">No requests on record.</div>'; return; }
-    const rows=allReqs.map(r=>{
-      const typeLabel=r.type==='leave'?'Leave':r.type==='swap'?'Swap':'Give Away';
-      const parties=r.type==='leave'?escHtml(r.initiatorName):`${escHtml(r.initiatorName)} ↔ ${escHtml(r.colleagueName||'—')}`;
-      const detail=r.type==='leave'?`${formatLeaveType(r.leaveType)} ${reqFmtDate(r.leaveStartDate)}–${reqFmtDate(r.leaveEndDate)}`:`${reqFmtDate(r.initiatorShiftDate||'')} shift`;
-      const rosterChange=r.status==='approved'?`Roster updated`:'—';
-      return `<tr>
-        <td>${reqFmtDate(r.createdAt)}</td>
-        <td><span class="req-admin-type-pill">${typeLabel}</span></td>
-        <td>${parties}</td><td>${detail}</td>
-        <td><span class="req-status-pill ${r.status}" style="display:inline-block;">${reqStatusLabel(r.status)}</span></td>
-        <td style="font-size:0.78rem;color:var(--muted);">${escHtml(r.managerName||'—')}</td>
-        <td style="font-size:0.78rem;color:var(--muted);">${r.managerDecidedAt?reqFmtDate(r.managerDecidedAt):'—'}</td>
-        <td style="font-size:0.78rem;color:var(--muted);">${rosterChange}</td>
-      </tr>`;
-    }).join('');
-    document.getElementById('req-audit-content').innerHTML=`<div class="table-wrap"><table class="timesheet-table">
-      <thead><tr><th>Submitted</th><th>Type</th><th>Staff</th><th>Details</th><th>Status</th><th>Manager</th><th>Decided</th><th>Roster</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`;
+    _reqAuditRows=(await db.get('requests')).map(normaliseRequest).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    renderReqAudit(true);
   }catch(e){ showToast('Error loading audit'); console.error(e); }
+}
+
+function renderReqAudit(resetPage=false){
+  const tbody=document.getElementById('req-audit-body');
+  if(!tbody) return;
+  const today=new Date().toISOString().slice(0,10);
+  // Populate staff dropdown filtered by role
+  const empSel=document.getElementById('raq-filter-emp');
+  const raqRf0=document.getElementById('raq-filter-role')?.value;
+  if(empSel){
+    const prev=empSel.value;
+    const visibleEmps=raqRf0?_emps.filter(e=>e.role===raqRf0):_emps;
+    empSel.innerHTML='<option value="">All staff</option>';
+    visibleEmps.forEach(e=>{const o=document.createElement('option');o.value=e.name;o.textContent=e.name;empSel.appendChild(o);});
+    empSel.value=visibleEmps.some(e=>e.name===prev)?prev:'';
+    const fromEl=document.getElementById('raq-filter-from');
+    const toEl=document.getElementById('raq-filter-to');
+    if(fromEl&&!fromEl.value) fromEl.value=today;
+    if(toEl&&!toEl.value) toEl.value=today;
+  }
+  if(resetPage) _raqPage=0;
+  // Apply filters
+  const ef=document.getElementById('raq-filter-emp')?.value;
+  const rf=document.getElementById('raq-filter-role')?.value;
+  const df=document.getElementById('raq-filter-from')?.value;
+  const dt=document.getElementById('raq-filter-to')?.value;
+  const tf=document.getElementById('raq-filter-type')?.value;
+  let rows=[..._reqAuditRows];
+  if(ef) rows=rows.filter(r=>r.initiatorName===ef);
+  else if(rf){ const names=_emps.filter(e=>e.role===rf).map(e=>e.name); rows=rows.filter(r=>names.includes(r.initiatorName)); }
+  if(df) rows=rows.filter(r=>(r.createdAt||'')>=df);
+  if(dt) rows=rows.filter(r=>(r.createdAt||'').slice(0,10)<=dt);
+  if(tf) rows=rows.filter(r=>r.type===tf);
+  if(!rows.length){
+    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="empty-msg">No requests found.</div></div></td></tr>`;
+    document.getElementById('raq-pagination')?.remove();
+    return;
+  }
+  const totalPages=Math.ceil(rows.length/CA_PAGE_SIZE);
+  _raqPage=Math.min(_raqPage,totalPages-1);
+  const page=rows.slice(_raqPage*CA_PAGE_SIZE,(_raqPage+1)*CA_PAGE_SIZE);
+  tbody.innerHTML=page.map(r=>{
+    const typeLabel=r.type==='leave'?'Leave':r.type==='swap'?'Swap':'Give Away';
+    const parties=r.type==='leave'?escHtml(r.initiatorName):`${escHtml(r.initiatorName)} ↔ ${escHtml(r.colleagueName||'—')}`;
+    const detail=r.type==='leave'?`${formatLeaveType(r.leaveType)} ${reqFmtDate(r.leaveStartDate)}–${reqFmtDate(r.leaveEndDate)}`:`${reqFmtDate(r.initiatorShiftDate||'')} shift`;
+    const rosterChange=r.status==='approved'?'Roster updated':'—';
+    return`<tr>
+      <td>${reqFmtDate(r.createdAt)}</td>
+      <td><span class="req-admin-type-pill">${typeLabel}</span></td>
+      <td>${parties}</td><td>${detail}</td>
+      <td><span class="req-status-pill ${r.status}" style="display:inline-block;">${reqStatusLabel(r.status)}</span></td>
+      <td style="font-size:0.78rem;color:var(--muted);">${escHtml(r.managerName||'—')}</td>
+      <td style="font-size:0.78rem;color:var(--muted);">${r.managerDecidedAt?reqFmtDate(r.managerDecidedAt):'—'}</td>
+      <td style="font-size:0.78rem;color:var(--muted);">${rosterChange}</td>
+    </tr>`;
+  }).join('');
+  let pag=document.getElementById('raq-pagination');
+  if(!pag){
+    pag=document.createElement('div');
+    pag.id='raq-pagination';
+    pag.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0 0.25rem;';
+    tbody.closest('.table-wrap').after(pag);
+  }
+  pag.innerHTML=`
+    <button onclick="_raqPage--;renderReqAudit()" ${_raqPage===0?'disabled':''} style="background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:0.35rem 0.9rem;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;${_raqPage===0?'opacity:0.35;cursor:not-allowed;':''}">← Prev</button>
+    <span style="font-size:0.75rem;color:var(--muted);font-weight:600;">Page ${_raqPage+1} of ${totalPages} · ${rows.length} total</span>
+    <button onclick="_raqPage++;renderReqAudit()" ${_raqPage>=totalPages-1?'disabled':''} style="background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:0.35rem 0.9rem;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;${_raqPage>=totalPages-1?'opacity:0.35;cursor:not-allowed;':''}">Next →</button>`;
 }
 
 /* ═══════════════════════════════════════════
@@ -6308,6 +6657,5 @@ function reqFmtDate(dateStr){
 function escHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 </script>
-<div id="roster-print-area"></div>
 </body>
 </html>
