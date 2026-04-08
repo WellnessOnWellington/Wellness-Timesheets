@@ -678,30 +678,33 @@
 
   .sr-gnow { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
-  .sr-gnow-axis-row { display: flex; align-items: flex-end; flex-shrink: 0; padding-bottom: 0.5rem; padding-right: 1.5rem; border-bottom: 1.5px solid var(--border); margin-bottom: 0.25rem; }
-  .sr-gnow-name-col { width: 140px; flex-shrink: 0; }
+  .sr-gnow-axis-row { display: flex; align-items: flex-end; flex-shrink: 0; padding-bottom: 0.5rem; padding-right: 3rem; border-bottom: 1.5px solid var(--border); margin-bottom: 0.25rem; }
+  .sr-gnow-name-col { width: 90px; flex-shrink: 0; }
   .sr-gnow-axis { flex: 1; position: relative; height: 28px; }
   .sr-gnow-tick { position: absolute; transform: translateX(-50%); top: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
   .sr-gnow-tick-mark { width: 1px; height: 6px; background: var(--border-dk); }
   .sr-gnow-tick-label { font-size: 0.6rem; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; white-space: nowrap; }
 
-  .sr-gnow-body { flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative; overflow: hidden; padding-top: 1.6rem; }
-  .sr-gnow-now-line { position: absolute; top: 0; bottom: 0; left: calc(140px + var(--now-pct, -1) * (100% - 140px)); width: 3px; background: var(--burgundy); box-shadow: 0 0 6px rgba(139,37,53,0.5); z-index: 4; pointer-events: none; display: none; }
-  .sr-gnow-now-badge { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); background: var(--burgundy); color: #fff; font-size: 0.82rem; font-weight: 800; padding: 0.28rem 0.75rem; border-radius: 20px; white-space: nowrap; font-family: 'Courier New',monospace; box-shadow: 0 2px 8px rgba(139,37,53,0.4); letter-spacing: 0.04em; }
+  .sr-gnow-body { flex: 1; display: flex; flex-direction: column; align-items: stretch; min-height: 0; position: relative; overflow-y: auto; padding-top: 1.6rem; }
+  .sr-gnow-now-line { position: absolute; top: 0; bottom: 0; left: calc(90px + var(--now-pct, -1) * (100% - 90px - 3rem)); width: 1px; background: rgba(180,140,148,0.7); z-index: 4; pointer-events: none; display: none; }
+  .sr-gnow-now-line.fixed { width: 2px; background: repeating-linear-gradient(to bottom, rgba(140,132,136,0.75) 0, rgba(140,132,136,0.75) 6px, transparent 6px, transparent 12px); }
+  .sr-gnow-now-badge { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); background: rgba(180,140,148,0.85); color: #fff; font-size: 0.7rem; font-weight: 600; padding: 0.18rem 0.55rem; border-radius: 20px; white-space: nowrap; font-family: 'Courier New',monospace; letter-spacing: 0.03em; }
+  .sr-gnow-now-line.fixed .sr-gnow-now-badge { background: rgba(160,155,158,0.75); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; left: 50%; transform: translateX(-50%); }
+  .sr-gnow-now-line.fixed-end { left: calc(100% - 3rem); }
 
-  .sr-gnow-group { display: flex; flex-direction: column; min-height: 0; }
+  .sr-gnow-group { display: flex; flex-direction: column; flex-shrink: 0; margin-bottom: 0.6rem; }
   .sr-gnow-group-hdr { display: flex; align-items: center; gap: 0.45rem; font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 0.4rem 0 0.25rem; flex-shrink: 0; }
   .sr-gnow-group-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .sr-gnow-rows { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .sr-gnow-row { flex: 1; display: flex; align-items: center; min-height: 28px; padding-right: 1.5rem; border-bottom: 1px solid rgba(234,217,220,0.5); }
-  .sr-gnow-row:last-child { border-bottom: none; }
-  .sr-gnow-row:nth-child(even) { background: rgba(234,217,220,0.35); }
-  .sr-gnow-row:nth-child(even) .sr-gnow-track { background: transparent; }
-  .sr-gnow-row-name { width: 140px; flex-shrink: 0; font-size: 0.8rem; font-weight: 700; color: var(--charcoal); padding-right: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sr-gnow-track { flex: 1; position: relative; height: 55%; min-height: 18px; max-height: 30px; background: var(--warm-white); border-radius: 6px; border: 1px solid var(--border); }
+  .sr-gnow-rows { display: flex; flex-direction: column; }
+  .sr-gnow-row { height: 42px; display: flex; align-items: center; padding-left: 0.6rem; padding-right: 3rem; border-radius: 0; flex-shrink: 0; }
+  .sr-gnow-rows .sr-gnow-row:first-child { border-radius: 8px 8px 0 0; }
+  .sr-gnow-rows .sr-gnow-row:last-child { border-radius: 0 0 8px 8px; }
+  .sr-gnow-rows .sr-gnow-row:only-child { border-radius: 8px; }
+  .sr-gnow-row-name { width: 90px; flex-shrink: 0; font-size: 0.8rem; font-weight: 700; color: var(--charcoal); padding-right: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sr-gnow-track { flex: 1; position: relative; height: 55%; min-height: 18px; max-height: 30px; }
   .sr-gnow-bar { position: absolute; top: 0; bottom: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 0 0.5rem; overflow: hidden; min-width: 3px; }
-  .sr-gnow-bar-time { font-size: 0.6rem; font-weight: 700; color: rgba(255,255,255,0.92); white-space: nowrap; font-family: 'Courier New',monospace; position: absolute; left: 0.4rem; }
-  .sr-gnow-bar-name { font-size: 0.62rem; font-weight: 800; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: clip; letter-spacing: 0.03em; pointer-events: none; }
+  .sr-gnow-bar-time { font-size: 0.6rem; font-weight: 700; color: inherit; white-space: nowrap; font-family: 'Courier New',monospace; position: absolute; left: 0.4rem; opacity: 0.8; }
+  .sr-gnow-bar-name { font-size: 0.62rem; font-weight: 800; color: inherit; opacity: 0.35; white-space: nowrap; overflow: hidden; text-overflow: clip; letter-spacing: 0.03em; pointer-events: none; }
 
   /* Now — mobile card list (hidden on desktop) */
   .sr-gnow-mobile { display: none; }
@@ -775,6 +778,7 @@
   .rb-lock-btn.locked { background:#fff3cd; border-color:#d4a017; color:#7a5200; }
   .rb-copy-btn { background:var(--blush-lt); border:1.5px solid var(--burgundy); border-radius:8px; padding:0.32rem 0.8rem; cursor:pointer; font-size:0.72rem; font-weight:700; color:var(--burgundy); font-family:'Nunito',sans-serif; transition:all 0.15s; }
   .rb-copy-btn:hover { background:var(--burgundy); color:#fff; }
+  .rb-copy-btn:disabled { background:var(--warm-white); border-color:var(--border); color:var(--muted); cursor:not-allowed; opacity:0.55; }
   .rb-publish-btn { background:#e8f5e9; border:1.5px solid #2e7d32; border-radius:8px; padding:0.32rem 0.8rem; cursor:pointer; font-size:0.72rem; font-weight:700; color:#1b5e20; font-family:'Nunito',sans-serif; transition:all 0.15s; }
   .rb-publish-btn:hover { background:#2e7d32; color:#fff; }
   .rb-publish-btn.published { background:#2e7d32; border-color:#1b5e20; color:#fff; }
@@ -4061,6 +4065,10 @@ async function rbMarkLeave(empId, date, shiftId, leaveType){
   const existingLeave=_entries.find(e=>e.shiftId===shiftId&&e.leaveType)
     ||_entries.find(e=>!e.shiftId&&e.employeeId===empId&&e.date===date&&e.leaveType);
   if(!leaveType){
+    const snapLeave=existingLeave?{...existingLeave}:null;
+    const sMin2=timeStrToMin(shift.start_time)||TL_START;
+    const eMin2=timeStrToMin(shift.end_time)||TL_END;
+    const hrs2=((eMin2-sMin2)/60).toFixed(2);
     if(existingLeave){
       await db.delete('entries',existingLeave.id);
       _entries=_entries.filter(e=>e.id!==existingLeave.id);
@@ -4068,6 +4076,16 @@ async function rbMarkLeave(empId, date, shiftId, leaveType){
     }
     await db.update('roster_shifts',shift.id,{on_leave:false});
     shift.on_leave=false;
+    if(snapLeave){
+      rbPushUndo('leave cleared',async()=>{
+        const row={id:'L'+Date.now(),employee_id:empId,employee_name:emp.name,role:emp.role,date,clock_in:(shift.start_time||'').slice(0,5),clock_out:(shift.end_time||'').slice(0,5),hours:hrs2,leave_type:snapLeave.leaveType,shift_id:shiftId,status:'normal'};
+        await db.insert('entries',row);
+        _entries.push(normaliseEntry(row));
+        await db.update('roster_shifts',shift.id,{on_leave:true});
+        shift.on_leave=true;
+        renderDayTimelineForRole(role); renderTimesheets();
+      });
+    }
     renderDayTimelineForRole(role); renderTimesheets(); return;
   }
   const sMin=timeStrToMin(shift.start_time)||TL_START;
@@ -4087,6 +4105,14 @@ async function rbMarkLeave(empId, date, shiftId, leaveType){
     }
     await db.update('roster_shifts',shift.id,{on_leave:true});
     shift.on_leave=true;
+    const newLeaveEntry=_entries.find(e=>e.shiftId===shiftId&&e.leaveType);
+    const newLeaveId=newLeaveEntry?.id;
+    rbPushUndo('leave marked',async()=>{
+      if(newLeaveId){ await db.delete('entries',newLeaveId); _entries=_entries.filter(e=>e.id!==newLeaveId); }
+      await db.update('roster_shifts',shift.id,{on_leave:false});
+      shift.on_leave=false;
+      renderDayTimelineForRole(role); renderTimesheets();
+    });
     showToast(formatLeaveType(leaveType)+' marked');
     renderDayTimelineForRole(role); renderTimesheets();
   }catch(err){showToast('Could not save leave');console.error(err);}
@@ -4505,6 +4531,12 @@ const SR_ROLE_PILL={
   Receptionist:{bg:'rgba(39,174,96,0.1)',  color:'#1a6b3c'},
   Manager:     {bg:'rgba(125,60,152,0.1)', color:'#5a2c75'},
 };
+const SR_ROLE_BAR={
+  Doctor:      {bg:'#e8a09a', text:'#8b1e15'},
+  Nurse:       {bg:'#8ab8d4', text:'#1a5578'},
+  Receptionist:{bg:'#85c9a5', text:'#1a6b3c'},
+  Manager:     {bg:'#b89ac9', text:'#5a2c75'},
+};
 const SR_ROLE_BG={Doctor:'rgba(139,37,53,0.10)',Nurse:'rgba(166,50,69,0.12)',Receptionist:'rgba(212,137,154,0.2)',Manager:'rgba(139,37,53,0.07)'};
 
 function getFortnightStart(offsetFortnights){
@@ -4670,6 +4702,17 @@ function srSelectIndividual(){
 }
 
 function srSetLayout(layout){
+  const _tnNow=new Date();
+  const todayStr=`${_tnNow.getFullYear()}-${String(_tnNow.getMonth()+1).padStart(2,'0')}-${String(_tnNow.getDate()).padStart(2,'0')}`;
+  if(layout==='day'){
+    if(srLayout==='day'){
+      if(srDayDate===todayStr) return; // already on today, do nothing
+      srDayDate=todayStr; // navigate back to today
+      clearInterval(_srNowLineInterval); _srNowLineInterval=null;
+      renderStaffRoster(); return;
+    }
+    srDayDate=todayStr; // switching to day view always lands on today
+  }
   srLayout=layout;
   clearInterval(_srNowLineInterval); _srNowLineInterval=null;
   document.getElementById('sr-btn-fortnight').classList.toggle('active',layout==='fortnight');
@@ -4706,10 +4749,15 @@ function renderStaffRoster(){
         const line=document.getElementById('sr-gnow-now-line');
         const badge=document.getElementById('sr-gnow-now-badge');
         if(!body||!line) return;
-        const fixedMin=srDayDate<today?GNOW_END:GNOW_START;
-        body.style.setProperty('--now-pct',((fixedMin-GNOW_START)/GNOW_RANGE).toFixed(4));
+        const isPast=srDayDate<today;
         line.style.display='block';
-        if(badge) badge.textContent=srDayDate<today?'22:00':'07:45';
+        line.classList.add('fixed');
+        if(isPast){
+          line.classList.add('fixed-end');
+        } else {
+          body.style.setProperty('--now-pct','0');
+        }
+        if(badge) badge.textContent=isPast?'Closed':'Not open';
       });
     }
     return;
@@ -4759,8 +4807,8 @@ function srShiftForEmp(empId,date){
   return null;
 }
 
-const GNOW_START=7*60; // 7:00am
-const GNOW_END=22*60;  // 10:00pm
+const GNOW_START=7*60+45;  // 7:45am
+const GNOW_END=21*60+30;   // 9:30pm
 const GNOW_RANGE=GNOW_END-GNOW_START;
 
 function gnowPct(min){ return Math.max(0,Math.min(100,(min-GNOW_START)/GNOW_RANGE*100)); }
@@ -4774,7 +4822,20 @@ function srUpdateNowLine(){
   const now=new Date();
   const nowMin=now.getHours()*60+now.getMinutes();
   const pct=(nowMin-GNOW_START)/GNOW_RANGE;
-  if(pct<0||pct>1){line.style.display='none';return;}
+  line.classList.remove('fixed','fixed-end');
+  if(pct<0){
+    line.style.display='block';
+    line.classList.add('fixed');
+    body.style.setProperty('--now-pct','0');
+    if(badge) badge.textContent='Not open';
+    return;
+  }
+  if(pct>1){
+    line.style.display='block';
+    line.classList.add('fixed','fixed-end');
+    if(badge) badge.textContent='Closed';
+    return;
+  }
   body.style.setProperty('--now-pct',pct.toFixed(4));
   line.style.display='block';
   if(badge) badge.textContent=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -4787,7 +4848,7 @@ function srByDayGantt(dateStr, today){
 
   // Hour tick marks
   const ticks=[];
-  for(let m=Math.ceil(GNOW_START/60)*60;m<=GNOW_END;m+=60){
+  for(let m=Math.ceil(GNOW_START/60)*60;m<=Math.floor(GNOW_END/60)*60;m+=60){
     const h=Math.floor(m/60);
     const label=h>12?`${h-12}pm`:h===12?'12pm':`${h}am`;
     ticks.push(`<div class="sr-gnow-tick" style="left:${gnowPct(m).toFixed(2)}%"><div class="sr-gnow-tick-mark"></div><div class="sr-gnow-tick-label">${label}</div></div>`);
@@ -4795,7 +4856,7 @@ function srByDayGantt(dateStr, today){
 
   let hasAny=false;
   const groups=ROLE_ORDER.filter(r=>srRoles.has(r)).map(role=>{
-    const color=SR_ROLE_COLORS[role]||'var(--dusty)';
+    const roleBar=SR_ROLE_BAR[role]||{bg:'var(--dusty)',text:'var(--charcoal)'};
     const roleShifts=_emps.filter(e=>e.role===role)
       .map(emp=>({emp,shift:srShiftForEmp(emp.id,dateStr)}))
       .filter(x=>x.shift&&x.shift!=='off')
@@ -4807,13 +4868,15 @@ function srByDayGantt(dateStr, today){
       const left=gnowPct(startMin);
       const width=gnowPct(endMin)-left;
       const name=_srDnMap[emp.id]||empFirstName(emp);
-      const barColor=onLeave?'#c8c4c6':color;
+      const barBg=onLeave?'#c8c4c6':roleBar.bg;
+      const barText=onLeave?'var(--muted)':roleBar.text;
       const nameStyle=onLeave?'color:var(--muted);':'';
       const tooltip=`${name}: ${shift.start}–${shift.end}`;
-      return`<div class="sr-gnow-row">
+      const rowPill=onLeave?{bg:'rgba(180,180,180,0.08)'}:(SR_ROLE_PILL[role]||{bg:'transparent'});
+      return`<div class="sr-gnow-row" style="background:${rowPill.bg}">
         <div class="sr-gnow-row-name" style="${nameStyle}">${name}</div>
         <div class="sr-gnow-track">
-          <div class="sr-gnow-bar" style="left:${left.toFixed(2)}%;width:${Math.max(0,width).toFixed(2)}%;background:${barColor};" data-tooltip="${tooltip}">
+          <div class="sr-gnow-bar" style="left:${left.toFixed(2)}%;width:${Math.max(0,width).toFixed(2)}%;background:${barBg};color:${barText};" data-tooltip="${tooltip}">
             <span class="sr-gnow-bar-time">${shift.start.slice(0,5)}–${shift.end.slice(0,5)}</span>
             <span class="sr-gnow-bar-name">${name}</span>
           </div>
@@ -4822,8 +4885,7 @@ function srByDayGantt(dateStr, today){
     });
     if(!rows.length) return null;
     hasAny=true;
-    return`<div class="sr-gnow-group" style="flex:${rows.length}">
-      <div class="sr-gnow-group-hdr"><div class="sr-gnow-group-dot" style="background:${color}"></div>${ROLE_LABELS[role]}</div>
+    return`<div class="sr-gnow-group">
       <div class="sr-gnow-rows">${rows.join('')}</div>
     </div>`;
   }).filter(Boolean);
@@ -4833,7 +4895,7 @@ function srByDayGantt(dateStr, today){
   // Mobile card list
   const nowMin=isToday?new Date().getHours()*60+new Date().getMinutes():-1;
   const mobileGroups=ROLE_ORDER.filter(r=>srRoles.has(r)).map(role=>{
-    const color=SR_ROLE_COLORS[role]||'var(--dusty)';
+    const roleBar=SR_ROLE_BAR[role]||{bg:'var(--dusty)',text:'var(--charcoal)'};
     const roleMobile=_emps.filter(e=>e.role===role)
       .map(emp=>({emp,shift:srShiftForEmp(emp.id,dateStr)}))
       .filter(x=>x.shift&&x.shift!=='off')
@@ -4845,8 +4907,8 @@ function srByDayGantt(dateStr, today){
       const onNow=isToday&&nowMin>=startMin&&nowMin<endMin;
       const finished=isToday&&nowMin>=endMin;
       const statusClass=onNow?'on-now':finished?'finished':'coming-up';
-      const badge=onNow?`<span class="sr-gnow-mobile-badge" style="background:${color}">On now</span>`:'';
-      const rowStyle=onNow?`style="background:${color}18;border-color:${color}55;"`:'';
+      const badge=onNow?`<span class="sr-gnow-mobile-badge" style="background:${roleBar.bg};color:${roleBar.text};">On now</span>`:'';
+      const rowStyle=onNow?`style="background:${roleBar.bg}33;border-color:${roleBar.bg}88;"`:'';
       return`<div class="sr-gnow-mobile-row ${statusClass}" ${rowStyle}>
         <span class="sr-gnow-mobile-name">${name}</span>
         <span class="sr-gnow-mobile-time">${shift.start.slice(0,5)}–${shift.end.slice(0,5)}</span>
@@ -4855,7 +4917,7 @@ function srByDayGantt(dateStr, today){
     }).filter(Boolean);
     if(!rows.length) return null;
     return`<div class="sr-gnow-mobile-group">
-      <div class="sr-gnow-mobile-role-hdr"><span class="sr-gnow-mobile-dot" style="background:${color}"></span>${ROLE_LABELS[role]}</div>
+      <div class="sr-gnow-mobile-role-hdr"><span class="sr-gnow-mobile-dot" style="background:${roleBar.bg}"></span>${ROLE_LABELS[role]}</div>
       ${rows.join('')}
     </div>`;
   }).filter(Boolean);
@@ -5005,7 +5067,7 @@ function renderRosterPanels(){
             <span class="rb-panel-title">${RB_ROLE_LABELS[role]}</span>
           </div>
           <div class="rb-panel-actions" onclick="event.stopPropagation()">
-            <button class="rb-copy-btn" onclick="rbCopyLastFnForRole('${role}')">Copy Last Fortnight</button>
+            <button class="rb-copy-btn" id="rb-copy-btn-${role}" onclick="rbCopyLastFnForRole('${role}')">Copy Last Fortnight</button>
             <button class="rb-publish-btn" id="rb-publish-btn-${role}" onclick="rbTogglePublishForRole('${role}')">&#10003; Publish Roster</button>
           </div>
         </div>
@@ -5032,6 +5094,8 @@ function renderRosterPanels(){
     const published=rbIsPublishedForRole(fnStart,role);
     const pubBtn=document.getElementById('rb-publish-btn-'+role);
     if(pubBtn){ pubBtn.innerHTML=published?'&#10003; Published &middot; Unpublish':'&#10003; Publish Roster'; pubBtn.classList.toggle('published',published); }
+    const copyBtn=document.getElementById('rb-copy-btn-'+role);
+    if(copyBtn) copyBtn.disabled=locked;
     panel.classList.toggle('published',locked);
     if(collapsed) return;
     document.getElementById('rb-fn-grid-'+role).style.display=rbSelectedDay?'none':'';
@@ -5078,6 +5142,24 @@ function rbIsPublished(fnStart){ return RB_ROLES.some(r=>rbIsPublishedForRole(fn
 let _rbConfirmCallback=null;
 function rbConfirmClose(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); _rbConfirmCallback=null; }
 function rbConfirmProceed(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); if(_rbConfirmCallback) _rbConfirmCallback(); _rbConfirmCallback=null; }
+
+/* ── Undo stack ── */
+const _rbUndoStack=[];
+function rbPushUndo(label,fn){ _rbUndoStack.push({label,fn}); if(_rbUndoStack.length>20) _rbUndoStack.shift(); }
+async function rbUndo(){
+  const action=_rbUndoStack.pop();
+  if(!action){showToast('Nothing to undo');return;}
+  try{ await action.fn(); showToast('\u21a9 Undone: '+action.label); }
+  catch(e){ showToast('Undo failed'); console.error(e); }
+}
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){
+    const rosterTab=document.getElementById('tab-roster');
+    if(rosterTab&&rosterTab.classList.contains('active')){
+      e.preventDefault(); rbUndo();
+    }
+  }
+});
 
 function rbTogglePublishForRole(role){
   const fnStart=rbGetFnStart();
@@ -5162,17 +5244,31 @@ async function rbCopyLastFnForRole(role){
   const roleEmps=rbGetEmpsForRole(role).map(e=>e.id);
   const prevShifts=_rosterShifts.filter(s=>s.date>=prevKey&&s.date<fnKey&&roleEmps.includes(s.employee_id));
   if(!prevShifts.length){showToast('No shifts found in previous fortnight for '+RB_ROLE_LABELS[role]);return;}
-  const base=Date.now();
-  const newShifts=prevShifts.map((s,i)=>{
-    const d=new Date(s.date+'T12:00:00'); d.setDate(d.getDate()+14);
-    return{id:'SH'+(base+i),employee_id:s.employee_id,date:d.toISOString().slice(0,10),start_time:s.start_time,end_time:s.end_time,is_day_off:s.is_day_off};
-  });
-  try{
-    await db.bulkInsert('roster_shifts',newShifts);
-    _rosterShifts.push(...newShifts);
-    renderRoster();
-    showToast(`Copied ${newShifts.length} shifts for ${RB_ROLE_LABELS[role]}`);
-  }catch(e){ showToast('Copy error: '+e.message.slice(0,80)); console.error(e); }
+  document.getElementById('rb-confirm-title').textContent='Copy Last Fortnight?';
+  document.getElementById('rb-confirm-msg').innerHTML=`This will copy <strong>${prevShifts.length} shift${prevShifts.length!==1?'s':''}</strong> from the previous fortnight into the current ${RB_ROLE_LABELS[role]} roster. Existing shifts will not be removed.`;
+  const okBtn=document.getElementById('rb-confirm-ok');
+  okBtn.textContent='Copy Shifts';
+  okBtn.className='rb-confirm-ok';
+  _rbConfirmCallback=async()=>{
+    const base=Date.now();
+    const newShifts=prevShifts.map((s,i)=>{
+      const d=new Date(s.date+'T12:00:00'); d.setDate(d.getDate()+14);
+      return{id:'SH'+(base+i),employee_id:s.employee_id,date:d.toISOString().slice(0,10),start_time:s.start_time,end_time:s.end_time,is_day_off:s.is_day_off};
+    });
+    try{
+      await db.bulkInsert('roster_shifts',newShifts);
+      _rosterShifts.push(...newShifts);
+      renderRoster();
+      const copiedIds=newShifts.map(s=>s.id);
+      rbPushUndo(`${newShifts.length} shifts copied`,async()=>{
+        await Promise.all(copiedIds.map(id=>db.delete('roster_shifts',id)));
+        _rosterShifts=_rosterShifts.filter(s=>!copiedIds.includes(s.id));
+        renderRoster();
+      });
+      showToast(`Copied ${newShifts.length} shifts for ${RB_ROLE_LABELS[role]}`);
+    }catch(e){ showToast('Copy error: '+e.message.slice(0,80)); console.error(e); }
+  };
+  document.getElementById('rb-confirm-overlay').classList.add('show');
 }
 
 function renderFnGridForRole(role){
@@ -5396,13 +5492,18 @@ async function rbAddShift(empId,date,role){
   const end=sched?.endMin!=null?minToTimeStr(sched.endMin):'17:00';
   const row={id:'SH'+Date.now(),employee_id:empId,date,start_time:start,end_time:end,is_day_off:false};
   _rosterShifts.push(row);
-  renderDayTimelineForRole(role||rbRoleForEmp(empId));
+  renderDayTimelineForRole(r);
   try{
     await db.insert('roster_shifts',row);
+    rbPushUndo('shift added',async()=>{
+      await db.delete('roster_shifts',row.id);
+      _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
+      renderDayTimelineForRole(r);
+    });
     showToast('Shift added');
   }catch(e){
     _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
-    renderDayTimelineForRole(role||rbRoleForEmp(empId));
+    renderDayTimelineForRole(r);
     showToast('Could not add shift');
     console.error(e);
   }
@@ -5430,6 +5531,15 @@ async function rbSplitShift(shiftId,role){
       const local=_rosterShifts.find(s=>s.id===newRow.id);
       if(local) local.id=saved.id;
     }
+    const savedNewId=(saved?.id&&saved.id!==newRow.id)?saved.id:newRow.id;
+    const splitRole=role||rbRoleForEmp(shift.employee_id);
+    rbPushUndo('shift split',async()=>{
+      await db.delete('roster_shifts',savedNewId);
+      _rosterShifts=_rosterShifts.filter(s=>s.id!==savedNewId);
+      shift.end_time=prevEnd;
+      await db.update('roster_shifts',shiftId,{end_time:prevEnd});
+      renderDayTimelineForRole(splitRole);
+    });
     showToast('Shift split ✓');
   }catch(e){
     shift.end_time=prevEnd;
@@ -5440,12 +5550,18 @@ async function rbSplitShift(shiftId,role){
 }
 
 async function rbDeleteShift(shiftId,role){
+  const shift=_rosterShifts.find(s=>s.id==shiftId);
+  const r=role||rbRoleForEmp(shift?.employee_id);
+  const snapshot=shift?{...shift}:null;
   try{
     await db.delete('roster_shifts',shiftId);
-    const shift=_rosterShifts.find(s=>s.id==shiftId);
-    const r=role||rbRoleForEmp(shift?.employee_id);
     _rosterShifts=_rosterShifts.filter(s=>s.id!==shiftId);
     renderDayTimelineForRole(r);
+    if(snapshot) rbPushUndo('shift deleted',async()=>{
+      await db.insert('roster_shifts',snapshot);
+      _rosterShifts.push(snapshot);
+      renderDayTimelineForRole(r);
+    });
     showToast('Shift removed');
   }catch(e){showToast('Could not remove');console.error(e);}
 }
@@ -5470,10 +5586,16 @@ async function rbToggleLane(shiftId, role){
 async function rbSaveShiftTimes(shiftId,startTime,endTime){
   const shift=_rosterShifts.find(s=>s.id==shiftId);
   if(!shift) return;
+  const prevStart=shift.start_time, prevEnd=shift.end_time;
   shift.start_time=startTime; shift.end_time=endTime;
   const role=rbRoleForEmp(shift.employee_id);
   try{
     await db.update('roster_shifts',shiftId,{start_time:startTime,end_time:endTime});
+    rbPushUndo('shift times changed',async()=>{
+      shift.start_time=prevStart; shift.end_time=prevEnd;
+      await db.update('roster_shifts',shiftId,{start_time:prevStart,end_time:prevEnd});
+      if(role) renderDayTimelineForRole(role);
+    });
     if(role) renderDayTimelineForRole(role);
   }catch(e){showToast('Could not save shift');console.error(e);}
 }
