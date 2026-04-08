@@ -1288,7 +1288,8 @@
       <div class="scan-prompt">Tap your card</div>
       <div class="scan-sub">Tap your RFID card to view your requests and notifications</div>
       <div class="reader-pill"><span class="pulse-dot"></span> READY TO SCAN</div>
-      <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px dashed var(--border);">
+      <!-- TESTING ONLY — restore display:block to re-enable manual RFID entry -->
+      <div style="display:none; margin-top:1.25rem;padding-top:1.25rem;border-top:1px dashed var(--border);">
         <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--dusty);margin-bottom:0.5rem;">⌨ Test mode — type card number</div>
         <div style="display:flex;gap:0.5rem;">
           <input id="test-rfid-req" type="text" placeholder="e.g. 0001234567"
@@ -2594,6 +2595,7 @@ document.addEventListener('click',e=>{
   if(e.target.closest('.reason-card'))return;
   if(e.target.id==='test-rfid'||e.target.id==='test-rfid-req')return;
   if(e.target.tagName==='BUTTON'&&e.target.onclick?.toString().includes('testScan'))return;
+  if(e.target.tagName==='SELECT'||e.target.closest('select'))return;
   if(!document.getElementById('reason-overlay').classList.contains('show'))focusRFID();
 });
 rfidEl.addEventListener('input',()=>{
