@@ -1237,8 +1237,8 @@
     <div class="scan-sub">Hold your card near the reader — it only takes a moment</div>
     <div class="reader-pill"><div class="pulse-dot"></div>Reader ready</div>
 
-    <!-- TESTING ONLY — remove when RFID reader arrives -->
-    <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px dashed var(--border);">
+    <!-- TESTING ONLY — restore display:block to re-enable manual RFID entry -->
+    <div style="display:none; margin-top:1.25rem; padding-top:1.25rem; border-top:1px dashed var(--border);">
       <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--dusty);margin-bottom:0.5rem;">⌨ Test mode — type card number</div>
       <div style="display:flex;gap:0.5rem;">
         <input id="test-rfid" type="text" placeholder="e.g. 0001234567"
@@ -2493,6 +2493,66 @@ function tick(){
 }
 tick();
 setInterval(tick, 1000);
+
+/* ═══════════════════════════════════════════
+   AUTO-RELOAD + STATE RESTORE
+═══════════════════════════════════════════ */
+const RW_STATE_KEY='rw_display_state';
+let _rwLastActivity=Date.now();
+let _rwVersionChanged=false;
+let _rwPageHash=null;
+
+// Track user activity
+['click','keydown','touchstart','mousemove'].forEach(ev=>{
+  document.addEventListener(ev,()=>{ _rwLastActivity=Date.now(); },{passive:true});
+});
+
+// Simple hash of page content to detect new deploys
+async function rwCheckVersion(){
+  try{
+    const r=await fetch(location.href+'?_v='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;
+    const text=await r.text();
+    const hash=text.length+'_'+[...text.slice(0,800)].reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0,0);
+    if(_rwPageHash===null){ _rwPageHash=hash; return; }
+    if(hash!==_rwPageHash) _rwVersionChanged=true;
+  }catch(e){}
+}
+
+// Every 15s: reload if new version detected AND page has been idle 2+ min
+setInterval(()=>{
+  if(_rwVersionChanged&&Date.now()-_rwLastActivity>2*60*1000){
+    localStorage.setItem(RW_STATE_KEY,'whosOn');
+    location.reload();
+  }
+},15000);
+
+// Poll for new version every 60s
+setInterval(rwCheckVersion,60000);
+rwCheckVersion();
+
+// Restore Who's On view if we reloaded from that state
+(function rwRestoreState(){
+  const saved=localStorage.getItem(RW_STATE_KEY);
+  if(saved==='whosOn'){
+    localStorage.removeItem(RW_STATE_KEY);
+    // Defer until app is fully initialised
+    setTimeout(()=>{ if(typeof showStaffRoster==='function') showStaffRoster(); },500);
+  }
+})();
+
+// Advance to next day at midnight without requiring a reload
+function rwScheduleMidnight(){
+  const now=new Date();
+  const midnight=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,5);
+  setTimeout(()=>{
+    const d=new Date();
+    srDayDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if(typeof srLayout!=='undefined'&&srLayout==='day'&&typeof renderStaffRoster==='function') renderStaffRoster();
+    rwScheduleMidnight();
+  },midnight-now);
+}
+rwScheduleMidnight();
 
 /* ═══════════════════════════════════════════
    RFID
@@ -5493,15 +5553,17 @@ async function rbAddShift(empId,date,role){
   const row={id:'SH'+Date.now(),employee_id:empId,date,start_time:start,end_time:end,is_day_off:false};
   _rosterShifts.push(row);
   renderDayTimelineForRole(r);
+  const undoEntry={label:'shift added',fn:async()=>{
+    await db.delete('roster_shifts',row.id);
+    _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
+    renderDayTimelineForRole(r);
+  }};
+  _rbUndoStack.push(undoEntry);
   try{
     await db.insert('roster_shifts',row);
-    rbPushUndo('shift added',async()=>{
-      await db.delete('roster_shifts',row.id);
-      _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
-      renderDayTimelineForRole(r);
-    });
     showToast('Shift added');
   }catch(e){
+    const idx=_rbUndoStack.indexOf(undoEntry); if(idx!==-1) _rbUndoStack.splice(idx,1);
     _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
     renderDayTimelineForRole(r);
     showToast('Could not add shift');
@@ -5589,15 +5651,19 @@ async function rbSaveShiftTimes(shiftId,startTime,endTime){
   const prevStart=shift.start_time, prevEnd=shift.end_time;
   shift.start_time=startTime; shift.end_time=endTime;
   const role=rbRoleForEmp(shift.employee_id);
+  const undoEntry={label:'shift times changed',fn:async()=>{
+    shift.start_time=prevStart; shift.end_time=prevEnd;
+    await db.update('roster_shifts',shiftId,{start_time:prevStart,end_time:prevEnd});
+    if(role) renderDayTimelineForRole(role);
+  }};
+  _rbUndoStack.push(undoEntry);
   try{
     await db.update('roster_shifts',shiftId,{start_time:startTime,end_time:endTime});
-    rbPushUndo('shift times changed',async()=>{
-      shift.start_time=prevStart; shift.end_time=prevEnd;
-      await db.update('roster_shifts',shiftId,{start_time:prevStart,end_time:prevEnd});
-      if(role) renderDayTimelineForRole(role);
-    });
     if(role) renderDayTimelineForRole(role);
-  }catch(e){showToast('Could not save shift');console.error(e);}
+  }catch(e){
+    const idx=_rbUndoStack.indexOf(undoEntry); if(idx!==-1) _rbUndoStack.splice(idx,1);
+    showToast('Could not save shift'); console.error(e);
+  }
 }
 
 function rbStartDrag(e,shiftId,type){
