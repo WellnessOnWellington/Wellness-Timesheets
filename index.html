@@ -635,24 +635,24 @@
   #sr-layout-popover {
     display: none; position: absolute; top: calc(100% + 8px); left: 0; z-index: 200;
     background: var(--white); border: 1.5px solid var(--border); border-radius: 14px;
-    box-shadow: 0 8px 24px rgba(40,20,30,0.13); padding: 0.4rem 0; min-width: 160px;
+    box-shadow: 0 8px 24px rgba(40,20,30,0.13); padding: 0.4rem 0; width: 170px;
     animation: srFpIn 0.15s ease;
   }
   #sr-layout-popover.open { display: block; }
-  .sr-lp-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.65rem 1rem; cursor: pointer; transition: background 0.1s; }
+  .sr-lp-row { display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0.9rem; cursor: pointer; transition: background 0.1s; }
   .sr-lp-row:active { background: var(--warm-white); }
-  .sr-lp-radio { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0; transition: all 0.12s; }
-  .sr-lp-radio.active { background: var(--burgundy); border-color: var(--burgundy); box-shadow: inset 0 0 0 4px #fff; }
+  .sr-lp-radio { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0; transition: all 0.12s; }
+  .sr-lp-radio.active { background: var(--burgundy); border-color: var(--burgundy); box-shadow: inset 0 0 0 5px #fff; }
   .sr-lp-label { flex: 1; font-family: 'Nunito',sans-serif; font-size: 0.88rem; font-weight: 700; color: var(--charcoal); }
   #sr-filter-popover {
     display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
     background: var(--white); border: 1.5px solid var(--border); border-radius: 14px;
-    box-shadow: 0 8px 24px rgba(40,20,30,0.13); padding: 0.4rem 0; min-width: 180px;
+    box-shadow: 0 8px 24px rgba(40,20,30,0.13); padding: 0.4rem 0; width: 170px;
     animation: srFpIn 0.15s ease;
   }
   #sr-filter-popover.open { display: block; }
   @keyframes srFpIn { from { opacity:0; transform:translateY(-6px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
-  .sr-fp-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.65rem 1rem; cursor: pointer; transition: background 0.1s; }
+  .sr-fp-row { display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0.9rem; cursor: pointer; transition: background 0.1s; }
   .sr-fp-row:active { background: var(--warm-white); }
   .sr-fp-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .sr-fp-label { flex: 1; font-family: 'Nunito',sans-serif; font-size: 0.88rem; font-weight: 700; color: var(--charcoal); }
@@ -1159,9 +1159,9 @@
     }
     .sr-header-brand {
       position: absolute; left: 50%; transform: translateX(-50%);
-      display: flex; align-items: center; gap: 0; pointer-events: none;
+      display: flex; align-items: center; gap: 0;
     }
-    .sr-header-brand img { height: 28px; }
+    .sr-header-brand img { display: none; }
     .sr-header-spacer { display: none; }
     .sr-header .sr-layout-toggle { display: none !important; }
     #sr-layout-pill-wrap { display: block; }
@@ -1220,8 +1220,9 @@
     #sr-right-group { display: none !important; }
     .sr-fn-badge { background: var(--blush-lt) !important; color: var(--burgundy) !important; border: 1.5px solid var(--border); }
 
-    /* Content padding */
+    /* Content padding + swipe clipping */
     .sr-content { padding: 1rem 0.75rem; }
+    #view-staff-roster { overflow-x: hidden; }
 
     /* Fortnight heading */
     .sr-fortnight-heading { flex-wrap: wrap; gap: 0.5rem; }
@@ -1441,7 +1442,7 @@
   <div class="sr-header">
     <div id="sr-layout-pill-wrap">
       <button id="sr-layout-pill" onclick="srToggleLayoutPicker(event)">
-        <span id="sr-layout-pill-label">Day</span>
+        <span id="sr-layout-pill-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 5.5V9l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div id="sr-layout-popover">
@@ -4953,9 +4954,14 @@ function srMobPersonSelect(mobSel){
 }
 
 function srSetLayout(layout){
-  // Sync mobile pill label + radios
-  const pillLabel=document.getElementById('sr-layout-pill-label');
-  if(pillLabel) pillLabel.textContent={fortnight:'Fortnight',day:'Day',person:'Person'}[layout]||layout;
+  // Sync mobile pill icon + radios
+  const SR_LAYOUT_ICONS={
+    fortnight:`<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 7h14" stroke="currentColor" stroke-width="1.5"/><path d="M6 2v2M12 2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><text x="9" y="13.5" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor" font-family="sans-serif">14</text></svg>`,
+    day:`<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 5.5V9l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    person:`<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6.5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 15.5c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`
+  };
+  const pillIcon=document.getElementById('sr-layout-pill-icon');
+  if(pillIcon) pillIcon.innerHTML=SR_LAYOUT_ICONS[layout]||SR_LAYOUT_ICONS.day;
   ['fortnight','day','person'].forEach(l=>document.getElementById('sr-lp-radio-'+l)?.classList.toggle('active',l===layout));
 
   const _tnNow=new Date();
@@ -7193,6 +7199,93 @@ function reqFmtDate(dateStr){
 }
 
 function escHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ═══════════════════════════════════════════
+   SWIPE NAVIGATION (mobile)
+═══════════════════════════════════════════ */
+(function(){
+  const SWIPE_THRESHOLD=50;      // px — minimum distance to trigger nav
+  const VELOCITY_THRESHOLD=0.35; // px/ms — fast flick triggers even if short
+  const RESIST=0.82;             // finger follow factor (< 1 = slight drag feel)
+  const SLIDE_OUT_MS=180;
+  const SLIDE_IN_MS=240;
+
+  let startX=0, startY=0, startT=0, curX=0;
+  let tracking=false, axisLocked=false, isHoriz=false;
+
+  function content(){ return document.getElementById('sr-content'); }
+  function isMobile(){ return window.matchMedia('(pointer:coarse)').matches; }
+  function canSwipe(){ return isMobile() && typeof srLayout!=='undefined' && srLayout!=='person'; }
+
+  function setTransform(el, x, transition){
+    el.style.transition = transition || 'none';
+    el.style.transform  = x===0 ? '' : `translateX(${x}px)`;
+  }
+
+  function slideNavigate(dir){
+    // dir: 1=next (swipe left), -1=prev (swipe right)
+    const c=content(); if(!c) return;
+    const W=window.innerWidth;
+    // Animate current content off screen
+    setTransform(c, -dir*W, `transform ${SLIDE_OUT_MS}ms ease-in`);
+    setTimeout(()=>{
+      srNav(dir); // updates DOM synchronously
+      // Place new content off screen on the opposite side, then slide in
+      setTransform(c, dir*W);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        setTransform(c, 0, `transform ${SLIDE_IN_MS}ms cubic-bezier(0.25,0.46,0.45,0.94)`);
+      }));
+    }, SLIDE_OUT_MS);
+  }
+
+  function onStart(e){
+    if(!canSwipe()) return;
+    const t=e.touches[0];
+    startX=curX=t.clientX; startY=t.clientY; startT=Date.now();
+    tracking=true; axisLocked=false; isHoriz=false;
+    const c=content(); if(c){ c.style.transition='none'; }
+  }
+
+  function onMove(e){
+    if(!tracking) return;
+    const t=e.touches[0];
+    const dx=t.clientX-startX, dy=t.clientY-startY;
+    curX=t.clientX;
+    if(!axisLocked){
+      if(Math.abs(dx)<6&&Math.abs(dy)<6) return;
+      isHoriz=Math.abs(dx)>Math.abs(dy);
+      axisLocked=true;
+    }
+    if(!isHoriz) return;
+    e.preventDefault();
+    const c=content(); if(c) setTransform(c, dx*RESIST);
+  }
+
+  function onEnd(e){
+    if(!tracking){ tracking=false; return; }
+    tracking=false;
+    if(!isHoriz){
+      const c=content(); if(c) setTransform(c,0,`transform 0.18s ease`);
+      return;
+    }
+    const dx=curX-startX;
+    const velocity=Math.abs(dx)/(Date.now()-startT);
+    const shouldNav=Math.abs(dx)>SWIPE_THRESHOLD||velocity>VELOCITY_THRESHOLD;
+    if(shouldNav){
+      slideNavigate(dx<0?1:-1);
+    } else {
+      const c=content(); if(c) setTransform(c,0,`transform 0.2s cubic-bezier(0.34,1.56,0.64,1)`);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    const view=document.getElementById('view-staff-roster');
+    if(!view) return;
+    view.addEventListener('touchstart', onStart, {passive:true});
+    view.addEventListener('touchmove',  onMove,  {passive:false});
+    view.addEventListener('touchend',   onEnd,   {passive:true});
+  });
+})();
 
 </script>
 </body>
