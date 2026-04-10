@@ -618,6 +618,26 @@
   .sr-layout-btn { padding: 0.55rem 1.6rem; border-radius: 9px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: 1.5px solid var(--border); font-family: 'Nunito',sans-serif; background: var(--white); color: var(--muted); transition: all 0.08s; letter-spacing: 0.02em; text-align: center; white-space: nowrap; }
   .sr-layout-btn:hover:not(.active) { color: var(--burgundy); }
   .sr-layout-btn.active { background: var(--burgundy); color: #fff; box-shadow: 0 2px 8px rgba(139,37,53,0.25); border-color: var(--burgundy); }
+  #sr-mobile-filter-btn { display: none; }
+  #sr-filter-wrap { position: relative; }
+  #sr-filter-popover {
+    display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
+    background: var(--white); border: 1.5px solid var(--border); border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(40,20,30,0.13); padding: 0.4rem 0; min-width: 180px;
+    animation: srFpIn 0.15s ease;
+  }
+  #sr-filter-popover.open { display: block; }
+  @keyframes srFpIn { from { opacity:0; transform:translateY(-6px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+  .sr-fp-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.65rem 1rem; cursor: pointer; transition: background 0.1s; }
+  .sr-fp-row:active { background: var(--warm-white); }
+  .sr-fp-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .sr-fp-label { flex: 1; font-family: 'Nunito',sans-serif; font-size: 0.88rem; font-weight: 700; color: var(--charcoal); }
+  .sr-fp-check {
+    width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    color: transparent; background: transparent; transition: all 0.12s;
+  }
+  .sr-fp-check.active { background: var(--burgundy); border-color: var(--burgundy); color: #fff; }
 
   .sr-content { padding: 1.75rem 2rem; max-width: 1500px; margin: 0 auto; width: 100%; }
 
@@ -1121,6 +1141,24 @@
     }
     #sr-kiosk-btn { display: none; }
 
+    #sr-filter-wrap { margin-left: auto; }
+    #sr-mobile-filter-btn {
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--warm-white); border: 1.5px solid var(--border);
+      color: var(--muted); cursor: pointer; flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+    #sr-mobile-filter-btn.active { background: var(--burgundy); color: #fff; border-color: var(--burgundy); }
+    #sr-filter-dot {
+      display: none; position: absolute; top: 3px; right: 3px;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--burgundy); border: 1.5px solid #fff;
+    }
+    #sr-mobile-filter-btn.filtered #sr-filter-dot { display: block; }
+    #sr-mobile-filter-btn.active.filtered #sr-filter-dot { background: #fff; border-color: var(--burgundy); }
+
     /* ── Ribbon 2: By Day / By Person / Now ── */
     .sr-layout-toggle {
       width: 100%; border-radius: 0;
@@ -1133,7 +1171,7 @@
     .sr-filters {
       flex-direction: column; padding: 0; gap: 0; align-items: stretch;
     }
-    .sr-filters-group { width: 100%; padding: 0.4rem 0.75rem; }
+    .sr-filters-group { display: none !important; }
     .sr-role-tabs { width: 100%; height: 40px; border-radius: 8px; }
     .sr-tab { flex: 1; justify-content: center; padding: 0; font-size: 0.75rem; white-space: nowrap; }
 
@@ -1390,6 +1428,29 @@
     </div>
     <div class="sr-header-spacer"></div>
     <button class="admin-kiosk-btn" id="sr-kiosk-btn" onclick="showView('kiosk')" style="flex-shrink:0;">← Return to Kiosk</button>
+    <div id="sr-filter-wrap">
+      <button id="sr-mobile-filter-btn" onclick="srToggleFilters(event)" aria-label="Toggle role filters">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1.5 3.5h13M4 8h8M6.5 12.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span id="sr-filter-dot"></span>
+      </button>
+      <div id="sr-filter-popover">
+        <div class="sr-fp-row" onclick="srToggleRolePopover('Receptionist')">
+          <span class="sr-fp-dot" style="background:#85c9a5"></span>
+          <span class="sr-fp-label">Receptionists</span>
+          <span class="sr-fp-check active" id="sr-fp-Receptionist"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="sr-fp-row" onclick="srToggleRolePopover('Nurse')">
+          <span class="sr-fp-dot" style="background:#8ab8d4"></span>
+          <span class="sr-fp-label">Nurses</span>
+          <span class="sr-fp-check active" id="sr-fp-Nurse"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="sr-fp-row" onclick="srToggleRolePopover('Manager')">
+          <span class="sr-fp-dot" style="background:#b89ac9"></span>
+          <span class="sr-fp-label">Managers</span>
+          <span class="sr-fp-check active" id="sr-fp-Manager"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="sr-filters">
@@ -4679,6 +4740,7 @@ function checkRosterPIN(){
   const val=[...document.querySelectorAll('.wos-pin-box[data-group="roster"]')].map(b=>b.value).join('');
   const activePin=_rosterConfig?.roster_view_pin||ROSTER_VIEW_PIN;
   if(val===activePin){
+    document.activeElement?.blur();
     document.getElementById('roster-pin-modal').classList.remove('show');
     showStaffRoster();
   }else{
@@ -4769,8 +4831,43 @@ function srToggleRole(role,btn){
   if(sel&&sel.value){ sel.value=''; sel.classList.remove('individual-active'); }
   if(srRoles.has(role)) srRoles.delete(role); else srRoles.add(role);
   btn.classList.toggle('active', srRoles.has(role));
+  srUpdateFilterDot();
   renderStaffRoster();
 }
+
+function srUpdateFilterDot(){
+  const allRoles=['Receptionist','Nurse','Manager'];
+  const isFiltered=allRoles.some(r=>!srRoles.has(r));
+  document.getElementById('sr-mobile-filter-btn')?.classList.toggle('filtered', isFiltered);
+}
+
+function srToggleFilters(e){
+  if(e) e.stopPropagation();
+  const popover=document.getElementById('sr-filter-popover');
+  const btn=document.getElementById('sr-mobile-filter-btn');
+  const isOpen=popover.classList.toggle('open');
+  btn.classList.toggle('active', isOpen);
+}
+
+function srToggleRolePopover(role){
+  if(srRoles.has(role)) srRoles.delete(role); else srRoles.add(role);
+  // sync popover checkmark
+  document.getElementById('sr-fp-'+role)?.classList.toggle('active', srRoles.has(role));
+  // sync desktop tab
+  const tab=document.querySelector(`.sr-role-tabs .sr-tab[onclick*="${role}"]`);
+  if(tab) tab.classList.toggle('active', srRoles.has(role));
+  srUpdateFilterDot();
+  renderStaffRoster();
+}
+
+document.addEventListener('click', e=>{
+  const popover=document.getElementById('sr-filter-popover');
+  if(!popover?.classList.contains('open')) return;
+  if(!e.target.closest('#sr-filter-wrap')){
+    popover.classList.remove('open');
+    document.getElementById('sr-mobile-filter-btn')?.classList.remove('active');
+  }
+});
 
 function srSelectIndividual(){
   renderStaffRoster();
@@ -4794,6 +4891,11 @@ function srSetLayout(layout){
   document.getElementById('sr-btn-day').classList.toggle('active',layout==='day');
   document.getElementById('sr-btn-person').classList.toggle('active',layout==='person');
   document.getElementById('sr-filters-group').style.display=layout==='person'?'none':'';
+  // Mobile filter btn: hide on person layout, close popover on layout switch
+  const mfWrap=document.getElementById('sr-filter-wrap');
+  if(mfWrap) mfWrap.style.display=layout==='person'?'none':'';
+  document.getElementById('sr-filter-popover')?.classList.remove('open');
+  document.getElementById('sr-mobile-filter-btn')?.classList.remove('active');
   document.getElementById('sr-person-filter').style.display=layout==='person'?'flex':'none';
   document.getElementById('view-staff-roster').classList.toggle('sr-now-mode',layout==='day');
   const sel=document.getElementById('sr-staff-filter');
