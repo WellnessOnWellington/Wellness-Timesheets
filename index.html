@@ -711,13 +711,16 @@
   .sr-gnow-mobile-group { margin-bottom: 1.25rem; }
   .sr-gnow-mobile-role-hdr { display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.5rem; padding: 0 0.1rem; }
   .sr-gnow-mobile-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .sr-gnow-mobile-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); margin-bottom: 0.35rem; background: var(--white); border: 1.5px solid var(--border); }
+  .sr-gnow-mobile-row { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); margin-bottom: 0.35rem; background: var(--white); border: 1.5px solid var(--border); }
   .sr-gnow-mobile-row.on-now { border-color: transparent; }
   .sr-gnow-mobile-row.coming-up { opacity: 0.7; }
   .sr-gnow-mobile-row.finished { opacity: 0.4; }
+  .sr-gnow-mobile-top { display: flex; align-items: center; gap: 0.75rem; }
   .sr-gnow-mobile-name { font-size: 0.9rem; font-weight: 700; color: var(--charcoal); flex: 1; }
   .sr-gnow-mobile-time { font-size: 0.78rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
   .sr-gnow-mobile-badge { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.18rem 0.55rem; border-radius: 20px; color: #fff; white-space: nowrap; flex-shrink: 0; }
+  .sr-gnow-mobile-bar-track { width: 100%; height: 5px; border-radius: 3px; background: rgba(0,0,0,0.08); position: relative; overflow: hidden; }
+  .sr-gnow-mobile-bar-fill { position: absolute; top: 0; height: 100%; border-radius: 3px; opacity: 0.6; }
   .sr-gnow-empty { text-align: center; padding: 4rem 2rem; color: var(--muted); font-size: 0.85rem; font-weight: 600; }
 
   /* ══════════════════════════════
@@ -2103,7 +2106,7 @@
 </div>
 
 <!-- ADD EMPLOYEE MODAL -->
-<div class="modal-bg" id="emp-modal" onclick="if(event.target===this)closeModal()">
+<div class="modal-bg" id="emp-modal" onmousedown="if(event.target===this)this._closeOnUp=true" onmouseup="if(this._closeOnUp&&event.target===this)closeModal();this._closeOnUp=false;" onclick="this._closeOnUp=false">
   <div class="modal">
     <button class="btn-remove-emp" id="emp-remove-btn" style="display:none;" onclick="removeEmployee()">Remove staff member</button>
     <div class="modal-title" id="emp-modal-title">Add team member</div>
@@ -4971,10 +4974,15 @@ function srByDayGantt(dateStr, today){
       const statusClass=onNow?'on-now':finished?'finished':'coming-up';
       const badge=onNow?`<span class="sr-gnow-mobile-badge" style="background:${roleBar.bg};color:${roleBar.text};">On now</span>`:'';
       const rowStyle=onNow?`style="background:${roleBar.bg}33;border-color:${roleBar.bg}88;"`:'';
+      const barLeft=gnowPct(startMin).toFixed(1);
+      const barWidth=(gnowPct(endMin)-gnowPct(startMin)).toFixed(1);
       return`<div class="sr-gnow-mobile-row ${statusClass}" ${rowStyle}>
-        <span class="sr-gnow-mobile-name">${name}</span>
-        <span class="sr-gnow-mobile-time">${shift.start.slice(0,5)}–${shift.end.slice(0,5)}</span>
-        ${badge}
+        <div class="sr-gnow-mobile-top">
+          <span class="sr-gnow-mobile-name">${name}</span>
+          <span class="sr-gnow-mobile-time">${shift.start.slice(0,5)}–${shift.end.slice(0,5)}</span>
+          ${badge}
+        </div>
+        <div class="sr-gnow-mobile-bar-track"><div class="sr-gnow-mobile-bar-fill" style="left:${barLeft}%;width:${barWidth}%;background:${roleBar.bg};"></div></div>
       </div>`;
     }).filter(Boolean);
     if(!rows.length) return null;
@@ -6155,8 +6163,11 @@ async function printRoster(){
           const shifts=_rosterShifts.filter(s=>s.employee_id==emp.id&&s.date===d&&!s.is_day_off);
           const leaveEntry=_entries.find(e=>e.employeeId===emp.id&&e.date===d&&e.leaveType);
           if(leaveEntry?.leaveType){
-            const abbr={annual_leave:'AL',personal_leave:'PL',public_holiday:'PH',compassionate_leave:'CL',unpaid_leave:'UL'}[leaveEntry.leaveType]||'Leave';
-            return`<td><span class="rp-leave">${abbr}</span></td>`;
+            const leaveShifts=shifts.length?shifts:_rosterShifts.filter(s=>s.employee_id==emp.id&&s.date===d&&!s.is_day_off);
+            if(leaveShifts.length){
+              return`<td>${leaveShifts.map(s=>`<span class="rp-leave" style="text-decoration:line-through;">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`).join('<br/>')}</td>`;
+            }
+            return`<td><span class="rp-leave" style="text-decoration:line-through;">—</span></td>`;
           }
           if(!shifts.length) return`<td><span class="rp-off">—</span></td>`;
           return`<td>${shifts.map(s=>`<span class="rp-shift">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`).join('<br/>')}</td>`;
