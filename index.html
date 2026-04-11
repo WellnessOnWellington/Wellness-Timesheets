@@ -1171,7 +1171,7 @@
       position: relative;
     }
     .sr-header-brand { display: none; }
-    #sr-header-title { display: flex; flex: 1; justify-content: center; align-items: center; font-family: 'Nunito',sans-serif; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); pointer-events: none; }
+    #sr-header-title { display: flex; flex: 1; justify-content: center; align-items: center; font-family: 'Nunito',sans-serif; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
     .sr-header-spacer { display: none; }
     .sr-header .sr-layout-toggle { display: none !important; }
     #sr-layout-pill-wrap { display: block; }
@@ -1467,7 +1467,7 @@
         </div>
       </div>
     </div>
-    <div id="sr-header-title">Who's On</div>
+    <div id="sr-header-title" onclick="showView('kiosk')">Who's On</div>
     <div class="sr-header-brand">
       <img src="Logo.png" alt="Wellness on Wellington" style="height:36px;width:auto;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
       <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0;margin-left:0.6rem;cursor:pointer;" onclick="showView('kiosk')" title="Return to kiosk">
