@@ -3108,6 +3108,7 @@ async function processRFID(card){
   if(!emp){showFlash('error','🤷','','Card not recognised','Please see your manager');return;}
   // Fresh fetch before committing — prevents duplicate entries when multiple kiosks are in use
   try{ _entries=(await db.get('entries')).map(normaliseEntry); }catch(e){}
+  if(!_requests.length){ try{ _requests=(await db.get('requests')).map(normaliseRequest); }catch(e){} }
   const now=new Date();
   const todayKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const timeStr=now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false});
@@ -3132,8 +3133,8 @@ async function processRFID(card){
     await maybeBreakConfirm(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,null,null);
   }
   // Silently refresh cache in background for next scan
-  Promise.all([db.get('employees'),db.get('entries')]).then(([emps,entries])=>{
-    _emps=emps.filter(e=>e.active!==false); _entries=entries.map(normaliseEntry);
+  Promise.all([db.get('employees'),db.get('entries'),db.get('requests').catch(()=>[])]).then(([emps,entries,reqs])=>{
+    _emps=emps.filter(e=>e.active!==false); _entries=entries.map(normaliseEntry); _requests=reqs.map(normaliseRequest);
   }).catch(()=>{});
 }
 
