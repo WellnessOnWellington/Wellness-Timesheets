@@ -1406,6 +1406,19 @@
     #rb-panels { display: none; }
     #rb-mob-day-wrap { display: flex; }
   }
+
+  /* ── Help Guide ── */
+  .hg-intro { font-size:0.8rem; color:var(--muted); font-weight:500; padding:0.25rem 0 1.25rem; line-height:1.5; }
+  .hg-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
+  .hg-card { background:var(--warm-white); border:1.5px solid var(--border); border-radius:var(--radius); padding:1rem 1.1rem 1rem; }
+  .hg-card-head { display:flex; align-items:center; gap:0.55rem; margin-bottom:0.6rem; }
+  .hg-card-icon { font-size:1rem; flex-shrink:0; line-height:1; }
+  .hg-card-title { font-size:0.88rem; font-weight:800; color:var(--charcoal); font-family:'Nunito',sans-serif; }
+  .hg-list { margin:0; padding:0 0 0 1rem; display:flex; flex-direction:column; gap:0.3rem; }
+  .hg-list li { font-size:0.78rem; color:var(--muted); font-weight:500; line-height:1.45; }
+  .hg-list li strong { color:var(--charcoal); font-weight:700; }
+  .hg-card-wide { grid-column:span 2; }
+  @media (max-width:960px) { .hg-grid { grid-template-columns:1fr; } .hg-card-wide { grid-column:span 1; } }
 </style>
 </head>
 <body>
@@ -2329,7 +2342,101 @@
           </div>
         </div>
         <div class="settings-section-body" id="ss-body-help" style="display:none;">
-          <div class="empty-state" style="padding:2rem;">Coming soon</div>
+          <div style="padding:1rem 1.25rem 1.5rem;">
+            <div class="hg-intro">Quick reference for managing Running Well. All features below are desktop admin unless noted.</div>
+            <div class="hg-grid">
+
+              <div class="hg-card">
+                <div class="hg-card-head"><span class="hg-card-icon">🪪</span><span class="hg-card-title">Kiosk</span></div>
+                <ul class="hg-list">
+                  <li>Runs on the dedicated reception device — staff tap their RFID card to clock in or out</li>
+                  <li>If someone clocks outside their rostered window, they're prompted to leave a note</li>
+                  <li>Footer buttons give staff access to Who's On and Requests without manager involvement</li>
+                </ul>
+              </div>
+
+              <div class="hg-card">
+                <div class="hg-card-head"><span class="hg-card-icon">👥</span><span class="hg-card-title">Who's On</span></div>
+                <ul class="hg-list">
+                  <li>Read-only roster view for staff, accessed from the kiosk and protected by a PIN (set in Settings → Roster Settings)</li>
+                  <li><strong>Day view</strong> — Gantt timeline across all roles; darker bars indicate Clinic or Admin lane</li>
+                  <li><strong>Fortnight view</strong> — 2-week calendar grid; click a day to open the full day view</li>
+                  <li><strong>Person view</strong> — select a staff member to see their individual fortnight schedule</li>
+                </ul>
+              </div>
+
+              <div class="hg-card">
+                <div class="hg-card-head"><span class="hg-card-icon">📋</span><span class="hg-card-title">Requests</span></div>
+                <ul class="hg-list">
+                  <li>Staff scan their card at the Requests screen (kiosk footer) to submit and track requests</li>
+                  <li><strong>Leave</strong> — goes directly to the manager for approval</li>
+                  <li><strong>Shift Swap</strong> — sent to a colleague first; if they accept, it comes to you for final decision</li>
+                  <li><strong>Give Away</strong> — transfers a shift to a colleague permanently; requires your approval</li>
+                  <li>Approved swaps and give-aways automatically update the roster</li>
+                </ul>
+              </div>
+
+              <div class="hg-card">
+                <div class="hg-card-head"><span class="hg-card-icon">🗂️</span><span class="hg-card-title">Team</span></div>
+                <ul class="hg-list">
+                  <li>Add, edit, or deactivate staff from the Team tab</li>
+                  <li>Each person needs a role (Receptionist, Nurse, or Manager) and an RFID card number</li>
+                  <li>Use the role filter tabs to narrow the view</li>
+                  <li>Deactivated staff are hidden from active views but their records are preserved</li>
+                </ul>
+              </div>
+
+              <div class="hg-card">
+                <div class="hg-card-head"><span class="hg-card-icon">📅</span><span class="hg-card-title">Roster</span></div>
+                <ul class="hg-list">
+                  <li>Build the two-week roster in fortnight blocks — invisible to staff until published</li>
+                  <li>Drag a shift bar to move it; drag the edge to resize</li>
+                  <li>Nurses can be assigned Floor or Clinic lane; Receptionists can be Floor or Admin</li>
+                  <li>Use Week A / Week B tabs for alternating schedules</li>
+                  <li>Hit Publish when the fortnight is ready — staff will see it in Who's On</li>
+                </ul>
+              </div>
+
+              <div class="hg-card">
+                <div class="hg-card-head"><span class="hg-card-icon">📝</span><span class="hg-card-title">Notes</span></div>
+                <ul class="hg-list">
+                  <li>Notes appear when staff clock in or out outside their rostered window</li>
+                  <li>Each note shows the staff member, the time, and their reason</li>
+                  <li>Acknowledge a note once reviewed — it clears from the unread list</li>
+                </ul>
+              </div>
+
+              <div class="hg-card">
+                <div class="hg-card-head"><span class="hg-card-icon">🕐</span><span class="hg-card-title">Timesheets</span></div>
+                <ul class="hg-list">
+                  <li>Review clocked hours against rostered hours at the end of each fortnight</li>
+                  <li>Yellow and red flag icons indicate discrepancies between clocked and rostered time</li>
+                  <li>Click a row to review, adjust if needed, and approve</li>
+                  <li>Lock the fortnight before exporting to MYOB</li>
+                </ul>
+              </div>
+
+              <div class="hg-card">
+                <div class="hg-card-head"><span class="hg-card-icon">📊</span><span class="hg-card-title">Analytics</span></div>
+                <ul class="hg-list">
+                  <li>Full audit logs for clock events, notes, requests, and timesheet adjustments</li>
+                  <li>Filter each audit by staff member, role, and date range</li>
+                </ul>
+              </div>
+
+              <div class="hg-card hg-card-wide">
+                <div class="hg-card-head"><span class="hg-card-icon">⚙️</span><span class="hg-card-title">Settings</span></div>
+                <ul class="hg-list">
+                  <li><strong>Grace period</strong> — minutes either side of shift start/end before the app prompts staff for a reason</li>
+                  <li><strong>Discrepancy thresholds</strong> — how far off rostered time triggers a yellow or red flag on timesheets</li>
+                  <li><strong>Coverage thresholds</strong> — staffing levels that show red/yellow/green on the roster</li>
+                  <li><strong>Who's On PIN</strong> — the PIN staff enter to access the Who's On roster view</li>
+                  <li><strong>Fortnight cycle start date</strong> — only change this during initial setup</li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
         </div>
       </div>
 
@@ -5417,7 +5524,7 @@ function srRenderFortnight(startStr, days, emps, published, today){
 
 function srShiftForEmp(empId,date){
   const shift=_rosterShifts.find(s=>s.employee_id===empId&&s.date===date);
-  if(shift){if(shift.is_day_off)return'off';if(shift.start_time&&shift.end_time)return{start:shift.start_time,end:shift.end_time};}
+  if(shift){if(shift.is_day_off)return'off';if(shift.start_time&&shift.end_time)return{start:shift.start_time,end:shift.end_time,lane:shift.lane||null};}
   return null;
 }
 
@@ -5513,16 +5620,19 @@ function srByDayGantt(dateStr, today){
       const left=gnowPct(startMin);
       const width=gnowPct(endMin)-left;
       const name=_srDnMap[emp.id]||empFirstName(emp);
+      const isSecondaryLane=!onLeave&&(shift.lane==='75plus'||shift.lane==='admin');
+      const laneTag=shift.lane==='75plus'?' · clinic':shift.lane==='admin'?' · admin':'';
       const barBg=onLeave?'#c8c4c6':roleBar.bg;
       const barText=onLeave?'var(--muted)':roleBar.text;
+      const barFilter=isSecondaryLane?'filter:brightness(0.78);':'';
       const nameStyle=onLeave?'color:var(--muted);':'';
-      const tooltip=`${name}: ${shift.start}–${shift.end}`;
+      const tooltip=`${name}: ${shift.start}–${shift.end}${laneTag}`;
       const rowPill=onLeave?{bg:'rgba(180,180,180,0.08)'}:(SR_ROLE_PILL[role]||{bg:'transparent'});
       return`<div class="sr-gnow-row" style="background:${rowPill.bg}">
         <div class="sr-gnow-row-name" style="${nameStyle}">${name}</div>
         <div class="sr-gnow-track">
-          <div class="sr-gnow-bar" style="left:${left.toFixed(2)}%;width:${Math.max(0,width).toFixed(2)}%;background:${barBg};color:${barText};" data-tooltip="${tooltip}">
-            <span class="sr-gnow-bar-time">${shift.start.slice(0,5)}–${shift.end.slice(0,5)}</span>
+          <div class="sr-gnow-bar" style="left:${left.toFixed(2)}%;width:${Math.max(0,width).toFixed(2)}%;background:${barBg};color:${barText};${barFilter}" data-tooltip="${tooltip}">
+            <span class="sr-gnow-bar-time">${shift.start.slice(0,5)}–${shift.end.slice(0,5)}${laneTag}</span>
             <span class="sr-gnow-bar-name">${name}</span>
           </div>
         </div>
@@ -5632,7 +5742,8 @@ function srByPerson(days,emps,today){
       const isToday=date===today;
       const shift=srShiftForEmp(emp.id,date);
       const onLeave=shift&&shift!=='off'&&isOnLeave(emp.id,date);
-      const timeCell=!shift?`<span class="sr-person-day-off">—</span>`:shift==='off'?`<span class="sr-person-day-off">Day off</span>`:onLeave?`<span class="sr-person-day-time" style="color:#b0a8ac;">${shift.start} – ${shift.end} · Not in</span>`:`<span class="sr-person-day-time">${shift.start} – ${shift.end}</span>`;
+      const laneLabel=shift&&shift!=='off'?(shift.lane==='75plus'?' (clinic)':shift.lane==='admin'?' (admin)':''):'';
+      const timeCell=!shift?`<span class="sr-person-day-off">—</span>`:shift==='off'?`<span class="sr-person-day-off">Day off</span>`:onLeave?`<span class="sr-person-day-time" style="color:#b0a8ac;">${shift.start} – ${shift.end} · Not in</span>`:`<span class="sr-person-day-time">${shift.start} – ${shift.end}${laneLabel}</span>`;
       return`<div class="sr-person-day${isToday?' today-row':''}"><div class="sr-person-day-label"><div class="sr-person-day-name">${SR_DAYS[d.getDay()].slice(0,3)}${isToday?' ·':''}</div><div class="sr-person-day-date">${d.getDate()} ${SR_MONTHS[d.getMonth()].slice(0,3)}</div></div>${timeCell}</div>`;
     }).join('');
     return`<div class="sr-person-card"><div class="sr-person-header"><div class="sr-person-avatar ${roleClass}">${initials}</div><div><div class="sr-person-name">${emp.name}</div><div class="sr-person-role">${emp.role}</div></div></div><div class="sr-person-days">${dayRows}</div></div>`;
