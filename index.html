@@ -5315,10 +5315,13 @@ function renderStaffRoster(){
   }
   content.innerHTML=srRenderFortnight(fn1Start, fn1Days, emps, fn1Published, today);
   if(window.matchMedia('(max-width:960px)').matches){
-    requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
       const todayCard=content.querySelector('.sr-day-card.today');
-      if(todayCard) todayCard.scrollIntoView({behavior:'smooth',block:'start'});
-    });
+      if(todayCard){
+        const top=todayCard.getBoundingClientRect().top+window.scrollY-8;
+        window.scrollTo({top,behavior:'smooth'});
+      }
+    }));
   }
 }
 
