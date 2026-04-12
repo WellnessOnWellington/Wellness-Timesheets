@@ -1128,6 +1128,13 @@
   .ts-fn-btn.ts-today-btn:hover { background:var(--wine); }
   .ts-fn-label { font-size:0.82rem; font-weight:700; color:var(--charcoal); padding:0 0.4rem; white-space:nowrap; }
   .ts-content { padding:1.25rem 0; }
+  .ts-mob-notice { display:none; font-size:0.74rem; font-weight:600; color:var(--muted); background:var(--warm-white); border:1.5px solid var(--border); border-radius:var(--radius); padding:0.55rem 0.9rem; margin-bottom:0.75rem; }
+  #rb-mob-day-wrap { display:none; flex-direction:column; position:relative; overflow:hidden; }
+  .rb-mob-day-header { display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0.75rem; background:var(--warm-white); border-bottom:1.5px solid var(--border); gap:0.5rem; flex-shrink:0; }
+  .rb-mob-nav-btn { background:var(--white); border:1.5px solid var(--border); border-radius:8px; padding:0.3rem 0.75rem; font-size:0.78rem; font-weight:700; color:var(--charcoal); cursor:pointer; font-family:'Nunito',sans-serif; }
+  .rb-mob-nav-btn:active { background:var(--blush-lt); }
+  #rb-mob-date-label { font-size:0.85rem; font-weight:800; color:var(--charcoal); }
+  #rb-mob-day-content { padding:0.75rem; }
   .ts-emp-block { background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius); margin-bottom:1.25rem; box-shadow:var(--shadow); overflow:hidden; }
   .ts-emp-header { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1.1rem; background:var(--warm-white); border-bottom:1.5px solid var(--border); cursor:pointer; user-select:none; transition:background 0.12s; }
   .ts-emp-header:hover { background:var(--blush-lt); }
@@ -1366,6 +1373,29 @@
     .today-strip-panels { flex-direction: column; }
     .section-header { flex-direction: column; gap: 0.5rem; }
     .page-ribbon { flex-wrap: wrap; gap: 0.5rem; }
+    /* Timesheets — read-only card view */
+    .ts-mob-notice { display: block; }
+    .export-btn { display: none; }
+    .ts-emp-myob-badge { display: none; }
+    .ts-emp-role-badge { display: none; }
+    .ts-row-detail { display: none !important; }
+    .ts-row-main { flex-wrap: wrap; gap: 0.15rem 0; padding: 0.6rem 0.8rem; cursor: default; }
+    .ts-row-main:hover { background: transparent; }
+    .ts-row-date { width: auto; flex: 1; font-size: 0.8rem; }
+    .ts-row-times { width: 100%; font-size: 0.74rem; order: 3; gap: 0.2rem; }
+    .ts-row-right { flex: none; gap: 0.4rem; }
+    .ts-row-hours { font-size: 0.88rem; width: auto; }
+    .ts-payroll-wrap { display: none; }
+    .ts-locked-label { display: none; }
+    .ts-myob-preview { display: none; }
+    .ts-adjusted-pencil { display: none; }
+  }
+
+  @media (max-width: 767px) {
+    /* Roster — phone only: replace with read-only day view */
+    #tab-roster .rb-ctrl { display: none; }
+    #rb-panels { display: none; }
+    #rb-mob-day-wrap { display: flex; }
   }
 </style>
 </head>
@@ -1761,7 +1791,7 @@
       </button>
       <div id="admin-mob-popover">
         <div class="sr-lp-row" onclick="adminMobileSwitchTab('team')"><span class="sr-lp-radio active" id="admin-mp-r-team"></span><span class="sr-lp-label">Team</span></div>
-        <div class="sr-lp-row" onclick="adminMobileSwitchTab('roster')"><span class="sr-lp-radio" id="admin-mp-r-roster"></span><span class="sr-lp-label">Roster</span></div>
+        <div class="sr-lp-row" id="admin-mob-nav-roster" onclick="adminMobileSwitchTab('roster')"><span class="sr-lp-radio" id="admin-mp-r-roster"></span><span class="sr-lp-label">Roster</span></div>
         <div class="sr-lp-row" onclick="adminMobileSwitchTab('notes')"><span class="sr-lp-radio" id="admin-mp-r-notes"></span><span class="sr-lp-label">Notes</span></div>
         <div class="sr-lp-row" onclick="adminMobileSwitchTab('requests')"><span class="sr-lp-radio" id="admin-mp-r-requests"></span><span class="sr-lp-label">Requests</span></div>
         <div class="sr-lp-row" onclick="adminMobileSwitchTab('timesheets')"><span class="sr-lp-radio" id="admin-mp-r-timesheets"></span><span class="sr-lp-label">Timesheets</span></div>
@@ -1842,6 +1872,7 @@
         <div class="page-ribbon-spacer"></div>
         <button class="export-btn" onclick="exportMYOB()">⬇ Export for MYOB</button>
       </div>
+      <div class="ts-mob-notice">View only on mobile — open on desktop to edit and approve shifts</div>
       <div class="ts-role-tabs-bar">
         <button class="ts-role-tab active" id="ts-tab-Receptionist" onclick="tsSetRole('Receptionist',this)">Receptionists</button>
         <button class="ts-role-tab" id="ts-tab-Nurse" onclick="tsSetRole('Nurse',this)">Nurses</button>
@@ -2318,6 +2349,16 @@
     </div>
     <div id="tab-roster" class="tab-panel">
 
+      <!-- Mobile day view (phone only) -->
+      <div id="rb-mob-day-wrap">
+        <div class="rb-mob-day-header">
+          <button class="rb-mob-nav-btn" onclick="rbMobNavDay(-1)">← Prev</button>
+          <span id="rb-mob-date-label"></span>
+          <button class="rb-mob-nav-btn" onclick="rbMobNavDay(1)">Next →</button>
+        </div>
+        <div id="rb-mob-day-content"></div>
+      </div>
+
       <!-- Control bar -->
       <div class="rb-ctrl">
         <button class="rb-nav-btn rb-all-days-btn" id="rb-all-days-btn" onclick="rbCloseAllDays()" style="height:44px;align-self:center;">&#8592; All Days</button>
@@ -2554,6 +2595,7 @@ let _rbHighlightRole = null;
 const RB_ROLES=['Receptionist','Nurse','Manager'];
 const RB_ROLE_LABELS={Receptionist:'Receptionists',Nurse:'Nurses',Manager:'Managers'};
 let rbSelectedDay=null;
+let _rbMobDate=null;
 let rbState={Receptionist:{collapsed:false},Nurse:{collapsed:false},Manager:{collapsed:false}};
 
 async function loadAll() {
@@ -5617,6 +5659,31 @@ function renderRoster(){
     }
   }
   renderRosterPanels();
+  if(window.matchMedia('(max-width:767px)').matches) renderRosterMob();
+}
+
+function renderRosterMob(){
+  if(!window.matchMedia('(max-width:767px)').matches) return;
+  if(!_rbMobDate) _rbMobDate=rbDateKey(new Date());
+  const el=document.getElementById('rb-mob-day-content');
+  if(!el) return;
+  const today=rbDateKey(new Date());
+  _srDnMap=buildDisplayNames(_emps);
+  const savedRoles=new Set(srRoles);
+  srRoles=new Set(['Receptionist','Nurse','Manager']);
+  el.innerHTML=srByDayGantt(_rbMobDate,today);
+  srRoles=savedRoles;
+  const d=new Date(_rbMobDate+'T12:00:00');
+  const labelEl=document.getElementById('rb-mob-date-label');
+  if(labelEl) labelEl.textContent=d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+}
+
+function rbMobNavDay(dir){
+  if(!_rbMobDate) _rbMobDate=rbDateKey(new Date());
+  const d=new Date(_rbMobDate+'T12:00:00');
+  d.setDate(d.getDate()+dir);
+  _rbMobDate=rbDateKey(d);
+  renderRosterMob();
 }
 
 function renderRosterPanels(){
@@ -7651,6 +7718,74 @@ function escHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').re
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
 }
+
+// ── Roster mobile swipe ──────────────────────────────────────────────
+(()=>{
+  const SWIPE_THRESHOLD=60,VELOCITY_THRESHOLD=0.3,COMMIT_MS=280,CANCEL_MS=350;
+  let startX,startY,curX,startT,tracking=false,axisLocked=false,isHoriz=false,animating=false;
+  const wrap=()=>document.getElementById('rb-mob-day-wrap');
+  const cont=()=>document.getElementById('rb-mob-day-content');
+  function setT(el,x,tr){if(!el)return;el.style.transition=tr||'none';el.style.transform=x===0?'':`translateX(${x}px)`;}
+  function adjHtml(dir){
+    if(!_rbMobDate) return '';
+    const d=new Date(_rbMobDate+'T12:00:00'); d.setDate(d.getDate()+dir);
+    const adjDate=rbDateKey(d); const today=rbDateKey(new Date());
+    const saved=new Set(srRoles); srRoles=new Set(['Receptionist','Nurse','Manager']);
+    const html=srByDayGantt(adjDate,today); srRoles=saved; return html;
+  }
+  function createAdj(dir){
+    const w=wrap(); if(!w) return null;
+    document.getElementById('rb-mob-adj-pane')?.remove();
+    const pane=document.createElement('div');
+    pane.id='rb-mob-adj-pane';
+    pane.style.cssText=`position:absolute;top:0;left:${dir>0?'100':'-100'}%;width:100%;pointer-events:none;padding:0.75rem;box-sizing:border-box;`;
+    pane.innerHTML=adjHtml(dir); w.appendChild(pane); return pane;
+  }
+  function commitNav(dir){
+    animating=true;
+    const c=cont(),adj=document.getElementById('rb-mob-adj-pane'),W=window.innerWidth;
+    const ease=`transform ${COMMIT_MS}ms ease-out`;
+    setT(c,-dir*W,ease); if(adj) setT(adj,-dir*W,ease);
+    setTimeout(()=>{ setT(c,0); rbMobNavDay(dir); document.getElementById('rb-mob-adj-pane')?.remove(); animating=false; },COMMIT_MS);
+  }
+  function cancelDrag(){
+    const c=cont(),adj=document.getElementById('rb-mob-adj-pane');
+    const spring=`transform ${CANCEL_MS}ms cubic-bezier(0.34,1.56,0.64,1)`;
+    setT(c,0,spring); if(adj) setTimeout(()=>adj.remove(),CANCEL_MS);
+  }
+  function onStart(e){
+    if(animating||!window.matchMedia('(max-width:767px)').matches) return;
+    const t=e.touches[0]; startX=curX=t.clientX; startY=t.clientY; startT=Date.now();
+    tracking=true; axisLocked=false; isHoriz=false;
+    const c=cont(); if(c) c.style.transition='none';
+  }
+  function onMove(e){
+    if(!tracking) return;
+    const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY; curX=t.clientX;
+    if(!axisLocked){
+      if(Math.abs(dx)<6&&Math.abs(dy)<6) return;
+      isHoriz=Math.abs(dx)>Math.abs(dy); axisLocked=true;
+      if(isHoriz) createAdj(dx<0?1:-1);
+    }
+    if(!isHoriz) return;
+    e.preventDefault();
+    const c=cont(),adj=document.getElementById('rb-mob-adj-pane');
+    setT(c,dx); if(adj){adj.style.transition='none';setT(adj,dx);}
+  }
+  function onEnd(){
+    if(!tracking){tracking=false;return;} tracking=false;
+    if(!isHoriz){cancelDrag();return;}
+    const dx=curX-startX,velocity=Math.abs(dx)/(Date.now()-startT);
+    (Math.abs(dx)>SWIPE_THRESHOLD||velocity>VELOCITY_THRESHOLD)?commitNav(dx<0?1:-1):cancelDrag();
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    const tab=document.getElementById('tab-roster');
+    if(!tab) return;
+    tab.addEventListener('touchstart',onStart,{passive:true});
+    tab.addEventListener('touchmove',onMove,{passive:false});
+    tab.addEventListener('touchend',onEnd,{passive:true});
+  });
+})();
 
 window.addEventListener('load', ()=>{
   if(window.matchMedia('(max-width:960px)').matches){
