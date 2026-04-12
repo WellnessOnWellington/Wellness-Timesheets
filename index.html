@@ -7220,7 +7220,7 @@ async function renderRequestForm(){
   const today=rbDateKey(new Date());
   try{
     const allShifts=await db.get('roster_shifts');
-    _reqMyShifts=allShifts.filter(s=>s.employee_id===emp.id&&s.date>=today).sort((a,b)=>a.date.localeCompare(b.date));
+    _reqMyShifts=allShifts.filter(s=>s.employee_id===emp.id&&s.date>today).sort((a,b)=>a.date.localeCompare(b.date));
   }catch(e){ _reqMyShifts=[]; }
   const myShiftOptions=_reqMyShifts.length
     ?_reqMyShifts.map(s=>s.on_leave?`<option value="${s.id}" disabled>${reqFmtDate(s.date)} ${s.start_time}–${s.end_time} (Not in)</option>`:`<option value="${s.id}">${reqFmtDate(s.date)} ${s.start_time}–${s.end_time}</option>`).join('')
@@ -7270,7 +7270,7 @@ async function reqLoadColleagueShifts(colleagueId){
   const today=rbDateKey(new Date());
   try{
     const allShifts=await db.get('roster_shifts');
-    _reqColleagueShifts=allShifts.filter(s=>s.employee_id===colleagueId&&s.date>=today).sort((a,b)=>a.date.localeCompare(b.date));
+    _reqColleagueShifts=allShifts.filter(s=>s.employee_id===colleagueId&&s.date>today).sort((a,b)=>a.date.localeCompare(b.date));
   }catch(e){ _reqColleagueShifts=[]; }
   const opts=_reqColleagueShifts.length
     ?_reqColleagueShifts.map(s=>s.on_leave?`<option value="${s.id}" disabled>${reqFmtDate(s.date)} ${s.start_time}–${s.end_time} (Not in)</option>`:`<option value="${s.id}">${reqFmtDate(s.date)} ${s.start_time}–${s.end_time}</option>`).join('')
