@@ -718,11 +718,15 @@
   .sr-fp-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .sr-fp-label { flex: 1; font-family: 'Nunito',sans-serif; font-size: 0.88rem; font-weight: 700; color: var(--charcoal); }
   .sr-fp-check {
-    width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--border);
+    width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    color: transparent; background: transparent; transition: all 0.12s;
+    background: transparent; transition: all 0.12s;
   }
-  .sr-fp-check.active { background: var(--burgundy); border-color: var(--burgundy); color: #fff; }
+  .sr-fp-check.active { background: var(--burgundy); border-color: var(--burgundy); box-shadow: inset 0 0 0 5px #fff; }
+  /* Checkbox mode (team tab) */
+  #admin-mob-filter-popover.checkbox-mode .sr-fp-check { border-radius: 6px; }
+  #admin-mob-filter-popover.checkbox-mode .sr-fp-check.active { box-shadow: none; }
+  #admin-mob-filter-popover.checkbox-mode .sr-fp-check.active::after { content: ''; display: block; width: 5px; height: 9px; border: 2px solid #fff; border-top: none; border-left: none; transform: rotate(45deg) translate(-1px,-1px); }
 
   .sr-content { padding: 1.75rem 2rem; max-width: 1500px; margin: 0 auto; width: 100%; }
   #sr-swipe-wrap { position: relative; }
@@ -1578,17 +1582,17 @@
         <div class="sr-fp-row" onclick="srToggleRolePopover('Receptionist')">
           <span class="sr-fp-dot" style="background:#85c9a5"></span>
           <span class="sr-fp-label">Receptionists</span>
-          <span class="sr-fp-check active" id="sr-fp-Receptionist"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="sr-fp-check active" id="sr-fp-Receptionist"></span>
         </div>
         <div class="sr-fp-row" onclick="srToggleRolePopover('Nurse')">
           <span class="sr-fp-dot" style="background:#8ab8d4"></span>
           <span class="sr-fp-label">Nurses</span>
-          <span class="sr-fp-check active" id="sr-fp-Nurse"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="sr-fp-check active" id="sr-fp-Nurse"></span>
         </div>
         <div class="sr-fp-row" onclick="srToggleRolePopover('Manager')">
           <span class="sr-fp-dot" style="background:#b89ac9"></span>
           <span class="sr-fp-label">Managers</span>
-          <span class="sr-fp-check active" id="sr-fp-Manager"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="sr-fp-check active" id="sr-fp-Manager"></span>
         </div>
       </div>
     </div>
@@ -1783,17 +1787,17 @@
         <div class="sr-fp-row" onclick="adminMobFilterRole('Receptionist')">
           <span class="sr-fp-dot" style="background:#27AE60"></span>
           <span class="sr-fp-label">Receptionists</span>
-          <span class="sr-fp-check active" id="admin-mob-fpc-Receptionist">&#10003;</span>
+          <span class="sr-fp-check active" id="admin-mob-fpc-Receptionist"></span>
         </div>
         <div class="sr-fp-row" onclick="adminMobFilterRole('Nurse')">
           <span class="sr-fp-dot" style="background:#2471A3"></span>
           <span class="sr-fp-label">Nurses</span>
-          <span class="sr-fp-check active" id="admin-mob-fpc-Nurse">&#10003;</span>
+          <span class="sr-fp-check active" id="admin-mob-fpc-Nurse"></span>
         </div>
         <div class="sr-fp-row" onclick="adminMobFilterRole('Manager')">
           <span class="sr-fp-dot" style="background:#7D3C98"></span>
           <span class="sr-fp-label">Managers</span>
-          <span class="sr-fp-check active" id="admin-mob-fpc-Manager">&#10003;</span>
+          <span class="sr-fp-check active" id="admin-mob-fpc-Manager"></span>
         </div>
       </div>
     </div>
@@ -5131,6 +5135,7 @@ function adminMobFilterRole(role){
 function adminMobSyncFilterChecks(){
   const ROLES=['Receptionist','Nurse','Manager'];
   const activeTab=document.querySelector('.tab-panel.active')?.id;
+  document.getElementById('admin-mob-filter-popover')?.classList.toggle('checkbox-mode',activeTab==='tab-team');
   if(activeTab==='tab-team'){
     ROLES.forEach(r=>document.getElementById('admin-mob-fpc-'+r)?.classList.toggle('active',teamRoles.has(r)));
     const filtered=ROLES.some(r=>!teamRoles.has(r));
