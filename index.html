@@ -1939,7 +1939,7 @@
           <div class="settings-section-chevron" id="ss-chevron-clockaudit">&#9658;</div>
           <div style="flex:1;">
             <div class="settings-section-title">Clock Audit</div>
-            <div class="settings-section-hint">Every clock-in and clock-out event across all staff.</div>
+            <div class="settings-section-hint">Every clock-in and clock-out event across all staff. Entries marked * were auto-generated from approved leave — not a physical clock.</div>
           </div>
         </div>
         <div class="settings-section-body" id="ss-body-clockaudit" style="display:none;">
@@ -4796,9 +4796,10 @@ function renderClockAudit(resetPage=false){
     const out=r.clockOut?`<span class="mono">${r.clockOut}</span>`:`<span style="color:var(--dusty)">Still in</span>`;
     const hrs=r.hours?`<span class="mono">${r.hours}h</span>`:'—';
     const badge=r.status==='pending'?'<span class="badge badge-pending">Pending</span>':r.status==='approved'?'<span class="badge badge-approved">✓ Acknowledged</span>':r.status==='flagged'?'<span class="badge badge-flagged">Flagged</span>':'<span class="badge badge-normal">✓ Normal</span>';
+    const isAuto=String(r.id).startsWith('L');
     return`<tr>
       <td>${dateF}</td>
-      <td><strong>${r.employeeName}</strong></td>
+      <td><strong>${r.employeeName}</strong>${isAuto?'<span style="color:var(--muted);font-size:0.75rem;margin-left:0.3rem;" title="Auto-generated — leave entry, not a physical clock">*</span>':''}</td>
       <td style="color:var(--muted)">${r.role}</td>
       <td><span class="mono">${r.clockIn}</span></td>
       <td>${out}</td>
