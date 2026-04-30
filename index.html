@@ -1134,6 +1134,7 @@
   .ts-fn-btn.ts-today-btn { background:var(--burgundy); color:#fff; border-color:var(--burgundy); border-radius:10px; font-weight:800; }
   .ts-fn-btn.ts-today-btn:hover { background:var(--wine); }
   .ts-fn-label { font-size:0.82rem; font-weight:700; color:var(--charcoal); padding:0 0.4rem; white-space:nowrap; }
+  .ts-pay-cycle-badge { background:var(--burgundy); color:#fff; border-radius:999px; padding:0.12rem 0.55rem; font-size:0.58rem; font-weight:800; letter-spacing:0.07em; text-transform:uppercase; white-space:nowrap; }
   .ts-content { padding:1.25rem 0; }
   .ts-mob-notice { display:none; font-size:0.74rem; font-weight:600; color:var(--muted); background:var(--warm-white); border:1.5px solid var(--border); border-radius:var(--radius); padding:0.55rem 0.9rem; margin-bottom:0.75rem; }
   #rb-mob-day-wrap { display:none; flex-direction:column; position:relative; overflow:hidden; min-height:60vh; }
@@ -1904,7 +1905,10 @@
         </div>
         <div class="page-ribbon-divider"></div>
         <button class="ts-fn-btn" onclick="tsNavFn(-1)">← Prev</button>
-        <span class="ts-fn-label" id="ts-fn-label"></span>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0.18rem;">
+          <span class="ts-pay-cycle-badge">Pay Cycle</span>
+          <span class="ts-fn-label" id="ts-fn-label"></span>
+        </div>
         <button class="ts-fn-btn" onclick="tsNavFn(1)">Next →</button>
         <button class="ts-fn-btn ts-today-btn" onclick="tsGoToday()">Today</button>
         <div class="page-ribbon-spacer"></div>
@@ -2192,15 +2196,27 @@
             </div>
           </div>
           <div class="roster-section" style="margin-bottom:1rem;">
-            <div class="roster-section-title">Fortnight Cycle Start Date</div>
+            <div class="roster-section-title">Roster Cycle Start Date</div>
             <div class="roster-anchor-bar" style="border-color:#e6a817;">
               <div style="width:100%;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;background:#fff8e1;border:1.5px solid #f9c825;border-radius:8px;padding:0.45rem 0.75rem;">
                 <span style="font-size:1rem;flex-shrink:0;">⚠</span>
-                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all fortnight boundaries across the entire app. Only change this during initial setup or if advised to do so.</span>
+                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all roster fortnight boundaries. Only change this during initial setup or if advised to do so.</span>
               </div>
               <label class="form-label" style="margin:0;white-space:nowrap;">Cycle starts</label>
               <input class="form-input" type="date" id="anchor-date" style="width:auto;border-color:#e6a817;" />
               <button class="add-emp-btn" style="background:#e6a817;border-color:#e6a817;" onclick="saveAnchorDate()">Save</button>
+            </div>
+          </div>
+          <div class="roster-section" style="margin-bottom:1rem;">
+            <div class="roster-section-title">Pay Cycle Start Date</div>
+            <div class="roster-anchor-bar" style="border-color:#e6a817;">
+              <div style="width:100%;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;background:#fff8e1;border:1.5px solid #f9c825;border-radius:8px;padding:0.45rem 0.75rem;">
+                <span style="font-size:1rem;flex-shrink:0;">⚠</span>
+                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all pay period boundaries in Timesheets and MYOB export. Must be a Tuesday. Only change this during initial setup or if advised to do so.</span>
+              </div>
+              <label class="form-label" style="margin:0;white-space:nowrap;">Period starts</label>
+              <input class="form-input" type="date" id="pay-period-anchor" style="width:auto;border-color:#e6a817;" />
+              <button class="add-emp-btn" style="background:#e6a817;border-color:#e6a817;" onclick="savePayPeriodAnchor()">Save</button>
             </div>
           </div>
         </div>
@@ -4054,7 +4070,7 @@ async function tsAutoLockSweep(){
   if(_tsAutoLockRunning) return;
   _tsAutoLockRunning=true;
   const today=rbDateKey(new Date());
-  const fnStart=getFortnightStart(tsOffset);
+  const fnStart=getPayPeriodStart(tsOffset);
   const fnDays=getFortnight14Days(fnStart).filter(d=>d<today);
   const mgr=currentManager?.name||'Manager';
   let changed=false;
@@ -4109,7 +4125,7 @@ async function tsAutoLockSweep(){
 }
 
 function renderTimesheets(){
-  const fnStart=getFortnightStart(tsOffset);
+  const fnStart=getPayPeriodStart(tsOffset);
   const fnDays=getFortnight14Days(fnStart);
   const labelEl=document.getElementById('ts-fn-label');
   if(labelEl) labelEl.textContent=srFortnightLabel(fnStart);
@@ -4558,7 +4574,7 @@ function calcMYOBRows(entry, emp, isPH=false){
 }
 
 function exportMYOB(){
-  const fnStart=getFortnightStart(tsOffset);
+  const fnStart=getPayPeriodStart(tsOffset);
   const fnDays=getFortnight14Days(fnStart);
   const allEntries=_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted);
   const locked=allEntries.filter(e=>e.locked&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
@@ -5116,6 +5132,20 @@ function getFortnightStart(offsetFortnights){
   return localDateStr(base);
 }
 
+function getPayPeriodStart(offsetFortnights){
+  const toTuesday=d=>{const day=d.getDay();const diff=-(((day-2)+7)%7);return new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff);};
+  const localDateStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const ppAnchorStr=_rosterConfig?.pay_period_anchor||'2026-04-21';
+  const anchor=toTuesday(new Date(ppAnchorStr+'T12:00:00'));
+  const today=toTuesday(new Date());
+  const daysDiff=Math.floor((today-anchor)/86400000);
+  const fnNum=Math.floor(daysDiff/14);
+  const base=new Date(anchor);
+  base.setDate(anchor.getDate()+fnNum*14);
+  base.setDate(base.getDate()+offsetFortnights*14);
+  return localDateStr(base);
+}
+
 function getFortnight14Days(startDateStr){
   const days=[];const start=new Date(startDateStr+'T12:00:00');
   for(let i=0;i<14;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(d.toISOString().slice(0,10));}
@@ -5361,7 +5391,7 @@ function adminMobUpdateContextLabel(){
     el.textContent=d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
     el.classList.add('visible');
   } else if(activeTab==='tab-timesheets'){
-    const fn=getFortnightStart(tsOffset);
+    const fn=getPayPeriodStart(tsOffset);
     const fnDays=getFortnight14Days(fn);
     const s=new Date(fnDays[0]+'T12:00:00');
     const e=new Date(fnDays[fnDays.length-1]+'T12:00:00');
@@ -6520,6 +6550,8 @@ function toggleSettingsSection(key){
 function renderAnchorDate(){
   const el=document.getElementById('anchor-date');
   if(el&&_rosterConfig) el.value=_rosterConfig.cycle_start_date||'';
+  const ppEl=document.getElementById('pay-period-anchor');
+  if(ppEl) ppEl.value=_rosterConfig?.pay_period_anchor||'2026-04-21';
   const gEl=document.getElementById('grace-period');
   if(gEl) gEl.value=_rosterConfig?.grace_period??GRACE;
   const yEl=document.getElementById('yellow-threshold');
@@ -6623,13 +6655,29 @@ async function saveWhosOnPIN(){
 async function saveAnchorDate(){
   const v=document.getElementById('anchor-date').value;
   if(!v){showToast('Please select a date');return;}
-  if(!confirm(`⚠ Change fortnight cycle anchor to ${v}?\n\nThis will recalculate ALL fortnight boundaries across the roster, MYOB export, and Who's On view. Existing shifts will not move — they may appear in different fortnights than expected.\n\nOnly proceed if you are setting up the system for the first time or have been advised to do so.`)) return;
+  if(!confirm(`⚠ Change roster cycle anchor to ${v}?\n\nThis will recalculate ALL roster fortnight boundaries. Existing shifts will not move — they may appear in different fortnights than expected.\n\nOnly proceed if you are setting up the system for the first time or have been advised to do so.`)) return;
   try{
     if(_rosterConfig) await db.update('roster_config','default',{cycle_start_date:v});
     else await db.insert('roster_config',{id:'default',cycle_start_date:v});
     if(_rosterConfig) _rosterConfig.cycle_start_date=v;
     else _rosterConfig={id:'default',cycle_start_date:v};
-    showToast('Cycle anchor saved');
+    showToast('Roster cycle anchor saved');
+  }catch(e){showToast('Could not save — check connection');console.error(e);}
+}
+
+async function savePayPeriodAnchor(){
+  const v=document.getElementById('pay-period-anchor').value;
+  if(!v){showToast('Please select a date');return;}
+  const d=new Date(v+'T12:00:00');
+  if(d.getDay()!==2){showToast('Pay period anchor must be a Tuesday');return;}
+  if(!confirm(`⚠ Change pay period anchor to ${v}?\n\nThis will recalculate ALL pay period boundaries in Timesheets and MYOB export. Existing clock entries are not affected.\n\nOnly proceed if you are setting up the system for the first time or have been advised to do so.`)) return;
+  try{
+    if(_rosterConfig) await db.update('roster_config','default',{pay_period_anchor:v});
+    else await db.insert('roster_config',{id:'default',pay_period_anchor:v});
+    if(_rosterConfig) _rosterConfig.pay_period_anchor=v;
+    else _rosterConfig={id:'default',pay_period_anchor:v};
+    showToast('Pay period anchor saved');
+    renderTimesheets();
   }catch(e){showToast('Could not save — check connection');console.error(e);}
 }
 
