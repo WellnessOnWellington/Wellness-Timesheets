@@ -2558,6 +2558,11 @@
       </div>
     </div>
     <div class="form-group">
+      <label class="form-label">Preferred Name <span style="font-weight:500;color:var(--muted);">(optional)</span></label>
+      <input class="form-input" type="text" id="emp-preferred-name" placeholder="e.g. Sam — shown on kiosk and Who's On" />
+      <div class="form-hint">If set, this name is used on the kiosk and roster. Legal name is always used for MYOB export.</div>
+    </div>
+    <div class="form-group">
       <label class="form-label">Role</label>
       <select class="form-select" id="emp-role">
         <option>Doctor</option><option>Nurse</option><option>Receptionist</option><option>Manager</option>
@@ -3645,7 +3650,7 @@ function openAddEmployee(){
   _editingEmpId=null;
   document.getElementById('emp-modal-title').textContent='Add team member';
   document.getElementById('emp-save-btn').textContent='Save';
-  ['emp-firstname','emp-surname','emp-rfid','emp-myob-id'].forEach(id=>document.getElementById(id).value='');
+  ['emp-firstname','emp-surname','emp-preferred-name','emp-rfid','emp-myob-id'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('emp-role').value='Doctor';
   document.getElementById('emp-type').value='Full Time';
   document.getElementById('emp-classification').value='';
@@ -3663,6 +3668,7 @@ function openEditEmployee(empId){
   const nameParts=emp.name.trim().split(' ');
   document.getElementById('emp-firstname').value=nameParts[0]||'';
   document.getElementById('emp-surname').value=nameParts.slice(1).join(' ')||'';
+  document.getElementById('emp-preferred-name').value=emp.preferred_name||'';
   document.getElementById('emp-role').value=emp.role;
   document.getElementById('emp-rfid').value=emp.rfid;
   document.getElementById('emp-type').value=emp.type;
@@ -3702,6 +3708,7 @@ async function saveEmployee(){
   const firstName=document.getElementById('emp-firstname').value.trim();
   const surname=document.getElementById('emp-surname').value.trim();
   const name=[firstName,surname].filter(Boolean).join(' ');
+  const preferredName=document.getElementById('emp-preferred-name').value.trim()||null;
   const role=document.getElementById('emp-role').value;
   const rfid=document.getElementById('emp-rfid').value.trim().replace(/\D/g,'');
   const type=document.getElementById('emp-type').value;
@@ -3713,14 +3720,14 @@ async function saveEmployee(){
   if(_emps.find(e=>e.rfid===rfid&&e.id!==_editingEmpId)){showToast('That card is already registered to someone');return;}
   try{
     if(_editingEmpId){
-      await db.update('employees',_editingEmpId,{name,role,rfid,type,classification,myob_record_id:myobRecordId});
+      await db.update('employees',_editingEmpId,{name,role,rfid,type,classification,myob_record_id:myobRecordId,preferred_name:preferredName});
       const emp=_emps.find(e=>e.id===_editingEmpId);
-      if(emp){emp.name=name;emp.role=role;emp.rfid=rfid;emp.type=type;emp.classification=classification;emp.myob_record_id=myobRecordId;}
+      if(emp){emp.name=name;emp.role=role;emp.rfid=rfid;emp.type=type;emp.classification=classification;emp.myob_record_id=myobRecordId;emp.preferred_name=preferredName;}
       if(role==='Manager') syncManagerLogin(_editingEmpId,name).catch(e=>console.warn('Manager sync failed:',e));
       closeModal(); renderTeam();
       showToast(name+' updated ✓');
     } else {
-      const row={id:'E'+Date.now(),name,role,rfid,type,classification,myob_record_id:myobRecordId};
+      const row={id:'E'+Date.now(),name,role,rfid,type,classification,myob_record_id:myobRecordId,preferred_name:preferredName};
       await db.insert('employees',row);
       _emps.push(row);
       if(role==='Manager') syncManagerLogin(row.id,name).catch(e=>console.warn('Manager sync failed:',e));
@@ -4480,7 +4487,7 @@ async function tsSaveAudit(data){
 }
 
 const MYOB_CATS={
-  'HSSE Level 3':    null, // placeholder — confirm strings when a Level 3 employee joins
+  'HSSE Level 3':    {day:'HSSE Level 3 - contract base',evening:'HSSE level 3- contract Evening',saturday:'HSSE level 3 contract Saturday',sunday:'HSSE level 3- contract Sunday',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:false},
   'HSSE Level 4':    {day:'HSSE level 4 - base',evening:'HSSE level 4 - evening',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:false},
   'HSSE Level 5':    {day:'HSSE level 5 - base',evening:'HSSE level 5 - evening',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:false},
   'Registered Nurse':{day:'Base Hourly',evening:'Nurse Evening Hours',saturday:'Saturday Rate  (1.5x)',sunday:null,publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:true},
@@ -5049,6 +5056,7 @@ function teamToggleRole(role,btn){
 }
 
 function empFirstName(emp){
+  if(emp.preferred_name) return emp.preferred_name;
   return emp.name.replace(/^(Dr\.|Nurse|Reception|Practice Mgr)\s*/i,'').split(' ')[0];
 }
 function buildDisplayNames(emps){
