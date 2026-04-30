@@ -1028,6 +1028,7 @@
   .rb-shift-pill.public-holiday    { background:#d8eaf9; color:#2a5a8c; }
   .rb-shift-pill.unpaid-leave      { background:#e8e8e8; color:#444444; }
   .rb-shift-pill.compassionate-leave { background:#ede6f5; color:#5c3d7a; }
+  .rb-shift-pill.long-service-leave  { background:#c8ece9; color:#004d44; }
   .rb-pills-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.18rem; }
   .rb-cov-badge { margin-top:auto; padding:0.18rem 0.4rem; border-radius:5px; font-size:0.56rem; font-weight:800; text-align:center; }
   .rb-cov-badge.green  { background:#e8f5ee; color:#2d6b47; }
@@ -1094,6 +1095,9 @@
   .rb-shift-bar.compassionate-leave { background:linear-gradient(135deg,#9b7db5,#8568a0); }
   .rb-shift-bar.compassionate-leave:hover { box-shadow:0 2px 8px rgba(130,80,170,0.28); }
   .rb-shift-bar.compassionate-leave .rb-shift-label { color:#fff; }
+  .rb-shift-bar.long-service-leave { background:linear-gradient(135deg,#26a69a,#00897b); }
+  .rb-shift-bar.long-service-leave:hover { box-shadow:0 2px 8px rgba(0,137,123,0.28); }
+  .rb-shift-bar.long-service-leave .rb-shift-label { color:#fff; }
   .rb-panels { display:flex; flex-direction:column; gap:1rem; }
   .rb-panel { border:1.5px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--white); box-shadow:var(--shadow); }
   .rb-panel-header { display:flex; align-items:center; padding:0.65rem 1rem; background:var(--warm-white); border-bottom:1.5px solid var(--border); gap:1rem; cursor:pointer; user-select:none; }
@@ -1116,6 +1120,7 @@
   .rb-legend-dot.public-holiday { background:#5b9bd5; }
   .rb-legend-dot.unpaid-leave { background:#a0a0a0; }
   .rb-legend-dot.compassionate-leave { background:#9b7db5; }
+  .rb-legend-dot.long-service-leave  { background:#26a69a; }
   /* ── Timesheets redesign ── */
   .ts-role-tabs-bar { display:flex; gap:0.25rem; background:var(--warm-white); border:1.5px solid var(--border); border-radius:12px; padding:0.3rem; margin:0 0 1.25rem; width:fit-content; }
   .ts-role-tab { padding:0.55rem 1.4rem; border-radius:9px; font-size:0.85rem; font-weight:700; cursor:pointer; border:1.5px solid var(--border); font-family:'Nunito',sans-serif; background:var(--white); color:var(--muted); transition:all 0.08s; letter-spacing:0.02em; white-space:nowrap; }
@@ -2521,6 +2526,7 @@
               <span class="rb-legend-item"><span class="rb-legend-dot public-holiday"></span>Public Hol</span>
               <span class="rb-legend-item"><span class="rb-legend-dot unpaid-leave"></span>Unpaid</span>
               <span class="rb-legend-item"><span class="rb-legend-dot compassionate-leave"></span>Compassionate</span>
+              <span class="rb-legend-item"><span class="rb-legend-dot long-service-leave"></span>Long Service</span>
             </div>
           </div>
         </div>
@@ -2887,7 +2893,7 @@ let SHOW_DECLINE_REASON = true;
 let GIVEAWAY_ENABLED = {Receptionist: true, Nurse: true, Manager: true};
 let reqRole = 'Receptionist';
 const ROUND_WINDOW = 5; // minutes — clock times within this window of rostered time are rounded to roster time on timesheets
-const LEAVE_TYPES = { annual_leave:'Annual Leave', personal_leave:'Personal Leave', public_holiday:'Public Holiday', unpaid_leave:'Unpaid Leave', compassionate_leave:'Compassionate Leave' };
+const LEAVE_TYPES = { annual_leave:'Annual Leave', personal_leave:'Personal Leave', public_holiday:'Public Holiday', unpaid_leave:'Unpaid Leave', compassionate_leave:'Compassionate Leave', long_service_leave:'Long Service Leave' };
 function formatLeaveType(lt){ return LEAVE_TYPES[lt]||'Worked'; }
 
 function roundToRoster(actualTimeStr, scheduledMin){
@@ -3924,7 +3930,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const billableMins=Math.max(0,finalMins-(entry?.unpaidBreakMins!=null?entry.unpaidBreakMins:expectedUnpaidBreakMins(finalMins/60)));
   const hoursText=billableMins>0?`${(billableMins/60).toFixed(1)}h`:''; // paid hours after unpaid break deduction
 
-  const PAYROLL_TYPES=[['','Worked'],['annual_leave','Annual Leave'],['personal_leave','Personal Leave'],['public_holiday','Public Holiday'],['compassionate_leave','Compassionate Leave'],['unpaid_leave','Unpaid Leave']];
+  const PAYROLL_TYPES=[['','Worked'],['annual_leave','Annual Leave'],['personal_leave','Personal Leave'],['public_holiday','Public Holiday'],['compassionate_leave','Compassionate Leave'],['long_service_leave','Long Service Leave'],['unpaid_leave','Unpaid Leave']];
   const fmtH=h=>h===Math.round(h)?h+'h':h.toFixed(1)+'h';
   const isPH=_publicHolidays?.has(date)||false;
   const myobEntry=splitSegment&&!isLeaveShift&&shift?.start_time
@@ -4487,15 +4493,15 @@ async function tsSaveAudit(data){
 }
 
 const MYOB_CATS={
-  'HSSE Level 3':    {day:'HSSE Level 3 - contract base',evening:'HSSE level 3- contract Evening',saturday:'HSSE level 3 contract Saturday',sunday:'HSSE level 3- contract Sunday',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:false},
-  'HSSE Level 4':    {day:'HSSE level 4 - base',evening:'HSSE level 4 - evening',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:false},
-  'HSSE Level 5':    {day:'HSSE level 5 - base',evening:'HSSE level 5 - evening',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:false},
-  'Registered Nurse':{day:'Base Hourly',evening:'Nurse Evening Hours',saturday:'Saturday Rate  (1.5x)',sunday:null,publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:true},
-  'Enrolled Nurse':  {day:'Base Hourly',evening:'Nurse Evening Hours',saturday:'Saturday Rate  (1.5x)',sunday:null,publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:true},
-  'Nurse Manager':   {day:'Base Hourly',evening:'Nurse Evening Hours',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:'personal leave without pay',isNurse:true},
-  'Office Manager':  {day:'Base Hourly',evening:'Evening Rate',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:null,isNurse:false},
-  'Practice Manager':{day:'Base Hourly',evening:null,saturday:null,sunday:'Sunday Rate (2x)',publicHoliday:null,annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',unpaidLeave:null,isNurse:false},
-  'Casual':          {day:'casual Day CE',evening:'Casual evening CE',saturday:'Casual WoW weekend',sunday:'Casual WoW weekend',publicHoliday:null,annualLeave:null,personalLeave:null,compassionateLeave:null,unpaidLeave:null,isNurse:false},
+  'HSSE Level 3':    {day:'HSSE Level 3 - contract base',evening:'HSSE level 3- contract Evening',saturday:'HSSE level 3 contract Saturday',sunday:'HSSE level 3- contract Sunday',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',longServiceLeave:'Long Service Leave',unpaidLeave:'personal leave without pay',isNurse:false},
+  'HSSE Level 4':    {day:'HSSE level 4 - base',evening:'HSSE level 4 - evening',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',longServiceLeave:'Long Service Leave',unpaidLeave:'personal leave without pay',isNurse:false},
+  'HSSE Level 5':    {day:'HSSE level 5 - base',evening:'HSSE level 5 - evening',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',longServiceLeave:'Long Service Leave',unpaidLeave:'personal leave without pay',isNurse:false},
+  'Registered Nurse':{day:'Base Hourly',evening:'Nurse Evening Hours',saturday:'Saturday Rate  (1.5x)',sunday:null,publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',longServiceLeave:'Long Service Leave',unpaidLeave:'personal leave without pay',isNurse:true},
+  'Enrolled Nurse':  {day:'Base Hourly',evening:'Nurse Evening Hours',saturday:'Saturday Rate  (1.5x)',sunday:null,publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',longServiceLeave:'Long Service Leave',unpaidLeave:'personal leave without pay',isNurse:true},
+  'Nurse Manager':   {day:'Base Hourly',evening:'Nurse Evening Hours',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',longServiceLeave:'Long Service Leave',unpaidLeave:'personal leave without pay',isNurse:true},
+  'Office Manager':  {day:'Base Hourly',evening:'Evening Rate',saturday:'Saturday Rate  (1.5x)',sunday:'Sunday Rate (2x)',publicHoliday:'Public Holiday',annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',longServiceLeave:'Long Service Leave',unpaidLeave:null,isNurse:false},
+  'Practice Manager':{day:'Base Hourly',evening:null,saturday:null,sunday:'Sunday Rate (2x)',publicHoliday:null,annualLeave:'Annual Leave',personalLeave:'Personal Leave',compassionateLeave:'Compassionate Leave',longServiceLeave:'Long Service Leave',unpaidLeave:null,isNurse:false},
+  'Casual':          {day:'casual Day CE',evening:'Casual evening CE',saturday:'Casual WoW weekend',sunday:'Casual WoW weekend',publicHoliday:null,annualLeave:null,personalLeave:null,compassionateLeave:null,longServiceLeave:null,unpaidLeave:null,isNurse:false},
 };
 
 function calcMYOBRows(entry, emp, isPH=false){
@@ -4526,6 +4532,7 @@ function calcMYOBRows(entry, emp, isPH=false){
   if(payrollType==='annual_leave')        return [{cat:cats?.annualLeave||'Annual Leave',hours:totalHours}];
   if(payrollType==='personal_leave')      return [{cat:cats?.personalLeave||'Personal Leave',hours:totalHours}];
   if(payrollType==='compassionate_leave') return [{cat:cats?.compassionateLeave||'Compassionate Leave',hours:totalHours}];
+  if(payrollType==='long_service_leave')  return [{cat:cats?.longServiceLeave||'Long Service Leave',hours:totalHours}];
   if(payrollType==='unpaid_leave')        return [{cat:cats?.unpaidLeave||'personal leave without pay',hours:totalHours}];
 
   // Weekend rates
