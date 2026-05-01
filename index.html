@@ -276,6 +276,7 @@
   .break-counter-input { width:52px; text-align:center; padding:0.35rem 0.25rem; border:1.5px solid var(--border); border-radius:8px; font-size:0.95rem; font-weight:700; font-family:'Nunito',sans-serif; color:var(--charcoal); }
   .ts-break-input { width:52px; text-align:center; padding:0.2rem 0.25rem; border:1.5px solid var(--border); border-radius:6px; font-size:0.82rem; font-weight:700; font-family:'Nunito',sans-serif; color:var(--charcoal); }
   .ts-break-warn { font-size:0.7rem; color:var(--burgundy); font-weight:700; margin-left:0.4rem; }
+  #clinic-km-input { width:120px; }
 
   /* ══════════════════════════════
      BUTTONS
@@ -512,6 +513,7 @@
   .modal {
     background: var(--white); border: 1.5px solid var(--border); border-radius: 24px;
     padding: 2rem; width: 90%; max-width: 410px; box-shadow: var(--shadow-md); position: relative;
+    max-height: 88vh; overflow-y: auto;
     transform: translateY(12px) scale(0.97);
     transition: transform 0.25s cubic-bezier(0.34,1.2,0.64,1);
   }
@@ -1734,6 +1736,41 @@
   </div>
 </div>
 
+<!-- CLINIC CLOCK-OUT OVERLAY (combined breaks + travel for clinic shifts) -->
+<div class="flash-overlay reason-bg" id="clinic-overlay">
+  <div class="reason-card">
+    <div class="reason-icon">☕🚗</div>
+    <div class="reason-title" id="clinic-overlay-title">Before you go…</div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.25rem;">Unusual breaks or travel to report?</div>
+    <div id="clinic-btn-row" style="display:flex;gap:0.75rem;justify-content:center;margin-top:1.5rem;">
+      <button class="btn-ghost" onclick="clinicYesExpand()">Yes, report it</button>
+      <button class="btn-primary" onclick="clinicNo()">No, all good</button>
+    </div>
+    <div id="clinic-edit-section" style="display:none;margin-top:1rem;">
+      <div id="clinic-break-fields"></div>
+      <div id="clinic-break-reason-wrap" style="margin-top:0.75rem;display:none;">
+        <label class="form-label">Break note (optional)</label>
+        <textarea class="reason-input" id="clinic-break-reason" rows="2" placeholder="e.g. Clinic was too busy, couldn't step away…"></textarea>
+      </div>
+      <div style="margin-top:0.75rem;">
+        <label class="form-label">Travel km <span style="font-weight:500;color:var(--muted);">(leave blank if none)</span></label>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;">
+          <span style="font-size:1.1rem;">🚗</span>
+          <input class="form-input" type="number" id="clinic-km-input" min="0" max="200" step="1" placeholder="e.g. 20" onclick="event.stopPropagation()" oninput="if(this.value.replace('.','').length>3)this.value=this.value.slice(0,this.value.includes('.')?4:3)" />
+          <span style="font-size:0.82rem;color:var(--muted);">km</span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;margin-top:1.25rem;">
+        <button class="btn-primary" onclick="submitClinicClockOut()">Submit &amp; check out</button>
+      </div>
+    </div>
+    <div class="break-timer-wrap" id="clinic-timer-wrap">
+      <div class="break-timer-bar" id="clinic-timer-bar"></div>
+    </div>
+    <div style="text-align:center;font-size:0.75rem;color:var(--muted);margin-top:0.5rem;" id="clinic-timer-label">Assuming no in 15s…</div>
+  </div>
+</div>
+
 <!-- BREAK EDIT OVERLAY -->
 <div class="flash-overlay reason-bg" id="break-edit-overlay">
   <div class="reason-card">
@@ -2584,22 +2621,24 @@
       <input class="form-input" type="text" id="emp-preferred-name" placeholder="e.g. Sam — shown on kiosk and Who's On" />
       <div class="form-hint">If set, this name is used on the kiosk and roster. Legal name is always used for MYOB export.</div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Role</label>
-      <select class="form-select" id="emp-role">
-        <option>Doctor</option><option>Nurse</option><option>Receptionist</option><option>Manager</option>
-      </select>
+    <div class="form-group" style="display:flex;gap:0.75rem;">
+      <div style="flex:1;">
+        <label class="form-label">Role</label>
+        <select class="form-select" id="emp-role">
+          <option>Doctor</option><option>Nurse</option><option>Receptionist</option><option>Manager</option>
+        </select>
+      </div>
+      <div style="flex:1;">
+        <label class="form-label">Employment Type</label>
+        <select class="form-select" id="emp-type">
+          <option>Full Time</option><option>Part Time</option><option>Casual</option>
+        </select>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">RFID Card Number</label>
       <input class="form-input" type="text" id="emp-rfid" placeholder="Tap card on reader, or type ID…" />
       <div class="form-hint">Click this field then tap the card on the reader — the number will appear automatically.</div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Employment Type</label>
-      <select class="form-select" id="emp-type">
-        <option>Full Time</option><option>Part Time</option><option>Casual</option>
-      </select>
     </div>
     <div class="form-group">
       <label class="form-label">Classification</label>
@@ -2623,6 +2662,13 @@
       <label class="form-label">MYOB Employee ID</label>
       <input class="form-input" type="text" id="emp-myob-id" placeholder="e.g. 308" />
       <div class="form-hint">The numeric employee record ID from MYOB. Used in payroll export.</div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
+        <input type="checkbox" id="emp-can-travel" style="width:16px;height:16px;cursor:pointer;" />
+        <span class="form-label" style="margin:0;">May claim travel allowance</span>
+      </label>
+      <div class="form-hint">Shows travel km field in timesheets and triggers the clinic clock-out prompt.</div>
     </div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal()">Cancel</button>
@@ -2824,6 +2870,7 @@ function normaliseEntry(r) {
     paidBreakMins: r.paid_break_mins ?? null,
     breakNote: r.break_note || null,
     deleted: r.deleted || false,
+    travelKm: r.travel_km ?? null,
   };
 }
 
@@ -2866,6 +2913,9 @@ function expectedPaidBreakMins(shiftHours){ return shiftHours>=4?10:0; }
 let _breakCommitArgs=null;
 let _breakTimerInterval=null;
 let _breakTimerSecs=15;
+let _clinicCommitArgs=null;
+let _clinicTimerInterval=null;
+let _clinicTimerSecs=15;
 
 function normaliseMgr(r) {
   return { id: r.id, name: r.name, pinHash: r.pin_hash, lastLogin: r.last_login, employeeId: r.employee_id||null };
@@ -3169,7 +3219,7 @@ async function processRFID(card){
   }).catch(()=>{});
 }
 
-async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidBreakMins=null,paidBreakMins=null,breakNote=null){
+async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidBreakMins=null,paidBreakMins=null,breakNote=null,travelKm=null){
   try {
     if(action==='in'){
       // If a leave entry exists for today, convert it to a clock-in and alert manager
@@ -3207,11 +3257,12 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
         status:(reason||breakFlagged)?'pending':open.status,
         unpaid_break_mins:unpaidBreakMins,
         paid_break_mins:paidBreakMins,
-        break_note:breakNote||null
+        break_note:breakNote||null,
+        travel_km:travelKm||null
       };
       await db.update('entries', open.id, patch);
       const cached=_entries.find(e=>e.id===open.id);
-      if(cached) Object.assign(cached,{clockOut:sheetTimeStr,hours:hoursStr,unpaidBreakMins,paidBreakMins,breakNote:breakNote||null});
+      if(cached) Object.assign(cached,{clockOut:sheetTimeStr,hours:hoursStr,unpaidBreakMins,paidBreakMins,breakNote:breakNote||null,travelKm:travelKm||null});
       if(reason) await addNote(emp,noteType||'Departure note',timeStr,reason,open.id,todayKey);
       if(breakFlagged) await addNote(emp,'Break note',timeStr,`Break shorter than expected — unpaid: ${unpaidBreakMins} min (expected ${unpaidExpected} min)${breakNote?' · '+breakNote:''}`,open.id,todayKey);
       const unseenOut=_requests.filter(r=>(r.status==='pending_manager'||r.status==='pending_peer')&&(r.initiatorId===emp.id||(r.colleagueId===emp.id&&r.status==='pending_peer'))).length;
@@ -3289,6 +3340,14 @@ async function maybeBreakConfirm(emp,action,timeStr,sheetTimeStr,isoNow,open,tod
   const shiftHours=((oh*60+om)-(ih*60+im))/60;
   const unpaidExpected=expectedUnpaidBreakMins(shiftHours);
   const paidExpected=expectedPaidBreakMins(shiftHours);
+  // Clinic override: replace standard break overlay with combined clinic overlay for can_travel staff on clinic lane
+  const rShift=srShiftForEmp(emp.id,todayKey);
+  const isClinic=emp.can_travel&&rShift&&rShift!=='off'&&rShift.lane==='75plus';
+  if(isClinic){
+    _clinicCommitArgs={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidExpected,paidExpected};
+    showClinicOverlay(empFirstName(emp),unpaidExpected,paidExpected);
+    return;
+  }
   if(!unpaidExpected&&!paidExpected){
     await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType);
     return;
@@ -3376,6 +3435,97 @@ async function submitBreakEdit(){
   _breakCommitArgs=null;
   document.getElementById('break-edit-overlay').classList.remove('show');
   await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidTaken,paidTaken,breakReason||null);
+}
+
+/* ═══════════════════════════════════════════
+   CLINIC CLOCK-OUT OVERLAY
+═══════════════════════════════════════════ */
+function _clearClinicTimer(){
+  if(_clinicTimerInterval){clearInterval(_clinicTimerInterval);_clinicTimerInterval=null;}
+}
+
+function showClinicOverlay(firstName,unpaidExpected,paidExpected){
+  document.getElementById('clinic-overlay-title').textContent=`Before you go, ${firstName}…`;
+  // Reset to default state
+  document.getElementById('clinic-btn-row').style.display='flex';
+  document.getElementById('clinic-edit-section').style.display='none';
+  document.getElementById('clinic-timer-wrap').style.display='';
+  document.getElementById('clinic-timer-label').style.display='';
+  document.getElementById('clinic-km-input').value='';
+  document.getElementById('clinic-break-reason').value='';
+  // Build break fields
+  let fields='';
+  if(unpaidExpected) fields+=`<div class="break-counter-row">
+    <span class="break-counter-label">🍽 Unpaid meal break</span>
+    <button class="break-counter-btn" onclick="adjustClinicBreak('unpaid',-5)">−</button>
+    <input class="break-counter-input" id="clinic-unpaid-input" type="number" min="0" max="120" value="${unpaidExpected}">
+    <button class="break-counter-btn" onclick="adjustClinicBreak('unpaid',5)">+</button>
+    <span style="font-size:0.8rem;color:var(--muted)">min</span>
+  </div>`;
+  if(paidExpected) fields+=`<div class="break-counter-row">
+    <span class="break-counter-label">☕ Paid rest break</span>
+    <button class="break-counter-btn" onclick="adjustClinicBreak('paid',-5)">−</button>
+    <input class="break-counter-input" id="clinic-paid-input" type="number" min="0" max="60" value="${paidExpected}">
+    <button class="break-counter-btn" onclick="adjustClinicBreak('paid',5)">+</button>
+    <span style="font-size:0.8rem;color:var(--muted)">min</span>
+  </div>`;
+  document.getElementById('clinic-break-fields').innerHTML=fields;
+  const hasBreakFields=!!(unpaidExpected||paidExpected);
+  document.getElementById('clinic-break-reason-wrap').style.display=hasBreakFields?'':'none';
+  // Start 15s timer defaulting to No
+  const bar=document.getElementById('clinic-timer-bar');
+  const label=document.getElementById('clinic-timer-label');
+  bar.style.transition='none'; bar.style.width='100%';
+  label.textContent='Assuming no in 15s…';
+  document.getElementById('clinic-overlay').classList.add('show');
+  _clinicTimerSecs=15;
+  requestAnimationFrame(()=>{
+    bar.style.transition='width 1s linear'; bar.style.width=(14/15*100)+'%';
+    _clinicTimerInterval=setInterval(()=>{
+      _clinicTimerSecs--;
+      const pct=(_clinicTimerSecs/15)*100;
+      bar.style.width=pct+'%';
+      label.textContent=`Assuming no in ${_clinicTimerSecs}s…`;
+      if(_clinicTimerSecs<=0) clinicNo();
+    },1000);
+  });
+}
+
+function clinicNo(){
+  _clearClinicTimer();
+  document.getElementById('clinic-overlay').classList.remove('show');
+  if(!_clinicCommitArgs) return;
+  const{emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidExpected,paidExpected}=_clinicCommitArgs;
+  _clinicCommitArgs=null;
+  commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidExpected,paidExpected,null,null);
+}
+
+function clinicYesExpand(){
+  _clearClinicTimer();
+  document.getElementById('clinic-btn-row').style.display='none';
+  document.getElementById('clinic-timer-wrap').style.display='none';
+  document.getElementById('clinic-timer-label').style.display='none';
+  document.getElementById('clinic-edit-section').style.display='block';
+  setTimeout(()=>document.getElementById('clinic-km-input').focus(),80);
+}
+
+function adjustClinicBreak(type,delta){
+  const el=document.getElementById(type==='unpaid'?'clinic-unpaid-input':'clinic-paid-input');
+  if(el) el.value=Math.max(0,(parseInt(el.value)||0)+delta);
+}
+
+async function submitClinicClockOut(){
+  if(!_clinicCommitArgs) return;
+  const{emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidExpected,paidExpected}=_clinicCommitArgs;
+  const unpaidEl=document.getElementById('clinic-unpaid-input');
+  const paidEl=document.getElementById('clinic-paid-input');
+  const unpaidTaken=unpaidEl?(parseInt(unpaidEl.value)||0):unpaidExpected;
+  const paidTaken=paidEl?(parseInt(paidEl.value)||0):paidExpected;
+  const breakReason=document.getElementById('clinic-break-reason').value.trim();
+  const kmVal=parseFloat(document.getElementById('clinic-km-input').value)||null;
+  _clinicCommitArgs=null;
+  document.getElementById('clinic-overlay').classList.remove('show');
+  await commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reason,noteType,unpaidTaken,paidTaken,breakReason||null,kmVal);
 }
 
 /* ═══════════════════════════════════════════
@@ -3673,6 +3823,7 @@ function openAddEmployee(){
   document.getElementById('emp-modal-title').textContent='Add team member';
   document.getElementById('emp-save-btn').textContent='Save';
   ['emp-firstname','emp-surname','emp-preferred-name','emp-rfid','emp-myob-id'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('emp-can-travel').checked=false;
   document.getElementById('emp-role').value='Doctor';
   document.getElementById('emp-type').value='Full Time';
   document.getElementById('emp-classification').value='';
@@ -3696,6 +3847,7 @@ function openEditEmployee(empId){
   document.getElementById('emp-type').value=emp.type;
   document.getElementById('emp-classification').value=emp.classification||'';
   document.getElementById('emp-myob-id').value=emp.myob_record_id||'';
+  document.getElementById('emp-can-travel').checked=!!emp.can_travel;
   document.getElementById('emp-remove-btn').style.display='';
   document.getElementById('emp-modal').classList.add('show');
   document.getElementById('emp-firstname').focus();
@@ -3736,20 +3888,21 @@ async function saveEmployee(){
   const type=document.getElementById('emp-type').value;
   const classification=document.getElementById('emp-classification').value||null;
   const myobRecordId=document.getElementById('emp-myob-id').value.trim()||null;
+  const canTravel=document.getElementById('emp-can-travel').checked;
   if(!firstName){showToast('Please fill in a first name');return;}
   if(!rfid&&!confirm('No RFID card number entered — this staff member won\'t be able to clock in until one is assigned. Save anyway?')) return;
   // Check RFID clash (exclude self when editing)
   if(_emps.find(e=>e.rfid===rfid&&e.id!==_editingEmpId)){showToast('That card is already registered to someone');return;}
   try{
     if(_editingEmpId){
-      await db.update('employees',_editingEmpId,{name,role,rfid,type,classification,myob_record_id:myobRecordId,preferred_name:preferredName});
+      await db.update('employees',_editingEmpId,{name,role,rfid,type,classification,myob_record_id:myobRecordId,preferred_name:preferredName,can_travel:canTravel});
       const emp=_emps.find(e=>e.id===_editingEmpId);
-      if(emp){emp.name=name;emp.role=role;emp.rfid=rfid;emp.type=type;emp.classification=classification;emp.myob_record_id=myobRecordId;emp.preferred_name=preferredName;}
+      if(emp){emp.name=name;emp.role=role;emp.rfid=rfid;emp.type=type;emp.classification=classification;emp.myob_record_id=myobRecordId;emp.preferred_name=preferredName;emp.can_travel=canTravel;}
       if(role==='Manager') syncManagerLogin(_editingEmpId,name).catch(e=>console.warn('Manager sync failed:',e));
       closeModal(); renderTeam();
       showToast(name+' updated ✓');
     } else {
-      const row={id:'E'+Date.now(),name,role,rfid,type,classification,myob_record_id:myobRecordId,preferred_name:preferredName};
+      const row={id:'E'+Date.now(),name,role,rfid,type,classification,myob_record_id:myobRecordId,preferred_name:preferredName,can_travel:canTravel};
       await db.insert('employees',row);
       _emps.push(row);
       if(role==='Manager') syncManagerLogin(row.id,name).catch(e=>console.warn('Manager sync failed:',e));
@@ -3968,6 +4121,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     <div class="ts-row-right">
       <div class="ts-payroll-wrap">${payrollInner}</div>
       <span class="ts-row-hours">${hoursText}</span>
+      ${entry?.travelKm?`<span title="${entry.travelKm} km travel" style="font-size:0.85rem;line-height:1;">🚗</span>`:''}
       <div class="ts-row-flag-dot" style="background:${flagColor}"></div><span class="ts-adjusted-pencil" title="Acknowledged by manager" style="${locked&&manuallyAdjusted?'':'visibility:hidden'}">✎</span><span class="ts-flag-icon" title="Flagged for follow-up" style="${flag==='flagged'?'':'visibility:hidden'}">⚑</span>
       <span class="ts-locked-label" style="${locked||effectiveAutoApproved?'':'visibility:hidden'}">${locked&&manuallyAdjusted?'Locked'+(lockedBy?' · '+lockedBy:''):'Auto-approved'}</span>
       <div class="ts-myob-preview">${myobPreviewText}</div>
@@ -4039,6 +4193,14 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       </div>
     </div>
     ${breakRowHtml}
+    ${emp.can_travel&&entry&&!entry.leaveType?`<div class="ts-sub-row">
+      <span class="ts-sub-label">Travel</span>
+      <div style="display:flex;align-items:center;gap:0.45rem;">
+        ${locked||(effectiveAutoApproved&&!autoOverridden)
+          ?`<span style="font-weight:700;font-size:0.82rem;">${entry.travelKm?'🚗 '+entry.travelKm+' km':'—'}</span>`
+          :`<span style="font-size:0.9rem;">🚗</span><input class="ts-break-input" type="number" min="0" max="500" step="0.1" value="${entry.travelKm||''}" placeholder="km" title="km travelled" onclick="event.stopPropagation()" onchange="tsSaveTravel('${entryId}',this.value,event)"><span style="font-size:0.72rem;color:var(--muted);">km (leave blank if none)</span>`}
+      </div>
+    </div>`:''}
     ${manuallyAdjusted&&entry?.adjustedBy?`<div class="ts-sub-adj-note">Adjusted by ${entry.adjustedBy}${entry.adjustmentReason?' · '+entry.adjustmentReason:''}</div>`:''}
   </div>`;
 
@@ -4064,6 +4226,20 @@ async function tsSaveBreak(entryId,empId,empName,role,date,value,e){
     renderTimesheets();
     _tsExpandEntryId=null;
   }catch(err){showToast('Could not save break');console.error(err);}
+}
+
+async function tsSaveTravel(entryId,value,e){
+  e?.stopPropagation?.();
+  if(!entryId){showToast('Save final times first before editing travel');return;}
+  const km=parseFloat(value)||null;
+  try{
+    await db.update('entries',entryId,{travel_km:km});
+    const entry=_entries.find(en=>en.id===entryId);
+    if(entry) entry.travelKm=km;
+    _tsExpandEntryId=String(entryId);
+    renderTimesheets();
+    _tsExpandEntryId=null;
+  }catch(err){showToast('Could not save travel km');console.error(err);}
 }
 
 async function tsAutoLockSweep(){
@@ -4605,6 +4781,10 @@ function exportMYOB(){
     if(!myobRows.length){
       const row=[dateF,'Base Hourly','0.00',firstName,lastName,'','','','','','*None',emp?.myob_record_id||'','',''];
       lines.push(row.join('\t'));
+    }
+    if(entry.travelKm>0){
+      const travelRow=[dateF,'Travelling Allowance per KLM',entry.travelKm.toFixed(2),firstName,lastName,'','','','','','*None',emp?.myob_record_id||'','',''];
+      lines.push(travelRow.join('\t'));
     }
   });
 
