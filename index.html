@@ -1177,6 +1177,7 @@
   .ts-times-clock { color:var(--charcoal); font-weight:800; font-family:'Courier New',monospace; }
   .ts-times-clock.ts-times-flagged { color:var(--burgundy); }
   .ts-row-flag-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .ts-travel-icon { width:20px; flex-shrink:0; font-size:0.8rem; line-height:1; text-align:center; }
   .ts-adjusted-pencil { font-size:0.7rem; color:var(--success); flex-shrink:0; line-height:1; margin-left:-0.2rem; }
   .ts-row-right { display:flex; align-items:center; gap:1.2rem; flex:1; min-width:0; }
   .ts-myob-preview { flex:1; min-width:0; font-size:0.68rem; color:var(--muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:0.01em; margin-left:2rem; padding-left:2rem; border-left:1.5px solid var(--border); }
@@ -4121,8 +4122,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     <div class="ts-row-right">
       <div class="ts-payroll-wrap">${payrollInner}</div>
       <span class="ts-row-hours">${hoursText}</span>
-      ${entry?.travelKm?`<span title="${entry.travelKm} km travel" style="font-size:0.85rem;line-height:1;">🚗</span>`:''}
-      <div class="ts-row-flag-dot" style="background:${flagColor}"></div><span class="ts-adjusted-pencil" title="Acknowledged by manager" style="${locked&&manuallyAdjusted?'':'visibility:hidden'}">✎</span><span class="ts-flag-icon" title="Flagged for follow-up" style="${flag==='flagged'?'':'visibility:hidden'}">⚑</span>
+      <div class="ts-row-flag-dot" style="background:${flagColor}"></div><div class="ts-travel-icon">${entry?.travelKm?`<span title="${entry.travelKm} km travel">🚗</span>`:''}</div><span class="ts-adjusted-pencil" title="Acknowledged by manager" style="${locked&&manuallyAdjusted?'':'visibility:hidden'}">✎</span><span class="ts-flag-icon" title="Flagged for follow-up" style="${flag==='flagged'?'':'visibility:hidden'}">⚑</span>
       <span class="ts-locked-label" style="${locked||effectiveAutoApproved?'':'visibility:hidden'}">${locked&&manuallyAdjusted?'Locked'+(lockedBy?' · '+lockedBy:''):'Auto-approved'}</span>
       <div class="ts-myob-preview">${myobPreviewText}</div>
     </div>
