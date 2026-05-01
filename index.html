@@ -1188,7 +1188,8 @@
   .ts-payroll-select:focus { outline:none; border-color:var(--burgundy); }
   .ts-payroll-label { font-size:0.72rem; font-weight:700; color:var(--muted); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ts-locked-label { font-size:0.68rem; color:var(--muted); font-weight:600; white-space:nowrap; width:70px; text-align:left; }
-  .ts-row-detail { background:rgba(250,245,246,0.7); border-top:1px solid rgba(234,217,220,0.5); padding:0.5rem 1.1rem 0.75rem; }
+  .ts-row-detail { background:rgba(250,245,246,0.7); border-top:1px solid rgba(234,217,220,0.5); height:0; overflow:hidden; transition:height 0.22s ease; }
+  .ts-row-detail-inner { padding:0.5rem 1.1rem 0.75rem; }
   .ts-sub-row { display:flex; align-items:center; gap:0.75rem; padding:0.3rem 0; font-size:0.8rem; }
   .ts-sub-label { width:72px; flex-shrink:0; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); }
   .ts-sub-rostered .ts-sub-time { color:var(--muted); font-weight:800; font-family:'Courier New',monospace; font-size:0.88rem; }
@@ -1398,7 +1399,7 @@
     .export-btn { display: none; }
     .ts-emp-myob-badge { display: none; }
     .ts-emp-role-badge { display: none; }
-    .ts-row-detail { display: none !important; }
+    .ts-row-detail { height: 0 !important; }
     .ts-row-main { flex-wrap: wrap; gap: 0.15rem 0; padding: 0.6rem 0.8rem; cursor: default; }
     .ts-row-main:hover { background: transparent; }
     .ts-row-date { width: auto; flex: 1; font-size: 0.8rem; }
@@ -4167,7 +4168,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       </div>
     </div>`;
 
-  const detailSection=`<div class="ts-row-detail" style="display:${autoExpand?'block':'none'}">
+  const detailSection=`<div class="ts-row-detail${autoExpand?' ts-detail-open':''}" style="${autoExpand?'height:auto;':''}"><div class="ts-row-detail-inner">
     <div class="ts-sub-row ts-sub-rostered">
       <span class="ts-sub-label">Rostered</span>
       <span class="ts-sub-time">${rostStart&&rostEnd?rostStart+' – '+rostEnd:'— Not rostered'}</span>
@@ -4202,7 +4203,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       </div>
     </div>`:''}
     ${manuallyAdjusted&&entry?.adjustedBy?`<div class="ts-sub-adj-note">Adjusted by ${entry.adjustedBy}${entry.adjustmentReason?' · '+entry.adjustmentReason:''}</div>`:''}
-  </div>`;
+  </div></div>`;
 
   return`<div class="${rowClass}" data-entry-id="${entryId||''}" data-date="${date}" data-emp-id="${safeEmpId}">
     ${compactRow}${detailSection}
@@ -4211,7 +4212,16 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
 
 function tsToggleRow(row){
   const detail=row?.querySelector('.ts-row-detail');
-  if(detail) detail.style.display=detail.style.display==='none'?'block':'none';
+  if(!detail) return;
+  if(detail.classList.contains('ts-detail-open')){
+    detail.style.height=detail.scrollHeight+'px';
+    detail.classList.remove('ts-detail-open');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{detail.style.height='0';}));
+  } else {
+    detail.classList.add('ts-detail-open');
+    detail.style.height=detail.scrollHeight+'px';
+    detail.addEventListener('transitionend',()=>{detail.style.height='auto';},{once:true});
+  }
 }
 
 async function tsSaveBreak(entryId,empId,empName,role,date,value,e){
