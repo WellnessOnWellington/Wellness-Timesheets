@@ -1188,7 +1188,8 @@
   .ts-payroll-select:focus { outline:none; border-color:var(--burgundy); }
   .ts-payroll-label { font-size:0.72rem; font-weight:700; color:var(--muted); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ts-locked-label { font-size:0.68rem; color:var(--muted); font-weight:600; white-space:nowrap; width:70px; text-align:left; }
-  .ts-row-detail { background:rgba(250,245,246,0.7); border-top:1px solid rgba(234,217,220,0.5); height:0; overflow:hidden; transition:height 0.22s ease; }
+  .ts-row-detail { background:rgba(250,245,246,0.7); border-top:1px solid rgba(234,217,220,0.5); max-height:0; overflow:hidden; transition:max-height 0.22s ease-out; }
+  .ts-row-detail.ts-detail-open { max-height:250px; }
   .ts-row-detail-inner { padding:0.5rem 1.1rem 0.75rem; }
   .ts-sub-row { display:flex; align-items:center; gap:0.75rem; padding:0.3rem 0; font-size:0.8rem; }
   .ts-sub-label { width:72px; flex-shrink:0; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); }
@@ -1399,7 +1400,7 @@
     .export-btn { display: none; }
     .ts-emp-myob-badge { display: none; }
     .ts-emp-role-badge { display: none; }
-    .ts-row-detail { height: 0 !important; }
+    .ts-row-detail { max-height: 0 !important; }
     .ts-row-main { flex-wrap: wrap; gap: 0.15rem 0; padding: 0.6rem 0.8rem; cursor: default; }
     .ts-row-main:hover { background: transparent; }
     .ts-row-date { width: auto; flex: 1; font-size: 0.8rem; }
@@ -3069,6 +3070,7 @@ let _rwPageHash=null;
 
 // Simple hash of page content to detect new deploys
 async function rwCheckVersion(){
+  if(location.protocol==='file:') return;
   try{
     const r=await fetch(location.href+'?_v='+Date.now(),{cache:'no-store'});
     if(!r.ok) return;
@@ -4168,7 +4170,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       </div>
     </div>`;
 
-  const detailSection=`<div class="ts-row-detail${autoExpand?' ts-detail-open':''}" style="${autoExpand?'height:auto;':''}"><div class="ts-row-detail-inner">
+  const detailSection=`<div class="ts-row-detail${autoExpand?' ts-detail-open':''}"><div class="ts-row-detail-inner">
     <div class="ts-sub-row ts-sub-rostered">
       <span class="ts-sub-label">Rostered</span>
       <span class="ts-sub-time">${rostStart&&rostEnd?rostStart+' – '+rostEnd:'— Not rostered'}</span>
@@ -4213,15 +4215,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
 function tsToggleRow(row){
   const detail=row?.querySelector('.ts-row-detail');
   if(!detail) return;
-  if(detail.classList.contains('ts-detail-open')){
-    detail.style.height=detail.scrollHeight+'px';
-    detail.classList.remove('ts-detail-open');
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{detail.style.height='0';}));
-  } else {
-    detail.classList.add('ts-detail-open');
-    detail.style.height=detail.scrollHeight+'px';
-    detail.addEventListener('transitionend',()=>{detail.style.height='auto';},{once:true});
-  }
+  detail.classList.toggle('ts-detail-open');
 }
 
 async function tsSaveBreak(entryId,empId,empName,role,date,value,e){
@@ -4455,21 +4449,33 @@ function tsToggleEmp(headerEl){
   if(empId){ if(nowCollapsed) _tsCollapsed.delete(empId); else _tsCollapsed.add(empId); }
 }
 
+function tsAnimateLockClose(entryId){
+  return new Promise(resolve=>{
+    const row=entryId?document.querySelector(`.ts-shift-row[data-entry-id="${entryId}"]`):null;
+    const detail=row?.querySelector('.ts-row-detail.ts-detail-open');
+    if(!detail){resolve();return;}
+    detail.classList.remove('ts-detail-open');
+    setTimeout(resolve,280);
+  });
+}
+
 async function tsLockRow(entryId, empId, date, e){
   e.stopPropagation();
   if(!entryId){showToast('No entry to lock');return;}
   const mgr=currentManager?.name||'Manager';
   try{
-    await db.update('entries',entryId,{locked:true,locked_by:mgr,locked_at:new Date().toISOString()});
     const entry=_entries.find(en=>en.id===entryId);
+    await Promise.all([
+      tsAnimateLockClose(entryId),
+      db.update('entries',entryId,{locked:true,locked_by:mgr,locked_at:new Date().toISOString()})
+    ]);
     if(entry){entry.locked=true;entry.lockedBy=mgr;}
     await tsSaveAudit({entry_id:entryId,employee_id:empId,employee_name:entry?.employeeName||'',date,
       rostered_start:null,rostered_end:null,
       clocked_start:entry?.clockIn||null,clocked_end:entry?.clockOut||null,
       final_start:entry?.finalStart||entry?.clockIn||null,final_end:entry?.finalEnd||entry?.clockOut||null,
       action:'lock',reason:'Locked by manager',manager_name:mgr});
-    renderTimesheets();
-    showToast('Entry locked.');
+    renderTimesheets();showToast('Entry locked.');
   }catch(err){showToast('Could not lock entry');console.error(err);}
 }
 
@@ -4483,16 +4489,19 @@ async function tsMgrAutoLock(empId, empName, role, date, rostStart, rostEnd, ent
   try{
     if(entryId){
       // Stub entry exists (e.g. leave type was set) — write roster times as finals and lock
-      await db.update('entries',entryId,{final_start:rostStart,final_end:rostEnd,hours,
-        locked:true,locked_by:mgr,locked_at:new Date().toISOString()});
       const entry=_entries.find(en=>String(en.id)===String(entryId));
+      await Promise.all([
+        tsAnimateLockClose(entryId),
+        db.update('entries',entryId,{final_start:rostStart,final_end:rostEnd,hours,
+          locked:true,locked_by:mgr,locked_at:new Date().toISOString()})
+      ]);
       if(entry){entry.finalStart=rostStart;entry.finalEnd=rostEnd;entry.locked=true;entry.lockedBy=mgr;}
       await tsSaveAudit({entry_id:entryId,employee_id:empId,employee_name:empName,date,
         rostered_start:rostStart,rostered_end:rostEnd,clocked_start:null,clocked_end:null,
         final_start:rostStart,final_end:rostEnd,
         action:'lock',reason:'No-clock auto-lock: roster hours used as finals',manager_name:mgr});
     } else {
-      // No entry at all — create and lock
+      // No entry at all — create and lock (no row to animate, no entryId)
       const newId='M'+Date.now();
       const newEntry={id:newId,employee_id:empId,employee_name:empName,role,
         date,clock_in:null,clock_out:null,hours,status:'normal',
@@ -4506,8 +4515,7 @@ async function tsMgrAutoLock(empId, empName, role, date, rostStart, rostEnd, ent
         final_start:rostStart,final_end:rostEnd,
         action:'lock',reason:'No-clock auto-lock: roster hours used as finals',manager_name:mgr});
     }
-    renderTimesheets();
-    showToast('Entry locked.');
+    renderTimesheets();showToast('Entry locked.');
   }catch(err){showToast('Could not lock entry: '+(err.message||err));console.error(err);}
 }
 
@@ -4691,7 +4699,9 @@ async function tsSavePayrollType(entryId, empId, empName, role, date, value){
 }
 
 async function tsSaveAudit(data){
-  try{ await db.insert('timesheet_audit',data); }catch(e){ console.error('Audit log failed',e); }
+  // Strip fields not in the timesheet_audit schema
+  const {date:_date,...rest}=data;
+  try{ await db.insert('timesheet_audit',rest); }catch(e){ console.error('Audit log failed',e); }
 }
 
 const MYOB_CATS={
@@ -8180,7 +8190,7 @@ function escHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').re
 
 </script>
 <script>
-if('serviceWorker' in navigator){
+if('serviceWorker' in navigator && location.protocol !== 'file:'){
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
 }
 
