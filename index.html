@@ -186,6 +186,7 @@
   .kiosk-footer-nav { display: flex; gap: 0.75rem; width: 100%; max-width: 440px; }
   .kiosk-build-credit { position:fixed; bottom:0.6rem; right:0.85rem; font-size:0.58rem; font-weight:600; color:var(--muted); opacity:0.45; letter-spacing:0.02em; pointer-events:none; }
   #kiosk-mob-presence { display: none; }
+  #db-status-mob { display: none; }
 
   .nav-btn {
     flex: 1; background: var(--white); border: 1.5px solid var(--border);
@@ -1497,7 +1498,7 @@
   </div>
 
   <div id="kiosk-mob-presence"></div>
-  <div id="db-status-mob" style="display:none;"></div>
+  <div id="db-status-mob"></div>
 
   <div class="kiosk-footer-nav" style="flex-direction:column;">
     <button class="nav-btn" onclick="openRosterPIN()" style="width:100%;">👥 Who's On</button>
