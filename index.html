@@ -5919,7 +5919,8 @@ function teamPresenceHtml(today, inNow, doneNow){
       const isIn=inNow.has(emp.id);
       const isDone=doneNow.has(emp.id);
       const onLeave=isOnLeave(emp.id,today);
-      const p=onLeave?{bg:'rgba(180,180,180,0.1)',color:'#b0a8ac'}:(SR_ROLE_PILL[role]||{bg:'rgba(180,160,170,0.12)',color:'var(--charcoal)'});
+      const _roleP=SR_ROLE_PILL[role]||{bg:'rgba(180,160,170,0.12)',color:'var(--charcoal)'};
+      const p=onLeave?{bg:_roleP.bg,color:'#b0a8ac'}:_roleP;
       const sMin=gnowToMin(shift.start);
       const eMin=gnowToMin(shift.end);
       const lPct=((sMin-TL_START)/TL_RANGE*100).toFixed(1);
@@ -5970,7 +5971,7 @@ function srByDayGantt(dateStr, today){
       const barFilter=isSecondaryLane?'filter:brightness(0.78);':'';
       const nameStyle=onLeave?'color:var(--muted);':'';
       const tooltip=`${name}: ${shift.start}–${shift.end}${laneTag}`;
-      const rowPill=onLeave?{bg:'rgba(180,180,180,0.08)'}:(SR_ROLE_PILL[role]||{bg:'transparent'});
+      const rowPill=SR_ROLE_PILL[role]||{bg:'transparent'};
       return`<div class="sr-gnow-row" style="background:${rowPill.bg}">
         <div class="sr-gnow-row-name" style="${nameStyle}">${name}</div>
         <div class="sr-gnow-track">
