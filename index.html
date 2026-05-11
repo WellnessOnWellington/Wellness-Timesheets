@@ -457,6 +457,7 @@
   .tp-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; flex-shrink: 0; position: relative; top: -1px; }
   .tp-dot-in  { background: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,0.25); }
   .tp-dot-out { background: var(--border-dk); }
+  .tp-dot-offline { background: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.25); }
 
   .stat-tile {
     background: var(--white); border: 1.5px solid var(--border);
@@ -1363,6 +1364,7 @@
     .kiosk-footer-nav { margin-top: auto; padding-bottom: 0.5rem; }
     .kiosk-build-credit { display: none; }
     #kiosk-mob-presence { display: block; width: 100%; margin-top: 2rem; }
+    #db-status-mob { display: block; width: 100%; margin-top: 0.75rem; }
     .kmp-label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.4rem; margin-top: 0.75rem; }
     .kmp-empty { font-size: 0.78rem; color: var(--muted); font-style: italic; text-align: center; padding: 0.5rem 0; }
     .scan-emoji { font-size: 2rem; margin-bottom: 0.6rem; }
@@ -1495,6 +1497,7 @@
   </div>
 
   <div id="kiosk-mob-presence"></div>
+  <div id="db-status-mob" style="display:none;"></div>
 
   <div class="kiosk-footer-nav" style="flex-direction:column;">
     <button class="nav-btn" onclick="openRosterPIN()" style="width:100%;">👥 Who's On</button>
@@ -3134,6 +3137,12 @@ function rwUpdateDbStatus(){
   }
   const banner=document.getElementById('db-offline-banner');
   if(banner) banner.style.display=(!_dbOnline&&!!currentManager)?'block':'none';
+  const mob=document.getElementById('db-status-mob');
+  if(mob){
+    const dotClass=_dbOnline?'tp-dot-in':'tp-dot-offline';
+    const label=_dbOnline?'Database online':'Database offline — contact Joel';
+    mob.innerHTML=`<div class="kmp-label">System</div><div class="sr-shift-pill" style="background:rgba(180,160,170,0.08);color:var(--charcoal)"><span class="tp-dot ${dotClass}"></span><span class="sr-shift-pill-name">${label}</span></div>`;
+  }
 }
 function rwDbGuard(){
   if(_dbOnline) return true;
@@ -3153,9 +3162,10 @@ setInterval(()=>{
 setInterval(rwCheckVersion,60000);
 rwCheckVersion();
 
-// Poll DB health every 60s; first check after 5s
+// Poll DB health every 60s; first check after 1s
 setInterval(rwCheckDbHealth,60000);
 setTimeout(rwCheckDbHealth,1000);
+rwUpdateDbStatus();
 
 // Restore Who's On view if we reloaded from that state
 (function rwRestoreState(){
