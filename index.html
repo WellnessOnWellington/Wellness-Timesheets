@@ -1498,9 +1498,9 @@
   </div>
 
   <div id="kiosk-mob-presence"></div>
-  <div id="db-status-mob"></div>
 
   <div class="kiosk-footer-nav" style="flex-direction:column;">
+    <div id="db-status-mob" style="margin-bottom:0.5rem;"></div>
     <button class="nav-btn" onclick="openRosterPIN()" style="width:100%;">👥 Who's On</button>
     <div style="display:flex;gap:0.75rem;width:100%;">
       <button class="nav-btn" onclick="openRequestsView()" style="flex:1;">📋 Requests</button>
@@ -3142,7 +3142,7 @@ function rwUpdateDbStatus(){
   if(mob){
     const dotClass=_dbOnline?'tp-dot-in':'tp-dot-offline';
     const label=_dbOnline?'Database online':'Database offline — contact Joel';
-    mob.innerHTML=`<div class="kmp-label">System</div><div class="sr-shift-pill" style="background:rgba(180,160,170,0.08);color:var(--charcoal)"><span class="tp-dot ${dotClass}"></span><span class="sr-shift-pill-name">${label}</span></div>`;
+    mob.innerHTML=`<div style="border-top:1px solid var(--border);padding-top:0.6rem;"><div class="sr-shift-pill" style="background:rgba(180,160,170,0.08);color:var(--charcoal)"><span class="tp-dot ${dotClass}"></span><span class="sr-shift-pill-name">${label}</span></div></div>`;
   }
 }
 function rwDbGuard(){
