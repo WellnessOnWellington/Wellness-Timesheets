@@ -4877,7 +4877,7 @@ function exportMYOB(){
 
   const fnLabel=srFortnightLabel(fnStart).replace(/[^a-zA-Z0-9-]/g,'-');
   const lines=['{}'];
-  const headers=['Date','Payroll Category','Units','Employee First Name','Employee Co./Last Name','Notes','Customer Card ID','Customer First Name','Customer Co./Last Name','Customer Record ID','Employee Card ID','Employee Record ID','Job','Start/Stop Time'];
+  const headers=['Employee Co./Last Name','Employee First Name','Payroll Category','Job','Customer Co./Last Name','Customer First Name','Notes','Date','Units','Employee Card ID','Employee Record ID','Start/Stop Time','Customer Card ID','Customer Record ID'];
   lines.push(headers.join('\t'));
 
   locked.forEach(entry=>{
@@ -4889,15 +4889,15 @@ function exportMYOB(){
     const myobRows=calcMYOBRows(entry,emp,_publicHolidays?.has(entry.date)||false);
     myobRows.forEach(({cat,hours})=>{
       const units=hours.toFixed(2);
-      const row=[dateF,cat,units,firstName,lastName,'','','','','','*None',emp?.myob_record_id||'','',''];
+      const row=[lastName,firstName,cat,'','','','',dateF,units,'*None',emp?.myob_record_id||'','','',''];
       lines.push(row.join('\t'));
     });
     if(!myobRows.length){
-      const row=[dateF,'Base Hourly','0.00',firstName,lastName,'','','','','','*None',emp?.myob_record_id||'','',''];
+      const row=[lastName,firstName,'Base Hourly','','','','',dateF,'0.00','*None',emp?.myob_record_id||'','','',''];
       lines.push(row.join('\t'));
     }
     if(entry.travelKm>0){
-      const travelRow=[dateF,'Travelling Allowance per KLM',entry.travelKm.toFixed(2),firstName,lastName,'','','','','','*None',emp?.myob_record_id||'','',''];
+      const travelRow=[lastName,firstName,'Travelling Allowance per KLM','','','','',dateF,entry.travelKm.toFixed(2),'*None',emp?.myob_record_id||'','','',''];
       lines.push(travelRow.join('\t'));
     }
   });
