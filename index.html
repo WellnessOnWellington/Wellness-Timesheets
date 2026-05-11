@@ -4639,6 +4639,20 @@ async function tsDeleteRow(entryId, empId, empName, date, e){
       action:'delete',reason:'Removed from timesheet export by manager',manager_name:mgr});
     await db.update('entries',entryId,{deleted:true});
     if(entry) entry.deleted=true;
+    const row=document.querySelector(`.ts-shift-row[data-entry-id="${entryId}"]`);
+    if(row){
+      row.style.transition='opacity 0.25s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease';
+      row.style.overflow='hidden';
+      row.style.maxHeight=row.offsetHeight+'px';
+      void row.offsetHeight;
+      row.style.opacity='0';
+      row.style.maxHeight='0';
+      row.style.paddingTop='0';
+      row.style.paddingBottom='0';
+      row.style.marginTop='0';
+      row.style.marginBottom='0';
+      await new Promise(r=>setTimeout(r,320));
+    }
     renderTimesheets();
     showToast('Entry removed from export.');
   }catch(err){showToast('Could not remove entry');console.error(err);}
@@ -4835,16 +4849,18 @@ function calcMYOBRows(entry, emp, isPH=false){
     if(role==='Nurse'||role==='Manager') return [{cat:endMins>=SPLIT?'Nurse Evening Hours':'Base Hourly',hours:totalHours}];
     if(effectiveEndMins<=SPLIT)   return [{cat:'Base Hourly',hours:totalHours}];
     if(startMins>=SPLIT)          return [{cat:'Evening Rate',hours:totalHours}];
-    return [{cat:'Base Hourly',hours:(SPLIT-startMins)/60},{cat:'Evening Rate',hours:(effectiveEndMins-SPLIT)/60}];
+    return [{cat:'Base Hourly',hours:Math.max(0,(SPLIT-startMins)/60-unpaidBreakMins/60)},{cat:'Evening Rate',hours:Math.max(0,(endMins-SPLIT)/60)}];
   }
 
   // Nurse rule: entire shift at evening if original end is at or after 18:00 (no split)
   if(cats.isNurse) return [{cat:endMins>=SPLIT?cats.evening:cats.day,hours:totalHours}];
 
-  // Receptionist / Manager rule: split at 18:00, break trimmed from end
+  // Receptionist / Manager rule: split at 18:00, break deducted from day portion (lunch break, not evening)
   if(effectiveEndMins<=SPLIT)   return [{cat:cats.day,hours:totalHours}];
   if(startMins>=SPLIT)          return [{cat:cats.evening||cats.day,hours:totalHours}];
-  return [{cat:cats.day,hours:(SPLIT-startMins)/60},{cat:cats.evening||cats.day,hours:(effectiveEndMins-SPLIT)/60}];
+  const baseHours=Math.max(0,(SPLIT-startMins)/60-unpaidBreakMins/60);
+  const eveningHours=Math.max(0,(endMins-SPLIT)/60);
+  return [{cat:cats.day,hours:baseHours},{cat:cats.evening||cats.day,hours:eveningHours}];
 }
 
 function exportMYOB(){
