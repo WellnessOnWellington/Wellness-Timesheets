@@ -168,6 +168,16 @@
     animation: breathe 2.2s ease-in-out infinite;
   }
 
+  /* DB status pill */
+  .db-status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; transition:background 0.4s; }
+  .db-status-pill.db-online { color:var(--wine); background:var(--blush); border-color:var(--border); }
+  .db-status-pill.db-online .db-status-dot { background:#22c55e; }
+  .db-status-pill.db-offline { color:#fff; background:#dc2626; border-color:#b91c1c; }
+  .db-status-pill.db-offline .db-status-dot { background:#fca5a5; }
+
+  /* Manager DB offline banner */
+  #db-offline-banner { display:none; position:fixed; top:0; left:0; right:0; z-index:998; background:#dc2626; color:#fff; padding:0.45rem 1.25rem; font-size:0.76rem; font-weight:700; text-align:center; letter-spacing:0.01em; line-height:1.4; }
+
   @keyframes breathe {
     0%,100% { opacity: 1; transform: scale(1); }
     50%     { opacity: 0.4; transform: scale(0.7); }
@@ -1468,7 +1478,7 @@
     <span class="scan-emoji">🪪</span>
     <div class="scan-prompt">Tap your card to check in or out.</div>
     <div class="scan-sub">Hold your card near the reader — it only takes a moment</div>
-    <div class="reader-pill"><div class="pulse-dot"></div>Reader ready</div>
+    <div class="reader-pill db-status-pill db-online" id="db-status-pill"><div class="db-status-dot"></div>Database online</div>
 
     <!-- TESTING ONLY — restore display:block to re-enable manual RFID entry -->
     <div style="display:none; margin-top:1.25rem; padding-top:1.25rem; border-top:1px dashed var(--border);">
@@ -2727,6 +2737,20 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- DB offline manager banner -->
+<div id="db-offline-banner">⚠ Database offline — changes cannot be saved. We recommend restarting the Supabase project from the dashboard.</div>
+
+<!-- DB offline intercept modal -->
+<div class="modal-bg" id="db-guard-modal">
+  <div class="modal">
+    <div class="modal-title" style="color:#dc2626;">Database Offline</div>
+    <p style="color:var(--muted);font-size:0.9rem;line-height:1.6;margin:0.75rem 0 1.5rem;">This action cannot be saved — the database is currently offline. We recommend restarting the Supabase project from the dashboard first.</p>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="document.getElementById('db-guard-modal').classList.remove('show')">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ═══════════════════════════════════════════
    SUPABASE CONFIG
@@ -3081,6 +3105,42 @@ async function rwCheckVersion(){
   }catch(e){}
 }
 
+// DB health check
+let _dbOnline=true;
+async function rwCheckDbHealth(){
+  if(location.protocol==='file:') return;
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/managers?select=id&limit=1`,{
+      headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}
+    });
+    if(!r.ok) throw new Error('DB offline');
+    if(!_dbOnline){
+      _dbOnline=true;
+      rwUpdateDbStatus();
+      showToast('Database connection restored.');
+    }
+  }catch(e){
+    if(_dbOnline){
+      _dbOnline=false;
+      rwUpdateDbStatus();
+    }
+  }
+}
+function rwUpdateDbStatus(){
+  const pill=document.getElementById('db-status-pill');
+  if(pill){
+    pill.className='reader-pill db-status-pill '+(_dbOnline?'db-online':'db-offline');
+    pill.innerHTML='<div class="db-status-dot"></div>'+(_dbOnline?'Database online':'Database offline');
+  }
+  const banner=document.getElementById('db-offline-banner');
+  if(banner) banner.style.display=(!_dbOnline&&!!currentManager)?'block':'none';
+}
+function rwDbGuard(){
+  if(_dbOnline) return true;
+  document.getElementById('db-guard-modal').classList.add('show');
+  return false;
+}
+
 // Every 15s: reload if new version detected AND page has been idle 2+ min
 setInterval(()=>{
   if(_rwVersionChanged&&Date.now()-_rwLastActivity>2*60*1000){
@@ -3092,6 +3152,10 @@ setInterval(()=>{
 // Poll for new version every 60s
 setInterval(rwCheckVersion,60000);
 rwCheckVersion();
+
+// Poll DB health every 60s; first check after 5s
+setInterval(rwCheckDbHealth,60000);
+setTimeout(rwCheckDbHealth,5000);
 
 // Restore Who's On view if we reloaded from that state
 (function rwRestoreState(){
@@ -3883,6 +3947,7 @@ async function syncManagerLogin(empId, name){
 }
 
 async function saveEmployee(){
+  if(!rwDbGuard())return;
   const firstName=document.getElementById('emp-firstname').value.trim();
   const surname=document.getElementById('emp-surname').value.trim();
   const name=[firstName,surname].filter(Boolean).join(' ');
@@ -4462,6 +4527,7 @@ function tsAnimateLockClose(entryId){
 async function tsLockRow(entryId, empId, date, e){
   e.stopPropagation();
   if(!entryId){showToast('No entry to lock');return;}
+  if(!rwDbGuard())return;
   const mgr=currentManager?.name||'Manager';
   try{
     const entry=_entries.find(en=>en.id===entryId);
@@ -4482,6 +4548,7 @@ async function tsLockRow(entryId, empId, date, e){
 async function tsMgrAutoLock(empId, empName, role, date, rostStart, rostEnd, entryId, e){
   e.stopPropagation();
   if(!rostStart||!rostEnd){showToast('No roster times to use');return;}
+  if(!rwDbGuard())return;
   const mgr=currentManager?.name||'Manager';
   const startMins=timeToMin(rostStart), endMins=timeToMin(rostEnd);
   if(endMins<=startMins){showToast('Invalid roster times');return;}
@@ -5200,6 +5267,7 @@ async function renderTimesheetAudit(resetPage=false){
 async function resolveNote(id,status){
   const note=_notes.find(a=>a.id===id);
   if(!note)return;
+  if(!rwDbGuard())return;
   const card=document.querySelector(`.approval-card[data-id="${id}"]`);
   const flashClass=status==='flagged'?'ac-flash-orange':'ac-flash-green';
   try {
@@ -6272,6 +6340,7 @@ function rbToggleLockForRole(role){
 }
 
 async function rbSaveFnLockForRole(fnStart,role,locked){
+  if(!rwDbGuard())return;
   const existing=_rosterFortnights.find(f=>f.fn_start===fnStart&&f.role===role);
   try{
     if(existing){
@@ -6639,6 +6708,7 @@ async function rbToggleLane(shiftId, role){
 async function rbSaveShiftTimes(shiftId,startTime,endTime){
   const shift=_rosterShifts.find(s=>s.id==shiftId);
   if(!shift) return;
+  if(!rwDbGuard())return;
   const prevStart=shift.start_time, prevEnd=shift.end_time;
   shift.start_time=startTime; shift.end_time=endTime;
   const role=rbRoleForEmp(shift.employee_id);
@@ -6945,6 +7015,7 @@ async function saveCoverageThresholds(){
 }
 
 async function saveRosterTemplate(){
+  if(!rwDbGuard())return;
   const empId=document.getElementById('roster-emp-select').value;
   if(!empId) return;
   const rows=[];
