@@ -3155,7 +3155,7 @@ rwCheckVersion();
 
 // Poll DB health every 60s; first check after 5s
 setInterval(rwCheckDbHealth,60000);
-setTimeout(rwCheckDbHealth,5000);
+setTimeout(rwCheckDbHealth,1000);
 
 // Restore Who's On view if we reloaded from that state
 (function rwRestoreState(){
