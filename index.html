@@ -3130,7 +3130,7 @@ function rwUpdateDbStatus(){
   const pill=document.getElementById('db-status-pill');
   if(pill){
     pill.className='reader-pill db-status-pill '+(_dbOnline?'db-online':'db-offline');
-    pill.innerHTML='<div class="db-status-dot"></div>'+(_dbOnline?'Database online':'Database offline');
+    pill.innerHTML='<div class="db-status-dot"></div>'+(_dbOnline?'Database online':'Database offline — contact Joel');
   }
   const banner=document.getElementById('db-offline-banner');
   if(banner) banner.style.display=(!_dbOnline&&!!currentManager)?'block':'none';
