@@ -4816,11 +4816,8 @@ function calcMYOBRows(entry, emp, isPH=false){
   const endMins=timeToMin(end);
   if(endMins<=startMins) return [];
   const rawHours=(endMins-startMins)/60;
-  // Subtract unpaid break: use recorded value if set, otherwise apply auto-rule
-  const unpaidBreakMins=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:expectedUnpaidBreakMins(rawHours);
-  // effectiveEndMins trims the break from the end of the shift for rate-split calculations
-  const effectiveEndMins=endMins-unpaidBreakMins;
-  const totalHours=Math.max(0,(effectiveEndMins-startMins)/60);
+  // MYOB expects raw clock hours — it applies break deductions via its own payroll settings
+  const totalHours=rawHours;
   if(totalHours<=0) return [];
   const payrollType=entry.payrollType||entry.leaveType||'';
   const dow=new Date(entry.date+'T12:00:00').getDay();
@@ -4847,18 +4844,18 @@ function calcMYOBRows(entry, emp, isPH=false){
     // No classification set — fall back to role-based logic (use original endMins for evening trigger)
     const role=emp?.role||'';
     if(role==='Nurse'||role==='Manager') return [{cat:endMins>=SPLIT?'Nurse Evening Hours':'Base Hourly',hours:totalHours}];
-    if(effectiveEndMins<=SPLIT)   return [{cat:'Base Hourly',hours:totalHours}];
-    if(startMins>=SPLIT)          return [{cat:'Evening Rate',hours:totalHours}];
-    return [{cat:'Base Hourly',hours:Math.max(0,(SPLIT-startMins)/60-unpaidBreakMins/60)},{cat:'Evening Rate',hours:Math.max(0,(endMins-SPLIT)/60)}];
+    if(endMins<=SPLIT)   return [{cat:'Base Hourly',hours:totalHours}];
+    if(startMins>=SPLIT) return [{cat:'Evening Rate',hours:totalHours}];
+    return [{cat:'Base Hourly',hours:Math.max(0,(SPLIT-startMins)/60)},{cat:'Evening Rate',hours:Math.max(0,(endMins-SPLIT)/60)}];
   }
 
   // Nurse rule: entire shift at evening if original end is at or after 18:00 (no split)
   if(cats.isNurse) return [{cat:endMins>=SPLIT?cats.evening:cats.day,hours:totalHours}];
 
-  // Receptionist / Manager rule: split at 18:00, break deducted from day portion (lunch break, not evening)
-  if(effectiveEndMins<=SPLIT)   return [{cat:cats.day,hours:totalHours}];
-  if(startMins>=SPLIT)          return [{cat:cats.evening||cats.day,hours:totalHours}];
-  const baseHours=Math.max(0,(SPLIT-startMins)/60-unpaidBreakMins/60);
+  // Split at 18:00 — raw hours only, MYOB handles break deductions
+  if(endMins<=SPLIT)   return [{cat:cats.day,hours:totalHours}];
+  if(startMins>=SPLIT) return [{cat:cats.evening||cats.day,hours:totalHours}];
+  const baseHours=Math.max(0,(SPLIT-startMins)/60);
   const eveningHours=Math.max(0,(endMins-SPLIT)/60);
   return [{cat:cats.day,hours:baseHours},{cat:cats.evening||cats.day,hours:eveningHours}];
 }
