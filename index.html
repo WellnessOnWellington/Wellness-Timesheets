@@ -4938,8 +4938,9 @@ function exportMYOB(){
   };
 
   const ready=allEntries.filter(e=>isReady(e)&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
-  // Only warn about entries that have clock times — timeless entries can't be exported anyway
-  const notReady=allEntries.filter(e=>!isReady(e)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
+  const activeEmpIds=new Set(_emps.filter(e=>e.active!==false).map(e=>e.id));
+  // Only warn about active employees with clock times — inactive/test entries can't block export
+  const notReady=allEntries.filter(e=>!isReady(e)&&activeEmpIds.has(e.employeeId)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
 
   if(!ready.length){showToast('No locked entries to export.');return;}
   if(notReady.length){
