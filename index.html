@@ -2975,6 +2975,7 @@ let tsOffset = 0;
 let tsRole = 'Receptionist';
 let _tsExpandEntryId = null;
 const _tsCollapsed = new Set();
+const _tsRoleLoaded = new Set(); // roles seen at least once — used to default-collapse on first visit
 const _tsAutoOverride = new Set(); // entry IDs where manager clicked to override auto-approval
 const _tsDeleteStack = []; // undo stack: [{entryId, auditId, entrySnapshot}] — session only
 let _tsAutoLockRunning = false;
@@ -4388,6 +4389,8 @@ function renderTimesheets(){
   if(labelEl) labelEl.textContent=srFortnightLabel(fnStart);
 
   const emps=_emps.filter(e=>e.role===tsRole).sort((a,b)=>a.name.localeCompare(b.name));
+  // Collapse all employees the first time each role tab is visited; preserve state after that
+  if(!_tsRoleLoaded.has(tsRole)){ _tsRoleLoaded.add(tsRole); emps.forEach(emp=>_tsCollapsed.add(String(emp.id))); }
   const content=document.getElementById('ts-content');
   if(!content) return;
 
