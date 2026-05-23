@@ -4938,11 +4938,13 @@ function exportMYOB(){
   };
 
   const ready=allEntries.filter(e=>isReady(e)&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
-  const notReady=allEntries.filter(e=>!isReady(e));
+  // Only warn about entries that have clock times — timeless entries can't be exported anyway
+  const notReady=allEntries.filter(e=>!isReady(e)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
 
   if(!ready.length){showToast('No locked entries to export.');return;}
   if(notReady.length){
-    if(!confirm(`${notReady.length} entr${notReady.length===1?'y':'ies'} are not yet locked and will not be included in this export.\n\nExport ${ready.length} ready entr${ready.length===1?'y':'ies'} anyway?`)) return;
+    const detail=notReady.map(e=>`• ${e.employeeName||'Unknown'} — ${e.date}`).join('\n');
+    if(!confirm(`${notReady.length} entr${notReady.length===1?'y':'ies'} are not yet locked and will not be included:\n\n${detail}\n\nExport ${ready.length} ready entr${ready.length===1?'y':'ies'} anyway?`)) return;
   }
 
   const fnLabel=srFortnightLabel(fnStart).replace(/[^a-zA-Z0-9-]/g,'-');
