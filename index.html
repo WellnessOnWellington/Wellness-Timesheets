@@ -4171,7 +4171,8 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     :needsMgrAutoLock
       ?`<button class="ts-lock-btn" onclick="tsMgrAutoLock('${safeEmpId}','${safeEmpName}','${emp.role}','${date}','${rostStart}','${rostEnd}','${entryId||''}',event)">🔓 Lock</button>`
       :`<button class="ts-lock-btn" onclick="tsLockRow('${entryId}','${safeEmpId}','${date}',event)">🔓 Lock</button>`;
-  const deleteBtn=`<button class="ts-delete-btn" onclick="tsDeleteRow('${entryId}','${safeEmpId}','${safeEmpName}','${date}',event)" title="Delete entry">✕</button>`;
+  const shiftId=shift?.id||null;
+  const deleteBtn=`<button class="ts-delete-btn" onclick="tsDeleteRow('${entryId||''}','${shiftId||''}','${safeEmpId}','${safeEmpName}','${date}',event)" title="Delete entry">✕</button>`;
 
 
   const rowClass=['ts-shift-row',locked?'ts-locked':'',`ts-flag-${flag}`].filter(Boolean).join(' ');
@@ -4284,7 +4285,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     ${manuallyAdjusted&&entry?.adjustedBy?`<div class="ts-sub-adj-note">Adjusted by ${entry.adjustedBy}${entry.adjustmentReason?' · '+entry.adjustmentReason:''}</div>`:''}
   </div></div>`;
 
-  return`<div class="${rowClass}" data-entry-id="${entryId||''}" data-date="${date}" data-emp-id="${safeEmpId}">
+  return`<div class="${rowClass}" data-entry-id="${entryId||''}" data-shift-id="${shiftId||''}" data-date="${date}" data-emp-id="${safeEmpId}">
     ${compactRow}${detailSection}
   </div>`;
 }
@@ -4630,53 +4631,89 @@ function tsOverrideAutoApproved(overrideKey, e){
   _tsExpandEntryId=null;
 }
 
-async function tsDeleteRow(entryId, empId, empName, date, e){
+async function tsDeleteRow(entryId, shiftId, empId, empName, date, e){
   e.stopPropagation();
-  if(!entryId){showToast('No entry to delete');return;}
+  const hasEntry=!!entryId;
+  const hasShift=!!shiftId;
+  if(!hasEntry&&!hasShift){showToast('Nothing to delete');return;}
+  if(!rwDbGuard())return;
   const mgr=currentManager?.name||'Manager';
-  if(!confirm(`Remove this timesheet entry for ${empName} on ${date} from the MYOB export?\n\nThe clock record will be preserved in the audit log.`)) return;
+
+  // Confirmation text adapts to what will actually be removed
+  let confirmMsg;
+  if(hasEntry&&hasShift){
+    confirmMsg=`Remove timesheet entry AND roster shift for ${empName} on ${date}?\n\nBoth the clock record and the roster slot will be permanently deleted.\n\nPress Ctrl+Z immediately after to undo.`;
+  }else if(hasEntry){
+    confirmMsg=`Remove clock record for ${empName} on ${date}?\n\nThe clock record will be removed from timesheets. Press Ctrl+Z to undo.`;
+  }else{
+    confirmMsg=`Remove roster shift for ${empName} on ${date}?\n\nThis shift has no clock data and will be fully removed from timesheets. Press Ctrl+Z to undo.`;
+  }
+  if(!confirm(confirmMsg))return;
+
+  const entry=hasEntry?_entries.find(en=>String(en.id)===String(entryId)):null;
+  const shift=hasShift?_rosterShifts.find(s=>String(s.id)===String(shiftId)):null;
+  let entryAuditId=null, shiftAuditId=null;
+
   try{
-    // Use loose string comparison — entryId from HTML attrs is always a string, en.id may be number
-    const entry=_entries.find(en=>String(en.id)===String(entryId));
-    const auditId=await tsSaveAudit({entry_id:entryId,employee_id:empId,employee_name:empName,date,
-      rostered_start:null,rostered_end:null,
-      clocked_start:entry?.clockIn||null,clocked_end:entry?.clockOut||null,
-      final_start:entry?.finalStart||entry?.clockIn||null,final_end:entry?.finalEnd||entry?.clockOut||null,
-      action:'delete',reason:'Removed from timesheet export by manager',manager_name:mgr});
-    await db.update('entries',entryId,{deleted:true});
-    if(entry){ entry.deleted=true; }
-    // Push to undo stack with a snapshot so we can restore the cache entry on undo
-    _tsDeleteStack.push({entryId:String(entryId),auditId,entrySnapshot:entry?{...entry}:null});
-    const row=document.querySelector(`.ts-shift-row[data-entry-id="${entryId}"]`);
+    if(hasEntry){
+      entryAuditId=await tsSaveAudit({entry_id:entryId,employee_id:empId,employee_name:empName,date,
+        rostered_start:shift?.start_time||null,rostered_end:shift?.end_time||null,
+        clocked_start:entry?.clockIn||null,clocked_end:entry?.clockOut||null,
+        final_start:entry?.finalStart||entry?.clockIn||null,final_end:entry?.finalEnd||entry?.clockOut||null,
+        action:'delete',reason:`Clock record removed from timesheets by ${mgr}`,manager_name:mgr});
+      await db.update('entries',entryId,{deleted:true});
+      if(entry) entry.deleted=true;
+    }
+
+    if(hasShift){
+      shiftAuditId=await tsSaveAudit({entry_id:entryId||null,employee_id:empId,employee_name:empName,date,
+        rostered_start:shift?.start_time||null,rostered_end:shift?.end_time||null,
+        clocked_start:null,clocked_end:null,final_start:null,final_end:null,
+        action:'delete_roster_shift',reason:`Roster shift removed from timesheets by ${mgr}`,manager_name:mgr});
+      await db.delete('roster_shifts',shiftId);
+      _rosterShifts=_rosterShifts.filter(s=>String(s.id)!==String(shiftId));
+    }
+
+    _tsDeleteStack.push({
+      entryId:hasEntry?String(entryId):null, entryAuditId, entrySnapshot:entry?{...entry}:null,
+      shiftId:hasShift?String(shiftId):null, shiftAuditId, shiftSnapshot:shift?{...shift}:null,
+    });
+
+    // Find the row by entryId or shiftId and animate it out
+    const row=document.querySelector(
+      hasEntry?`.ts-shift-row[data-entry-id="${entryId}"]`:`.ts-shift-row[data-shift-id="${shiftId}"]`
+    );
     if(row){
       row.style.transition='opacity 0.25s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease';
       row.style.overflow='hidden';
       row.style.maxHeight=row.offsetHeight+'px';
       void row.offsetHeight;
-      row.style.opacity='0';
-      row.style.maxHeight='0';
-      row.style.paddingTop='0';
-      row.style.paddingBottom='0';
-      row.style.marginTop='0';
-      row.style.marginBottom='0';
+      row.style.opacity='0';row.style.maxHeight='0';
+      row.style.paddingTop='0';row.style.paddingBottom='0';
+      row.style.marginTop='0';row.style.marginBottom='0';
       await new Promise(r=>setTimeout(r,320));
     }
     renderTimesheets();
-    showToast('Entry deleted. Ctrl+Z to undo.');
-  }catch(err){showToast('Could not remove entry');console.error(err);}
+    showToast('Deleted. Ctrl+Z to undo.');
+  }catch(err){showToast('Could not delete');console.error(err);}
 }
 
 async function tsUndoDelete(){
   const item=_tsDeleteStack.pop();
   if(!item){showToast('Nothing to undo.');return;}
   try{
-    await db.update('entries',item.entryId,{deleted:false});
-    // Restore local cache — find by string comparison in case of type mismatch
-    const cached=_entries.find(en=>String(en.id)===item.entryId);
-    if(cached) cached.deleted=false;
-    else if(item.entrySnapshot){ item.entrySnapshot.deleted=false; _entries.push(item.entrySnapshot); }
-    // Hard-delete the audit row so the action is fully reversed
-    if(item.auditId) await db.delete('timesheet_audit',item.auditId);
+    if(item.entryId){
+      await db.update('entries',item.entryId,{deleted:false});
+      const cached=_entries.find(en=>String(en.id)===item.entryId);
+      if(cached) cached.deleted=false;
+      else if(item.entrySnapshot){item.entrySnapshot.deleted=false;_entries.push(item.entrySnapshot);}
+      if(item.entryAuditId) await db.delete('timesheet_audit',item.entryAuditId);
+    }
+    if(item.shiftId&&item.shiftSnapshot){
+      await db.insert('roster_shifts',item.shiftSnapshot);
+      _rosterShifts.push(item.shiftSnapshot);
+      if(item.shiftAuditId) await db.delete('timesheet_audit',item.shiftAuditId);
+    }
     renderTimesheets();
     showToast('Delete undone.');
   }catch(err){showToast('Could not undo delete');console.error(err);}
