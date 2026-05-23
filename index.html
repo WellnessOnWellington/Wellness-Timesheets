@@ -4929,12 +4929,20 @@ function exportMYOB(){
   const fnStart=getPayPeriodStart(tsOffset);
   const fnDays=getFortnight14Days(fnStart);
   const allEntries=_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted);
-  const locked=allEntries.filter(e=>e.locked&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
-  const unlocked=allEntries.filter(e=>!e.locked);
 
-  if(!locked.length){showToast('No locked entries to export.');return;}
-  if(unlocked.length){
-    if(!confirm(`${unlocked.length} entr${unlocked.length===1?'y':'ies'} are not yet locked and will not be included in this export.\n\nExport ${locked.length} locked entr${locked.length===1?'y':'ies'} anyway?`)) return;
+  // An entry is "ready" if explicitly locked OR auto-approved (within threshold of roster)
+  const isReady=e=>{
+    if(e.locked) return true;
+    const shift=_rosterShifts.find(s=>s.employee_id===e.employeeId&&s.date===e.date);
+    return tsIsAutoApproved(e,shift);
+  };
+
+  const ready=allEntries.filter(e=>isReady(e)&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
+  const notReady=allEntries.filter(e=>!isReady(e));
+
+  if(!ready.length){showToast('No locked entries to export.');return;}
+  if(notReady.length){
+    if(!confirm(`${notReady.length} entr${notReady.length===1?'y':'ies'} are not yet locked and will not be included in this export.\n\nExport ${ready.length} ready entr${ready.length===1?'y':'ies'} anyway?`)) return;
   }
 
   const fnLabel=srFortnightLabel(fnStart).replace(/[^a-zA-Z0-9-]/g,'-');
@@ -4942,7 +4950,7 @@ function exportMYOB(){
   const headers=['Employee Co./Last Name','Employee First Name','Payroll Category','Job','Customer Co./Last Name','Customer First Name','Notes','Date','Units','Employee Card ID','Employee Record ID','Start/Stop Time','Customer Card ID','Customer Record ID'];
   lines.push(headers.join('\t'));
 
-  locked.forEach(entry=>{
+  ready.forEach(entry=>{
     const emp=_emps.find(em=>em.id===entry.employeeId);
     const nameParts=(entry.employeeName||'').trim().split(' ');
     const firstName=nameParts[0]||'';
@@ -4969,7 +4977,7 @@ function exportMYOB(){
   a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));
   a.download=`timesheets-${fnLabel}.txt`;
   a.click();
-  showToast(`Exported ${locked.length} entr${locked.length===1?'y':'ies'} ✓`);
+  showToast(`Exported ${ready.length} entr${ready.length===1?'y':'ies'} ✓`);
 }
 
 async function setLeaveType(entryId, leaveType){
