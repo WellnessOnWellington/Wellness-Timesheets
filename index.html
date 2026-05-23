@@ -1170,7 +1170,7 @@
   .ts-emp-hours.ready { color:var(--success); }
   .ts-emp-myob-badge { font-size:0.72rem; font-weight:700; color:var(--success); background:rgba(39,174,96,0.1); border:1px solid rgba(39,174,96,0.35); border-radius:999px; padding:0.15rem 0.65rem; white-space:nowrap; }
   .ts-emp-right { display:flex; align-items:center; gap:0.6rem; margin-left:auto; flex-shrink:0; }
-  .ts-shift-row { border-bottom:1px solid rgba(234,217,220,0.5); position:relative; }
+  .ts-shift-row { border-bottom:1px solid rgba(234,217,220,0.5); }
   .ts-shift-row:last-child { border-bottom:none; }
   .ts-shift-row.ts-locked { background:rgba(0,0,0,0.015); }
   .ts-shift-row.ts-flag-red .ts-row-main { border-left:3px solid var(--burgundy); }
@@ -1200,7 +1200,7 @@
   .ts-payroll-select:focus { outline:none; border-color:var(--burgundy); }
   .ts-payroll-label { font-size:0.72rem; font-weight:700; color:var(--muted); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ts-locked-label { font-size:0.68rem; color:var(--muted); font-weight:600; white-space:nowrap; width:70px; text-align:left; }
-  .ts-row-detail { background:rgba(250,245,246,0.7); border-top:1px solid rgba(234,217,220,0.5); max-height:0; overflow:hidden; transition:max-height 0.22s ease-out; }
+  .ts-row-detail { background:rgba(250,245,246,0.7); border-top:1px solid rgba(234,217,220,0.5); max-height:0; overflow:hidden; transition:max-height 0.22s ease-out; position:relative; }
   .ts-row-detail.ts-detail-open { max-height:250px; }
   .ts-row-detail-inner { padding:0.5rem 1.1rem 0.75rem; }
   .ts-sub-row { display:flex; align-items:center; gap:0.75rem; padding:0.3rem 0; font-size:0.8rem; }
@@ -4249,7 +4249,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       </div>
     </div>`;
 
-  const detailSection=`<div class="ts-row-detail"${autoExpand?' data-auto-expand="1"':''}><div class="ts-row-detail-inner">
+  const detailSection=`<div class="ts-row-detail"${autoExpand?' data-auto-expand="1"':''}>${deleteBtn}<div class="ts-row-detail-inner">
     <div class="ts-sub-row ts-sub-rostered">
       <span class="ts-sub-label">Rostered</span>
       <span class="ts-sub-time">${rostStart&&rostEnd?rostStart+' – '+rostEnd:'— Not rostered'}</span>
@@ -4285,7 +4285,6 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   </div></div>`;
 
   return`<div class="${rowClass}" data-entry-id="${entryId||''}" data-shift-id="${shiftId||''}" data-date="${date}" data-emp-id="${safeEmpId}">
-    ${deleteBtn}
     ${compactRow}${detailSection}
   </div>`;
 }
