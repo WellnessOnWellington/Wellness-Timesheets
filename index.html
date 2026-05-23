@@ -1170,7 +1170,7 @@
   .ts-emp-hours.ready { color:var(--success); }
   .ts-emp-myob-badge { font-size:0.72rem; font-weight:700; color:var(--success); background:rgba(39,174,96,0.1); border:1px solid rgba(39,174,96,0.35); border-radius:999px; padding:0.15rem 0.65rem; white-space:nowrap; }
   .ts-emp-right { display:flex; align-items:center; gap:0.6rem; margin-left:auto; flex-shrink:0; }
-  .ts-shift-row { border-bottom:1px solid rgba(234,217,220,0.5); }
+  .ts-shift-row { border-bottom:1px solid rgba(234,217,220,0.5); position:relative; }
   .ts-shift-row:last-child { border-bottom:none; }
   .ts-shift-row.ts-locked { background:rgba(0,0,0,0.015); }
   .ts-shift-row.ts-flag-red .ts-row-main { border-left:3px solid var(--burgundy); }
@@ -1222,7 +1222,7 @@
   .ts-lock-btn { border:1.5px solid var(--border); border-radius:7px; padding:0.22rem 0.65rem; font-size:0.72rem; cursor:pointer; background:var(--white); color:var(--muted); font-family:'Nunito',sans-serif; font-weight:700; transition:all 0.15s; white-space:nowrap; }
   .ts-lock-btn:hover { border-color:var(--burgundy); color:var(--burgundy); }
   .ts-lock-btn.locked { background:#e8f5e9; border-color:#4caf50; color:#2e7d32; }
-  .ts-delete-btn { border:1.5px solid var(--border); border-radius:7px; padding:0.22rem 0.55rem; font-size:0.72rem; cursor:pointer; background:var(--white); color:var(--muted); font-family:'Nunito',sans-serif; font-weight:700; transition:all 0.15s; }
+  .ts-delete-btn { position:absolute; top:0.35rem; right:0.5rem; border:1.5px solid var(--border); border-radius:7px; padding:0.18rem 0.5rem; font-size:0.68rem; cursor:pointer; background:var(--white); color:var(--muted); font-family:'Nunito',sans-serif; font-weight:700; transition:all 0.15s; z-index:1; }
   .ts-delete-btn:hover { border-color:var(--burgundy); background:var(--blush-lt); color:var(--burgundy); }
   .ts-manual-add-btn { border:1.5px solid var(--burgundy); border-radius:7px; padding:0.22rem 0.7rem; font-size:0.72rem; cursor:pointer; background:var(--blush-lt); color:var(--burgundy); font-family:'Nunito',sans-serif; font-weight:700; transition:all 0.15s; white-space:nowrap; }
   .ts-manual-add-btn:hover { background:var(--burgundy); color:#fff; }
@@ -4269,8 +4269,6 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
           :effectiveAutoApproved&&!autoOverridden
             ?`<button class="ts-lock-btn locked" onclick="tsOverrideAutoApproved('${overrideKey}',event)" title="Click to override auto-approval">🔒 Locked</button>`
             :entry||shift?lockBtn:''}
-        <div style="flex:1"></div>
-        ${deleteBtn}
       </div>
     </div>
     ${breakRowHtml}
@@ -4286,6 +4284,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   </div></div>`;
 
   return`<div class="${rowClass}" data-entry-id="${entryId||''}" data-shift-id="${shiftId||''}" data-date="${date}" data-emp-id="${safeEmpId}">
+    ${deleteBtn}
     ${compactRow}${detailSection}
   </div>`;
 }
