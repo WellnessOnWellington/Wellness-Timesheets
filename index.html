@@ -2976,6 +2976,7 @@ let tsRole = 'Receptionist';
 let _tsExpandEntryId = null;
 const _tsCollapsed = new Set();
 const _tsAutoOverride = new Set(); // entry IDs where manager clicked to override auto-approval
+const _tsDeleteStack = []; // undo stack: [{entryId, auditId, entrySnapshot}] — session only
 let _tsAutoLockRunning = false;
 // Requests state
 let _requests = [];
@@ -4246,7 +4247,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       </div>
     </div>`;
 
-  const detailSection=`<div class="ts-row-detail${autoExpand?' ts-detail-open':''}"><div class="ts-row-detail-inner">
+  const detailSection=`<div class="ts-row-detail"${autoExpand?' data-auto-expand="1"':''}><div class="ts-row-detail-inner">
     <div class="ts-sub-row ts-sub-rostered">
       <span class="ts-sub-label">Rostered</span>
       <span class="ts-sub-time">${rostStart&&rostEnd?rostStart+' – '+rostEnd:'— Not rostered'}</span>
@@ -4470,6 +4471,10 @@ function renderTimesheets(){
   }).filter(Boolean).join('');
 
   content.innerHTML=blocks||`<div class="ts-no-shifts">No shifts found for this fortnight.</div>`;
+  // Add ts-detail-open synchronously (same script tick as innerHTML) so the browser
+  // paints these rows open without animating, but records the open state — meaning the
+  // close transition works correctly on first lock, not just subsequent ones
+  content.querySelectorAll('.ts-row-detail[data-auto-expand]').forEach(d=>d.classList.add('ts-detail-open'));
   adminMobUpdateContextLabel();
 
   // Check if ALL employees across ALL roles are fully locked for this fortnight
@@ -4631,14 +4636,17 @@ async function tsDeleteRow(entryId, empId, empName, date, e){
   const mgr=currentManager?.name||'Manager';
   if(!confirm(`Remove this timesheet entry for ${empName} on ${date} from the MYOB export?\n\nThe clock record will be preserved in the audit log.`)) return;
   try{
-    const entry=_entries.find(en=>en.id===entryId);
-    await tsSaveAudit({entry_id:entryId,employee_id:empId,employee_name:empName,date,
+    // Use loose string comparison — entryId from HTML attrs is always a string, en.id may be number
+    const entry=_entries.find(en=>String(en.id)===String(entryId));
+    const auditId=await tsSaveAudit({entry_id:entryId,employee_id:empId,employee_name:empName,date,
       rostered_start:null,rostered_end:null,
       clocked_start:entry?.clockIn||null,clocked_end:entry?.clockOut||null,
       final_start:entry?.finalStart||entry?.clockIn||null,final_end:entry?.finalEnd||entry?.clockOut||null,
       action:'delete',reason:'Removed from timesheet export by manager',manager_name:mgr});
     await db.update('entries',entryId,{deleted:true});
-    if(entry) entry.deleted=true;
+    if(entry){ entry.deleted=true; }
+    // Push to undo stack with a snapshot so we can restore the cache entry on undo
+    _tsDeleteStack.push({entryId:String(entryId),auditId,entrySnapshot:entry?{...entry}:null});
     const row=document.querySelector(`.ts-shift-row[data-entry-id="${entryId}"]`);
     if(row){
       row.style.transition='opacity 0.25s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease';
@@ -4654,8 +4662,24 @@ async function tsDeleteRow(entryId, empId, empName, date, e){
       await new Promise(r=>setTimeout(r,320));
     }
     renderTimesheets();
-    showToast('Entry removed from export.');
+    showToast('Entry deleted. Ctrl+Z to undo.');
   }catch(err){showToast('Could not remove entry');console.error(err);}
+}
+
+async function tsUndoDelete(){
+  const item=_tsDeleteStack.pop();
+  if(!item){showToast('Nothing to undo.');return;}
+  try{
+    await db.update('entries',item.entryId,{deleted:false});
+    // Restore local cache — find by string comparison in case of type mismatch
+    const cached=_entries.find(en=>String(en.id)===item.entryId);
+    if(cached) cached.deleted=false;
+    else if(item.entrySnapshot){ item.entrySnapshot.deleted=false; _entries.push(item.entrySnapshot); }
+    // Hard-delete the audit row so the action is fully reversed
+    if(item.auditId) await db.delete('timesheet_audit',item.auditId);
+    renderTimesheets();
+    showToast('Delete undone.');
+  }catch(err){showToast('Could not undo delete');console.error(err);}
 }
 
 function tsValidTime(v){ return /^([01]?\d|2[0-3]):[0-5]\d$/.test((v||'').trim()); }
@@ -4793,7 +4817,10 @@ async function tsSavePayrollType(entryId, empId, empName, role, date, value){
 async function tsSaveAudit(data){
   // Strip fields not in the timesheet_audit schema
   const {date:_date,...rest}=data;
-  try{ await db.insert('timesheet_audit',rest); }catch(e){ console.error('Audit log failed',e); }
+  try{
+    const rows=await db.insert('timesheet_audit',rest);
+    return rows?.[0]?.id||null;
+  }catch(e){ console.error('Audit log failed',e); return null; }
 }
 
 const MYOB_CATS={
@@ -6298,9 +6325,15 @@ async function rbUndo(){
 }
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){
+    // Don't intercept when user is typing in a field
+    if(e.target.matches('input,textarea,select')) return;
     const rosterTab=document.getElementById('tab-roster');
     if(rosterTab&&rosterTab.classList.contains('active')){
-      e.preventDefault(); rbUndo();
+      e.preventDefault(); rbUndo(); return;
+    }
+    const tsTab=document.getElementById('tab-timesheets');
+    if(tsTab&&tsTab.classList.contains('active')&&_tsDeleteStack.length){
+      e.preventDefault(); tsUndoDelete();
     }
   }
 });
