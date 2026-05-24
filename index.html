@@ -4939,8 +4939,10 @@ function exportMYOB(){
 
   const ready=allEntries.filter(e=>isReady(e)&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
   const activeEmpIds=new Set(_emps.filter(e=>e.active!==false).map(e=>e.id));
-  // Only warn about active employees with clock times — inactive/test entries can't block export
-  const notReady=allEntries.filter(e=>!isReady(e)&&activeEmpIds.has(e.employeeId)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
+  // Check readiness using the same grouped-per-day canonical entry that the UI locks —
+  // prevents false warnings from secondary raw entries on the same day
+  const canonicalEntries=groupEntriesByDay(allEntries);
+  const notReady=canonicalEntries.filter(e=>!isReady(e)&&activeEmpIds.has(e.employeeId)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
 
   if(!ready.length){showToast('No locked entries to export.');return;}
   if(notReady.length){
