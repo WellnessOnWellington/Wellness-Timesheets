@@ -4908,14 +4908,21 @@ function calcMYOBRows(entry, emp, isPH=false){
   if(!cats){
     // No classification set — fall back to role-based logic (use original endMins for evening trigger)
     const role=emp?.role||'';
-    if(role==='Nurse'||role==='Manager') return [{cat:endMins>=SPLIT?'Nurse Evening Hours':'Base Hourly',hours:totalHours}];
+    if(role==='Nurse'||role==='Manager'){
+      const isCasual=emp?.type==='Casual';
+      return [{cat:endMins>=SPLIT?(isCasual?'Casual evening CE':'Nurse Evening Hours'):(isCasual?'casual Day CE':'Base Hourly'),hours:totalHours}];
+    }
     if(endMins<=SPLIT)   return [{cat:'Base Hourly',hours:totalHours}];
     if(startMins>=SPLIT) return [{cat:'Evening Rate',hours:totalHours}];
     return [{cat:'Base Hourly',hours:Math.max(0,(SPLIT-startMins)/60-unpaidBreakMins/60)},{cat:'Evening Rate',hours:Math.max(0,(endMins-SPLIT)/60)}];
   }
 
   // Nurse rule: entire shift at evening if original end is at or after 18:00 (no split)
-  if(cats.isNurse) return [{cat:endMins>=SPLIT?cats.evening:cats.day,hours:totalHours}];
+  // Casual employment type overrides categories to casual Day CE / Casual evening CE
+  if(cats.isNurse){
+    const nurseCats=emp?.type==='Casual'?MYOB_CATS['Casual']:cats;
+    return [{cat:endMins>=SPLIT?nurseCats.evening:nurseCats.day,hours:totalHours}];
+  }
 
   // Split at 18:00 — break deducted from base portion only
   if(endMins<=SPLIT)   return [{cat:cats.day,hours:totalHours}];
