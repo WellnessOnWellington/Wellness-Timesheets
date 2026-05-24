@@ -4249,7 +4249,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       </div>
     </div>`;
 
-  const detailSection=`<div class="ts-row-detail"${autoExpand?' data-auto-expand="1"':''}>${deleteBtn}<div class="ts-row-detail-inner">
+  const detailSection=`<div class="ts-row-detail${autoExpand?' ts-detail-open':''}">${deleteBtn}<div class="ts-row-detail-inner">
     <div class="ts-sub-row ts-sub-rostered">
       <span class="ts-sub-label">Rostered</span>
       <span class="ts-sub-time">${rostStart&&rostEnd?rostStart+' – '+rostEnd:'— Not rostered'}</span>
@@ -4473,7 +4473,6 @@ function renderTimesheets(){
   }).filter(Boolean).join('');
 
   content.innerHTML=blocks||`<div class="ts-no-shifts">No shifts found for this fortnight.</div>`;
-  content.querySelectorAll('.ts-row-detail[data-auto-expand]').forEach(d=>d.classList.add('ts-detail-open'));
   adminMobUpdateContextLabel();
 
   // Check if ALL employees across ALL roles are fully locked for this fortnight
@@ -4529,13 +4528,33 @@ function tsToggleEmp(headerEl){
   if(empId){ if(nowCollapsed) _tsCollapsed.delete(empId); else _tsCollapsed.add(empId); }
 }
 
-function tsAnimateLockClose(entryId){
+function tsAnimateLockClose(entryId, detailEl){
   return new Promise(resolve=>{
-    const row=entryId?document.querySelector(`.ts-shift-row[data-entry-id="${entryId}"]`):null;
-    const detail=row?.querySelector('.ts-row-detail.ts-detail-open');
+    let detail=detailEl||null;
+    if(!detail){
+      const row=entryId?document.querySelector(`.ts-shift-row[data-entry-id="${entryId}"]`):null;
+      detail=row?.querySelector('.ts-row-detail.ts-detail-open');
+    }
     if(!detail){resolve();return;}
+    const startH=detail.offsetHeight;
+    if(startH===0){detail.classList.remove('ts-detail-open');resolve();return;}
+    // Suppress CSS transition so it doesn't conflict with the rAF animation
+    detail.style.transition='none';
     detail.classList.remove('ts-detail-open');
-    setTimeout(resolve,250);
+    // Pin inline max-height so rAF starts from the actual rendered height
+    detail.style.maxHeight=startH+'px';
+    detail.offsetHeight; // commit before first frame
+    const duration=220;
+    const startTime=performance.now();
+    function step(now){
+      if(!detail.isConnected){resolve();return;}
+      const t=Math.min((now-startTime)/duration,1);
+      const ease=1-Math.pow(1-t,3);
+      detail.style.maxHeight=(startH*(1-ease))+'px';
+      if(t<1){requestAnimationFrame(step);}
+      else{detail.style.maxHeight='';detail.style.transition='';resolve();}
+    }
+    requestAnimationFrame(step);
   });
 }
 
@@ -4583,7 +4602,10 @@ async function tsMgrAutoLock(empId, empName, role, date, rostStart, rostEnd, ent
         final_start:rostStart,final_end:rostEnd,
         action:'lock',reason:'No-clock auto-lock: roster hours used as finals',manager_name:mgr});
     } else {
-      // No entry at all — create and lock (no row to animate, no entryId)
+      // No entry yet — animate the row using emp+date query before creating entry
+      const animRow=document.querySelector(`.ts-shift-row[data-emp-id="${empId}"][data-date="${date}"]`);
+      const animDetail=animRow?.querySelector('.ts-row-detail.ts-detail-open');
+      if(animDetail) await tsAnimateLockClose(null, animDetail);
       const newId='M'+Date.now();
       const newEntry={id:newId,employee_id:empId,employee_name:empName,role,
         date,clock_in:null,clock_out:null,hours,status:'normal',
