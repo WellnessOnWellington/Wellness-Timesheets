@@ -4473,9 +4473,6 @@ function renderTimesheets(){
   }).filter(Boolean).join('');
 
   content.innerHTML=blocks||`<div class="ts-no-shifts">No shifts found for this fortnight.</div>`;
-  // Add ts-detail-open synchronously (same script tick as innerHTML) so the browser
-  // paints these rows open without animating, but records the open state — meaning the
-  // close transition works correctly on first lock, not just subsequent ones
   content.querySelectorAll('.ts-row-detail[data-auto-expand]').forEach(d=>d.classList.add('ts-detail-open'));
   adminMobUpdateContextLabel();
 
