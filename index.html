@@ -7366,13 +7366,21 @@ async function printRoster(){
       const empRows=roleEmps.map(emp=>{
         const cells=days.map(d=>{
           const shifts=_rosterShifts.filter(s=>s.employee_id==emp.id&&s.date===d&&!s.is_day_off);
-          const leaveEntry=_entries.find(e=>e.employeeId===emp.id&&e.date===d&&e.leaveType);
-          if(leaveEntry?.leaveType){
-            const leaveShifts=shifts.length?shifts:_rosterShifts.filter(s=>s.employee_id==emp.id&&s.date===d&&!s.is_day_off);
-            if(leaveShifts.length){
-              return`<td>${leaveShifts.map(s=>`<span class="rp-leave" style="text-decoration:line-through;">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`).join('<br/>')}</td>`;
-            }
+          const dayEntries=_entries.filter(e=>e.employeeId===emp.id&&e.date===d&&!e.deleted);
+          const hasLeave=dayEntries.some(e=>e.leaveType);
+          const hasWork=dayEntries.some(e=>!e.leaveType);
+          if(hasLeave&&!hasWork){
+            // Full-day leave — strike through all shifts
+            if(shifts.length) return`<td>${shifts.map(s=>`<span class="rp-leave" style="text-decoration:line-through;">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`).join('<br/>')}</td>`;
             return`<td><span class="rp-leave" style="text-decoration:line-through;">—</span></td>`;
+          }
+          if(hasLeave&&hasWork&&shifts.length){
+            // Split shift — strike only the shift(s) matched to a leave entry by shiftId
+            return`<td>${shifts.map(s=>{
+              const match=dayEntries.find(e=>e.shiftId===s.id);
+              if(match?.leaveType) return`<span class="rp-leave" style="text-decoration:line-through;">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`;
+              return`<span class="rp-shift">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`;
+            }).join('<br/>')}</td>`;
           }
           if(!shifts.length) return`<td><span class="rp-off">—</span></td>`;
           return`<td>${shifts.map(s=>`<span class="rp-shift">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`).join('<br/>')}</td>`;
