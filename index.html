@@ -5095,6 +5095,27 @@ function dlTsToggleAll(checked){
   document.querySelectorAll('.dl-ts-emp-cb').forEach(cb=>cb.checked=checked);
 }
 
+async function dlTsLoadLogo(){
+  const toDataUrl=imgEl=>{
+    try{
+      const c=document.createElement('canvas');
+      c.width=imgEl.naturalWidth; c.height=imgEl.naturalHeight;
+      c.getContext('2d').drawImage(imgEl,0,0);
+      return{dataUrl:c.toDataURL('image/png'),w:imgEl.naturalWidth,h:imgEl.naturalHeight};
+    }catch(e){return null;} // fails on file:// — graceful, works fine on deployed HTTPS
+  };
+  // Reuse already-loaded kiosk image if available
+  const existing=document.querySelector('img[src="Logo.png"]');
+  if(existing&&existing.complete&&existing.naturalWidth>0) return toDataUrl(existing);
+  // Otherwise load fresh
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>resolve(toDataUrl(img));
+    img.onerror=()=>resolve(null);
+    img.src='Logo.png';
+  });
+}
+
 async function downloadTimesheetsPDFs(){
   const selectedIds=new Set([...document.querySelectorAll('.dl-ts-emp-cb:checked')].map(cb=>cb.value));
   if(!selectedIds.size){showToast('Select at least one staff member');return;}
@@ -5111,44 +5132,66 @@ async function downloadTimesheetsPDFs(){
   const fmtDDMMYY=iso=>{const[y,m,d]=iso.split('-');return`${d}${m}${y.slice(2)}`;};
   const fnEnd=fnDays[fnDays.length-1];
   const periodStr=`${fmtDDMMYY(fnStart)}-${fmtDDMMYY(fnEnd)}`;
-  for(const emp of emps){
-    const pdf=dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF);
-    const nameParts=emp.name.trim().split(/\s+/);
-    const firstName=(nameParts[0]||'').replace(/[^a-zA-Z0-9]/g,'');
-    const lastName=(nameParts.slice(1).join('_')||'Unknown').replace(/[^a-zA-Z0-9_]/g,'');
-    zip.file(`Running_Well_Timesheet_${firstName}_${lastName}_${periodStr}.pdf`,pdf.output('blob'));
+  const logo=await dlTsLoadLogo();
+  try{
+    for(const emp of emps){
+      const pdf=dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo);
+      const nameParts=emp.name.trim().split(/\s+/);
+      const firstName=(nameParts[0]||'').replace(/[^a-zA-Z0-9]/g,'');
+      const lastName=(nameParts.slice(1).join('_')||'Unknown').replace(/[^a-zA-Z0-9_]/g,'');
+      zip.file(`Running_Well_Timesheet_${firstName}_${lastName}_${periodStr}.pdf`,pdf.output('blob'));
+    }
+    const content=await zip.generateAsync({type:'blob'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(content);
+    a.download=`Running_Well_Timesheets_${periodStr}.zip`;
+    a.click();
+    showToast(`Downloaded ${emps.length} timesheet${emps.length!==1?'s':''} ✓`);
+  }catch(e){
+    console.error('Timesheet PDF generation failed:',e);
+    showToast('PDF generation failed — see browser console for details');
   }
-  const content=await zip.generateAsync({type:'blob'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(content);
-  a.download=`Running_Well_Timesheets_${periodStr}.zip`;
-  a.click();
-  showToast(`Downloaded ${emps.length} timesheet${emps.length!==1?'s':''} ✓`);
 }
 
-function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF){
+function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const margin=14;
   const pageW=210;
   const today=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
+  const fmtDDMMYY=iso=>{const[y,m,d]=iso.split('-');return`${d}/${m}/${y.slice(2)}`;};
+  const periodDisplay=`${fmtDDMMYY(fnDays[0])} - ${fmtDDMMYY(fnDays[fnDays.length-1])}`;
 
   // ── Header ──
+  const logoH=12; // display height in mm
+  let textX=margin;
+  if(logo?.dataUrl){
+    try{
+      const logoW=(logo.w/logo.h)*logoH;
+      doc.addImage(logo.dataUrl,'PNG',margin,10,logoW,logoH);
+      textX=margin+logoW+4;
+    }catch(e){ console.warn('Logo render skipped:',e); }
+  }
   doc.setFont('helvetica','bold');
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setTextColor(139,37,53);
-  doc.text('Wellness on Wellington',margin,18);
+  doc.text('Wellness on Wellington',textX,15);
   doc.setFont('helvetica','normal');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(120,100,105);
-  doc.text('Running Well — Staff Timesheet',margin,24);
+  doc.text('Running Well — Staff Timesheet',textX,20.5);
+  // Divider between clinic branding and staff details
+  doc.setDrawColor(212,137,154);
+  doc.setLineWidth(0.3);
+  doc.line(margin,25,pageW-margin,25);
+  // Staff name + role (left), pay period + print date (right)
   doc.setFont('helvetica','bold');
   doc.setFontSize(11);
   doc.setTextColor(45,36,38);
-  doc.text(emp.name,margin,33);
+  doc.text(emp.name,margin,32);
   doc.setFont('helvetica','normal');
   doc.setFontSize(8.5);
   doc.setTextColor(120,100,105);
-  doc.text(emp.role,margin,38.5);
+  doc.text(emp.role,margin,37.5);
   // Right side
   doc.setFont('helvetica','bold');
   doc.setFontSize(8.5);
@@ -5156,13 +5199,13 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF){
   doc.text('Pay Period:',pageW-margin,30,{align:'right'});
   doc.setFont('helvetica','normal');
   doc.setTextColor(120,100,105);
-  doc.text(fnLabel,pageW-margin,35.5,{align:'right'});
+  doc.text(periodDisplay,pageW-margin,35.5,{align:'right'});
   doc.setFontSize(7.5);
   doc.text(`Printed: ${today}`,pageW-margin,41,{align:'right'});
-  // Divider
+  // Main divider above table
   doc.setDrawColor(212,137,154);
   doc.setLineWidth(0.4);
-  doc.line(margin,45,pageW-margin,45);
+  doc.line(margin,43,pageW-margin,43);
 
   // ── Collect data ──
   const empShifts=_rosterShifts
@@ -5179,7 +5222,8 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF){
     const entry=empEntries.find(e=>e.shiftId===shift.id)
       ||empEntries.find(e=>e.date===shift.date&&!e.shiftId);
     const dateObj=new Date(shift.date+'T12:00:00');
-    const dateStr=dateObj.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+    const [_y,_m,_d]=shift.date.split('-');
+    const dateStr=dateObj.toLocaleDateString('en-AU',{weekday:'short'})+` ${_d}/${_m}/${_y.slice(2)}`;
     const rostIn=(shift.start_time||'').slice(0,5);
     const rostOut=(shift.end_time||'').slice(0,5);
 
@@ -5190,7 +5234,7 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF){
     if(entry.leaveType){
       const hrs=entry.hours!=null?parseFloat(entry.hours):null;
       if(hrs!=null&&!isNaN(hrs)) totalLeave+=hrs;
-      tableRows.push({cells:[dateStr,entry.leaveType,rostIn,rostOut,'','',hrs!=null?hrs.toFixed(2):'','',''],type:'leave'});
+      tableRows.push({cells:[dateStr,LEAVE_TYPES[entry.leaveType]||entry.leaveType,rostIn,rostOut,'','',hrs!=null?hrs.toFixed(2):'','',''],type:'leave'});
       return;
     }
     // Worked
@@ -5208,22 +5252,22 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF){
 
   // ── Table ──
   doc.autoTable({
-    startY:48,
+    startY:46,
     margin:{left:margin,right:margin},
-    head:[['Date','Type','Rost. In','Rost. Out','Final In','Final Out','Hrs','Notes','Approved By']],
+    head:[['Date','Type','R/In','R/Out','F/In','F/Out','Hrs','Notes','Approved By']],
     body:tableRows.map(r=>r.cells),
     styles:{font:'helvetica',fontSize:7.5,cellPadding:2.2,overflow:'linebreak'},
     headStyles:{fillColor:[139,37,53],textColor:255,fontStyle:'bold',fontSize:7.5,cellPadding:2.5},
     alternateRowStyles:{fillColor:[253,248,248]},
     columnStyles:{
-      0:{cellWidth:22},
+      0:{cellWidth:26},
       1:{cellWidth:23},
       2:{cellWidth:14,halign:'center'},
       3:{cellWidth:14,halign:'center'},
       4:{cellWidth:14,halign:'center'},
       5:{cellWidth:14,halign:'center'},
       6:{cellWidth:11,halign:'right'},
-      7:{cellWidth:38},
+      7:{cellWidth:34},
       8:{cellWidth:32},
     },
     didParseCell(data){
@@ -5237,6 +5281,18 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF){
         }
       }
     },
+    didDrawCell(data){
+      // Fine vertical dividers: left of R/In (col 2), left of F/In (col 4), right of F/Out (col 5)
+      const dividerCols=new Set([2,4]);
+      doc.setDrawColor(190,170,175);
+      doc.setLineWidth(0.25);
+      if(dividerCols.has(data.column.index)){
+        doc.line(data.cell.x,data.cell.y,data.cell.x,data.cell.y+data.cell.height);
+      }
+      if(data.column.index===5){
+        doc.line(data.cell.x+data.cell.width,data.cell.y,data.cell.x+data.cell.width,data.cell.y+data.cell.height);
+      }
+    },
   });
 
   // ── Summary ──
@@ -5248,11 +5304,11 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF){
   doc.setFontSize(8.5);
   doc.setTextColor(45,36,38);
   doc.text('Fortnight Summary',margin,finalY+2);
-  doc.setFont('helvetica','normal');
   doc.setFontSize(8);
   doc.setTextColor(80,70,72);
   doc.text(`Worked: ${totalWorked.toFixed(2)} hrs`,margin,finalY+8);
   doc.text(`Leave: ${totalLeave.toFixed(2)} hrs`,margin+45,finalY+8);
+  doc.setTextColor(45,36,38);
   doc.text(`Total: ${(totalWorked+totalLeave).toFixed(2)} hrs`,margin+90,finalY+8);
   return doc;
 }
@@ -7613,23 +7669,21 @@ async function printRoster(){
         const cells=days.map(d=>{
           const shifts=_rosterShifts.filter(s=>s.employee_id==emp.id&&s.date===d&&!s.is_day_off);
           const dayEntries=_entries.filter(e=>e.employeeId===emp.id&&e.date===d&&!e.deleted);
-          const hasLeave=dayEntries.some(e=>e.leaveType);
-          const hasWork=dayEntries.some(e=>!e.leaveType);
-          if(hasLeave&&!hasWork){
-            // Full-day leave — strike through all shifts
-            if(shifts.length) return`<td>${shifts.map(s=>`<span class="rp-leave" style="text-decoration:line-through;">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`).join('<br/>')}</td>`;
-            return`<td><span class="rp-leave" style="text-decoration:line-through;">—</span></td>`;
+          // No roster shifts — show leave dash or off
+          if(!shifts.length){
+            const hasLeave=dayEntries.some(e=>e.leaveType);
+            return hasLeave
+              ?`<td><span class="rp-leave" style="text-decoration:line-through;">—</span></td>`
+              :`<td><span class="rp-off">—</span></td>`;
           }
-          if(hasLeave&&hasWork&&shifts.length){
-            // Split shift — strike only the shift(s) matched to a leave entry by shiftId
-            return`<td>${shifts.map(s=>{
-              const match=dayEntries.find(e=>e.shiftId===s.id);
-              if(match?.leaveType) return`<span class="rp-leave" style="text-decoration:line-through;">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`;
-              return`<span class="rp-shift">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`;
-            }).join('<br/>')}</td>`;
-          }
-          if(!shifts.length) return`<td><span class="rp-off">—</span></td>`;
-          return`<td>${shifts.map(s=>`<span class="rp-shift">${(s.start_time||'').slice(0,5)}<br/>${(s.end_time||'').slice(0,5)}</span>`).join('<br/>')}</td>`;
+          // Match each shift to its entry by shiftId — strike only shifts with a leave entry
+          return`<td>${shifts.map(s=>{
+            const match=dayEntries.find(e=>e.shiftId===s.id);
+            const t=(s.start_time||'').slice(0,5);
+            const b=(s.end_time||'').slice(0,5);
+            if(match?.leaveType) return`<span class="rp-leave" style="text-decoration:line-through;">${t}<br/>${b}</span>`;
+            return`<span class="rp-shift">${t}<br/>${b}</span>`;
+          }).join('<br/>')}</td>`;
         }).join('');
         return`<tr><td class="rp-name-cell">${emp.name}</td>${cells}</tr>`;
       }).join('');
