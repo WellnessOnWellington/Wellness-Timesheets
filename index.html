@@ -643,7 +643,7 @@
   .empty-sub   { font-size: 0.76rem; font-weight: 400; margin-top: 0.25rem; }
 
   /* Toast */
-  .toast { position: fixed; bottom: 1.75rem; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--charcoal); color: #fff; border-radius: 30px; padding: 0.7rem 1.5rem; font-size: 0.82rem; font-weight: 600; z-index: 300; transition: transform 0.3s cubic-bezier(0.34,1.4,0.64,1); white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.18); }
+  .toast { position: fixed; bottom: 1.75rem; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--charcoal); color: #fff; border-radius: 30px; padding: 0.7rem 1.5rem; font-size: 0.82rem; font-weight: 600; z-index: 300; transition: transform 0.3s cubic-bezier(0.34,1.4,0.64,1); white-space: pre-line; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.18); }
   .toast.show { transform: translateX(-50%) translateY(0); }
 
   ::-webkit-scrollbar { width: 5px; }
@@ -901,7 +901,7 @@
 
   /* ── Roster Builder Phase 2 ── */
   .rb-ctrl { display:flex; align-items:flex-start; gap:0.6rem; flex-wrap:wrap; background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius); padding:0.85rem 1.1rem; box-shadow:var(--shadow); margin-bottom:1.25rem; }
-  .rb-nav-btn { background:var(--white); border:1.5px solid var(--border); border-radius:8px; padding:0.32rem 0.7rem; cursor:pointer; font-size:0.78rem; font-weight:700; color:var(--charcoal); font-family:'Nunito',sans-serif; transition:all 0.15s; }
+  .rb-nav-btn { background:var(--white); border:1.5px solid var(--border); border-radius:8px; padding:0.32rem 0.7rem; cursor:pointer; font-size:0.78rem; font-weight:700; color:var(--charcoal); font-family:'Nunito',sans-serif; transition:all 0.15s; height:44px; box-sizing:border-box; }
   .rb-nav-btn:hover { background:var(--blush-lt); border-color:var(--burgundy); }
   .rb-fn-label { font-size:0.85rem; font-weight:800; color:var(--charcoal); min-width:160px; text-align:center; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
   .rb-live-badge { background:#e8f5e9; border:1.5px solid #2e7d32; color:#1b5e20; border-radius:999px; padding:0.1rem 0.55rem; font-size:0.65rem; font-weight:800; letter-spacing:0.05em; white-space:nowrap; }
@@ -909,7 +909,7 @@
   .rb-role-tab { padding:0.28rem 0.7rem; border-radius:999px; border:1.5px solid var(--border); font-size:0.72rem; font-weight:700; cursor:pointer; background:var(--white); color:var(--muted); transition:all 0.15s; font-family:'Nunito',sans-serif; }
   .rb-role-tab.active { background:var(--burgundy); color:#fff; border-color:var(--burgundy); }
   .rb-spacer { flex:1; min-width:0.5rem; }
-  .rb-group { display:flex; flex-direction:column; gap:0.28rem; align-items:center; }
+  .rb-group { display:flex; flex-direction:column; gap:0; align-items:center; }
   .rb-group-label { font-size:0.55rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
   .rb-group-inner { display:flex; align-items:center; gap:0.4rem; min-height:30px; }
   .rb-group-divider { width:1px; height:44px; align-self:center; background:var(--border); flex-shrink:0; margin:0 0.2rem; }
@@ -1588,6 +1588,18 @@
   <div class="req-panel" id="req-panel-detail" style="display:none;">
     <div id="req-detail-content"></div>
     <button class="req-back-btn" onclick="reqShowList()">← Back to My Requests</button>
+  </div>
+</div>
+
+<!-- COPY FORTNIGHT MODAL -->
+<div class="modal-bg" id="rb-copy-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="max-width:520px;width:95%;max-height:80vh;display:flex;flex-direction:column;">
+    <div class="modal-title">Copy Last Fortnight</div>
+    <div id="rb-copy-modal-body" style="overflow-y:auto;flex:1;padding-bottom:0.5rem;"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="document.getElementById('rb-copy-modal').classList.remove('show')">Cancel</button>
+      <button class="btn-primary" id="rb-copy-modal-ok" onclick="rbCopyModalProceed()">Copy Shifts</button>
+    </div>
   </div>
 </div>
 
@@ -2584,8 +2596,13 @@
 
       <!-- Control bar -->
       <div class="rb-ctrl">
-        <button class="rb-nav-btn rb-all-days-btn" id="rb-all-days-btn" onclick="rbCloseAllDays()" style="height:44px;align-self:center;">&#8592; All Days</button>
-        <button class="rb-nav-btn" onclick="rbGoToday()" style="height:44px;align-self:center;">Today</button>
+        <div class="rb-group">
+          <div class="rb-group-label" style="visibility:hidden;">&#8203;</div>
+          <div class="rb-group-inner" style="gap:0.6rem;">
+            <button class="rb-nav-btn rb-all-days-btn" id="rb-all-days-btn" onclick="rbCloseAllDays()">&#8592; All Days</button>
+            <button class="rb-nav-btn" onclick="rbGoToday()">Today</button>
+          </div>
+        </div>
         <div class="rb-group-divider"></div>
         <div class="rb-nav-centre">
           <div class="rb-group rb-ctrl-disabled" id="rb-day-group">
@@ -4142,6 +4159,7 @@ function tsMissedClockOut(entry){
 
 function tsIsAutoApproved(entry, shift){
   if(!entry||entry.locked) return false;
+  if(!entry.clockIn) return false;
   const fs=entry.finalStart||entry.clockIn;
   const fe=entry.finalEnd||entry.clockOut;
   const rs=shift?.start_time||null;
@@ -4244,7 +4262,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       <div class="ts-payroll-wrap">${payrollInner}</div>
       <span class="ts-row-hours">${hoursText}</span>
       <div class="ts-row-flag-dot" style="background:${flagColor}"></div><div class="ts-travel-icon">${entry?.travelKm?`<span title="${entry.travelKm} km travel">🚗</span>`:''}</div><span class="ts-adjusted-pencil" title="Acknowledged by manager" style="${locked&&manuallyAdjusted?'':'visibility:hidden'}">✎</span><span class="ts-flag-icon" title="Flagged for follow-up" style="${flag==='flagged'?'':'visibility:hidden'}">⚑</span>
-      <span class="ts-locked-label" style="${locked||effectiveAutoApproved?'':'visibility:hidden'}">${locked&&manuallyAdjusted?'Locked'+(lockedBy?' · '+lockedBy:''):'Auto-approved'}</span>
+      <span class="ts-locked-label" style="${locked||effectiveAutoApproved?'':'visibility:hidden'}">${locked?'Locked'+(lockedBy?' · '+lockedBy:''):'Auto-approved'}</span>
       <div class="ts-myob-preview">${myobPreviewText}</div>
     </div>
   </div>`;
@@ -6690,6 +6708,7 @@ function rbIsLocked(fnStart){ return RB_ROLES.some(r=>rbIsLockedForRole(fnStart,
 function rbIsPublished(fnStart){ return RB_ROLES.some(r=>rbIsPublishedForRole(fnStart,r)); }
 
 let _rbConfirmCallback=null;
+let _rbCopyPending=null;
 function rbConfirmClose(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); _rbConfirmCallback=null; }
 function rbConfirmProceed(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); if(_rbConfirmCallback) _rbConfirmCallback(); _rbConfirmCallback=null; }
 
@@ -6793,6 +6812,10 @@ async function rbSaveFnLockForRole(fnStart,role,locked){
   }catch(e){ showToast('Lock error: '+e.message.slice(0,80)); console.error(e); }
 }
 
+function rbTimesOverlap(s1,e1,s2,e2){
+  return timeToMin(s1)<timeToMin(e2)&&timeToMin(s2)<timeToMin(e1);
+}
+
 async function rbCopyLastFnForRole(role){
   const fnStart=rbGetFnStart();
   const prevStart=new Date(fnStart); prevStart.setDate(prevStart.getDate()-14);
@@ -6801,31 +6824,76 @@ async function rbCopyLastFnForRole(role){
   const roleEmps=rbGetEmpsForRole(role).map(e=>e.id);
   const prevShifts=_rosterShifts.filter(s=>s.date>=prevKey&&s.date<fnKey&&roleEmps.includes(s.employee_id));
   if(!prevShifts.length){showToast('No shifts found in previous fortnight for '+RB_ROLE_LABELS[role]);return;}
-  document.getElementById('rb-confirm-title').textContent='Copy Last Fortnight?';
-  document.getElementById('rb-confirm-msg').innerHTML=`This will copy <strong>${prevShifts.length} shift${prevShifts.length!==1?'s':''}</strong> from the previous fortnight into the current ${RB_ROLE_LABELS[role]} roster. Existing shifts will not be removed.`;
-  const okBtn=document.getElementById('rb-confirm-ok');
-  okBtn.textContent='Copy Shifts';
-  okBtn.className='rb-confirm-ok';
-  _rbConfirmCallback=async()=>{
-    const base=Date.now();
-    const newShifts=prevShifts.map((s,i)=>{
-      const d=new Date(s.date+'T12:00:00'); d.setDate(d.getDate()+14);
-      return{id:'SH'+(base+i),employee_id:s.employee_id,date:d.toISOString().slice(0,10),start_time:s.start_time,end_time:s.end_time,is_day_off:s.is_day_off};
-    });
-    try{
-      await db.bulkInsert('roster_shifts',newShifts);
-      _rosterShifts.push(...newShifts);
+
+  const base=Date.now();
+  const toInsert=[],conflicts=[];
+  prevShifts.forEach((s,i)=>{
+    const d=new Date(s.date+'T12:00:00'); d.setDate(d.getDate()+14);
+    const newDate=d.toISOString().slice(0,10);
+    const newShift={id:'SH'+(base+i),employee_id:s.employee_id,date:newDate,start_time:s.start_time,end_time:s.end_time,is_day_off:s.is_day_off};
+    const hasOverlap=_rosterShifts.some(ex=>ex.employee_id===s.employee_id&&ex.date===newDate&&!ex.is_day_off&&rbTimesOverlap(ex.start_time,ex.end_time,s.start_time,s.end_time));
+    if(hasOverlap) conflicts.push({...newShift,empName:_emps.find(e=>e.id===s.employee_id)?.name||'Unknown'});
+    else toInsert.push(newShift);
+  });
+
+  const fnEnd=new Date(fnStart); fnEnd.setDate(fnEnd.getDate()+13);
+  const fmtD=d=>d.toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'2-digit'});
+  const periodLabel=`${fmtD(fnStart)} – ${fmtD(fnEnd)}`;
+
+  const empCounts={};
+  toInsert.forEach(s=>{
+    const name=_emps.find(e=>e.id===s.employee_id)?.name||'Unknown';
+    empCounts[name]=(empCounts[name]||0)+1;
+  });
+
+  let html=`<div style="margin-bottom:1rem;font-size:0.85rem;color:var(--muted);">Copying into <strong style="color:var(--charcoal)">${periodLabel}</strong></div>`;
+  if(Object.keys(empCounts).length){
+    html+=Object.entries(empCounts).sort(([a],[b])=>a.localeCompare(b)).map(([name,count])=>
+      `<div style="display:flex;justify-content:space-between;padding:0.28rem 0;border-bottom:1px solid var(--border);font-size:0.83rem;"><span>${name}</span><span style="font-weight:700;color:var(--charcoal)">${count} shift${count!==1?'s':''}</span></div>`
+    ).join('');
+  } else {
+    html+=`<div style="font-size:0.83rem;color:var(--muted);font-style:italic;padding:0.5rem 0;">All shifts conflict with existing entries — nothing to copy.</div>`;
+  }
+  if(conflicts.length){
+    html+=`<div style="background:#fff8f0;border:1.5px solid #e6a817;border-radius:8px;padding:0.75rem 1rem;margin-top:1rem;">`;
+    html+=`<div style="font-size:0.82rem;font-weight:700;color:#7a5200;margin-bottom:0.45rem;">⚠ ${conflicts.length} shift${conflicts.length!==1?'s':''} will be skipped — existing shift already present</div>`;
+    html+=conflicts.map(s=>{
+      const d=new Date(s.date+'T12:00:00');
+      const dateStr=d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+      return`<div style="font-size:0.8rem;color:var(--charcoal);padding:0.15rem 0;">${s.empName} — ${dateStr}, ${s.start_time}–${s.end_time}</div>`;
+    }).join('');
+    html+=`</div>`;
+  }
+
+  document.getElementById('rb-copy-modal-body').innerHTML=html;
+  const okBtn=document.getElementById('rb-copy-modal-ok');
+  okBtn.disabled=!toInsert.length;
+  okBtn.style.opacity=toInsert.length?'1':'0.4';
+  _rbCopyPending={toInsert,conflicts,role};
+  document.getElementById('rb-copy-modal').classList.add('show');
+}
+
+async function rbCopyModalProceed(){
+  if(!_rbCopyPending) return;
+  const{toInsert,conflicts,role}=_rbCopyPending;
+  _rbCopyPending=null;
+  document.getElementById('rb-copy-modal').classList.remove('show');
+  if(!toInsert.length){showToast('No shifts to copy.');return;}
+  try{
+    await db.bulkInsert('roster_shifts',toInsert);
+    _rosterShifts.push(...toInsert);
+    renderRoster();
+    const copiedIds=toInsert.map(s=>s.id);
+    rbPushUndo(`${toInsert.length} shifts copied`,async()=>{
+      await Promise.all(copiedIds.map(id=>db.delete('roster_shifts',id)));
+      _rosterShifts=_rosterShifts.filter(s=>!copiedIds.includes(s.id));
       renderRoster();
-      const copiedIds=newShifts.map(s=>s.id);
-      rbPushUndo(`${newShifts.length} shifts copied`,async()=>{
-        await Promise.all(copiedIds.map(id=>db.delete('roster_shifts',id)));
-        _rosterShifts=_rosterShifts.filter(s=>!copiedIds.includes(s.id));
-        renderRoster();
-      });
-      showToast(`Copied ${newShifts.length} shifts for ${RB_ROLE_LABELS[role]}`);
-    }catch(e){ showToast('Copy error: '+e.message.slice(0,80)); console.error(e); }
-  };
-  document.getElementById('rb-confirm-overlay').classList.add('show');
+    });
+    const msg=conflicts.length
+      ?`${toInsert.length} shift${toInsert.length!==1?'s':''} copied, ${conflicts.length} skipped due to duplication\nCtrl+Z to undo`
+      :`${toInsert.length} shift${toInsert.length!==1?'s':''} copied for ${RB_ROLE_LABELS[role]}\nCtrl+Z to undo`;
+    showToast(msg);
+  }catch(e){showToast('Copy error: '+e.message.slice(0,80));console.error(e);}
 }
 
 function renderFnGridForRole(role){
