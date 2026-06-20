@@ -915,6 +915,12 @@
   .rb-group-divider { width:1px; height:44px; align-self:center; background:var(--border); flex-shrink:0; margin:0 0.2rem; }
   /* Settings tab */
   .settings-section { border:1.5px solid var(--border); border-radius:var(--radius); background:var(--white); box-shadow:var(--shadow); margin-bottom:1rem; overflow:hidden; }
+  .thresh-table { border-collapse:collapse; margin-top:0.25rem; }
+  .thresh-table th,.thresh-table td { padding:0.45rem 1.25rem 0.45rem 0; font-size:0.85rem; text-align:left; vertical-align:middle; }
+  .thresh-table th { font-weight:700; color:var(--muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; padding-bottom:0.5rem; }
+  .thresh-table td:first-child { font-weight:600; color:var(--charcoal); min-width:120px; }
+  .thresh-input { width:68px !important; }
+  .thresh-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; position:relative; top:-1px; }
   .settings-section-header { display:flex; align-items:center; gap:0.75rem; padding:1rem 1.25rem; cursor:pointer; user-select:none; background:var(--warm-white); }
   .settings-section-header:hover { background:var(--blush-lt); }
   .settings-section-chevron { font-size:0.7rem; color:var(--muted); flex-shrink:0; transition:transform 0.2s; width:14px; text-align:center; }
@@ -2197,114 +2203,54 @@
     <div id="tab-settings" class="tab-panel">
 
       <!-- Roster Settings -->
-      <div class="settings-section" id="ss-roster">
-        <div class="settings-section-header" onclick="toggleSettingsSection('roster')">
-          <div class="settings-section-chevron" id="ss-chevron-roster">&#9658;</div>
+      <!-- Role Thresholds -->
+      <div class="settings-section" id="ss-rolethresholds">
+        <div class="settings-section-header" onclick="toggleSettingsSection('rolethresholds')">
+          <div class="settings-section-chevron" id="ss-chevron-rolethresholds">&#9658;</div>
           <div style="flex:1;">
-            <div class="settings-section-title">Roster Settings</div>
-            <div class="settings-section-hint">Roster cycle configuration and staff access PIN.</div>
+            <div class="settings-section-title">Role Thresholds</div>
+            <div class="settings-section-hint">Per-role rules for grace periods, timesheet flagging, and roster coverage.</div>
           </div>
         </div>
-        <div class="settings-section-body" id="ss-body-roster" style="display:none;">
+        <div class="settings-section-body" id="ss-body-rolethresholds" style="display:none;">
           <div class="roster-section" style="margin-bottom:1.5rem;">
             <div class="roster-section-title">Clock-in Grace Period</div>
-            <div class="roster-anchor-bar">
-              <label class="form-label" style="margin:0;white-space:nowrap;">Grace period</label>
-              <input class="form-input" type="number" id="grace-period" min="0" max="60" step="1" style="width:80px;" />
-              <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">minutes</span>
-              <button class="add-emp-btn" onclick="saveGracePeriod()">Save</button>
-              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Staff clocking in/out within this window of their rostered time will not be asked for a reason.</span>
-            </div>
+            <span style="font-size:0.75rem;color:var(--muted);font-weight:500;display:block;margin-bottom:0.75rem;">Staff clocking in/out within this window of their rostered time will not be asked for a reason.</span>
+            <table class="thresh-table">
+              <thead><tr><th>Role</th><th>Minutes</th></tr></thead>
+              <tbody>
+                <tr><td>Receptionist</td><td><input class="form-input thresh-input" type="number" id="grace-Receptionist" min="0" max="60" step="1"></td></tr>
+                <tr><td>Nurse</td><td><input class="form-input thresh-input" type="number" id="grace-Nurse" min="0" max="60" step="1"></td></tr>
+                <tr><td>Manager</td><td><input class="form-input thresh-input" type="number" id="grace-Manager" min="0" max="60" step="1"></td></tr>
+              </tbody>
+            </table>
+            <button class="add-emp-btn" onclick="saveGraceByRole()" style="margin-top:0.75rem;">Save</button>
           </div>
           <div class="roster-section" style="margin-bottom:1.5rem;">
             <div class="roster-section-title">Discrepancy Flagging Thresholds</div>
-            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
-              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Timesheet rows are flagged based on how far the clocked time differs from the rostered time.</span>
-              <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
-                <div style="display:flex;align-items:center;gap:0.5rem;">
-                  <span style="width:12px;height:12px;border-radius:50%;background:#e6a817;display:inline-block;flex-shrink:0;"></span>
-                  <label class="form-label" style="margin:0;white-space:nowrap;">Yellow flag after</label>
-                  <input class="form-input" type="number" id="yellow-threshold" min="1" max="120" step="1" style="width:70px;" />
-                  <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">min</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:0.5rem;">
-                  <span style="width:12px;height:12px;border-radius:50%;background:var(--burgundy);display:inline-block;flex-shrink:0;"></span>
-                  <label class="form-label" style="margin:0;white-space:nowrap;">Red flag after</label>
-                  <input class="form-input" type="number" id="red-threshold" min="1" max="120" step="1" style="width:70px;" />
-                  <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">min</span>
-                </div>
-                <button class="add-emp-btn" onclick="saveDiscrepancyThresholds()">Save</button>
-              </div>
-            </div>
+            <span style="font-size:0.75rem;color:var(--muted);font-weight:500;display:block;margin-bottom:0.75rem;">Timesheet rows are flagged based on how far the clocked time differs from the rostered time.</span>
+            <table class="thresh-table">
+              <thead><tr><th>Role</th><th><span class="thresh-dot" style="background:#e6a817;"></span>Yellow after</th><th><span class="thresh-dot" style="background:var(--burgundy);"></span>Red after</th></tr></thead>
+              <tbody>
+                <tr><td>Receptionist</td><td><input class="form-input thresh-input" type="number" id="yellow-Receptionist" min="1" max="120" step="1"> min</td><td><input class="form-input thresh-input" type="number" id="red-Receptionist" min="1" max="120" step="1"> min</td></tr>
+                <tr><td>Nurse</td><td><input class="form-input thresh-input" type="number" id="yellow-Nurse" min="1" max="120" step="1"> min</td><td><input class="form-input thresh-input" type="number" id="red-Nurse" min="1" max="120" step="1"> min</td></tr>
+                <tr><td>Manager</td><td><input class="form-input thresh-input" type="number" id="yellow-Manager" min="1" max="120" step="1"> min</td><td><input class="form-input thresh-input" type="number" id="red-Manager" min="1" max="120" step="1"> min</td></tr>
+              </tbody>
+            </table>
+            <button class="add-emp-btn" onclick="saveDiscrepancyByRole()" style="margin-top:0.75rem;">Save</button>
           </div>
-          <div class="roster-section" style="margin-bottom:1.5rem;">
+          <div class="roster-section" style="margin-bottom:0.5rem;">
             <div class="roster-section-title">Coverage Bar Thresholds</div>
-            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.9rem;">
-              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;line-height:1.5;">Red below yellow, yellow between yellow and green, green at or above the green value. Configured per role.</span>
-              <div style="display:flex;gap:0.4rem;" id="cov-role-tabs">
-                <button class="rb-role-tab active" onclick="switchCovRole('Receptionist')" id="cov-tab-Receptionist">Receptionists</button>
-                <button class="rb-role-tab" onclick="switchCovRole('Nurse')" id="cov-tab-Nurse">Nurses</button>
-                <button class="rb-role-tab" onclick="switchCovRole('Manager')" id="cov-tab-Manager">Managers</button>
-              </div>
-              <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
-                <div style="display:flex;align-items:center;gap:0.5rem;">
-                  <span style="width:12px;height:12px;border-radius:50%;background:#f5a623;display:inline-block;flex-shrink:0;"></span>
-                  <label class="form-label" style="margin:0;white-space:nowrap;">Yellow at</label>
-                  <input class="form-input" type="number" id="cov-yellow" min="1" max="20" step="1" style="width:65px;" oninput="const g=document.getElementById('cov-green');if(g&&parseInt(this.value)>=parseInt(g.value))this.value=parseInt(g.value)-1;" />
-                  <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">staff</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:0.5rem;">
-                  <span style="width:12px;height:12px;border-radius:50%;background:#4CAF7D;display:inline-block;flex-shrink:0;"></span>
-                  <label class="form-label" style="margin:0;white-space:nowrap;">Green at</label>
-                  <input class="form-input" type="number" id="cov-green" min="2" max="20" step="1" style="width:65px;" oninput="const y=document.getElementById('cov-yellow');if(y&&parseInt(this.value)<=parseInt(y.value))y.value=parseInt(this.value)-1;" />
-                  <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">staff</span>
-                </div>
-                <button class="add-emp-btn" onclick="saveCoverageThresholds()">Save</button>
-              </div>
-            </div>
-          </div>
-          <div class="roster-section" style="margin-bottom:1rem;">
-            <div class="roster-section-title">Who's On PIN</div>
-            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:1rem;">
-              <div style="font-size:0.8rem;color:var(--muted);font-weight:500;line-height:1.5;">This PIN is what staff enter to access the Who's On roster view. Choose something easy for staff to remember but not obvious.</div>
-              <div style="display:flex;align-items:flex-end;gap:1.5rem;flex-wrap:wrap;">
-                <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                  <label class="form-label" style="margin:0;">New PIN</label>
-                  <div class="wos-pin-boxes" id="wos-pin-new-wrap">
-                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="0" />
-                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="1" />
-                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="2" />
-                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="3" />
-                  </div>
-                </div>
-                <button class="add-emp-btn" id="whos-on-pin-save" onclick="saveWhosOnPIN()" disabled style="opacity:0.4;cursor:not-allowed;margin-bottom:2px;">Save PIN</button>
-              </div>
-              <div id="whos-on-pin-feedback" style="font-size:0.78rem;font-weight:600;min-height:1rem;"></div>
-            </div>
-          </div>
-          <div class="roster-section" style="margin-bottom:1rem;">
-            <div class="roster-section-title">Roster Cycle Start Date</div>
-            <div class="roster-anchor-bar" style="border-color:#e6a817;">
-              <div style="width:100%;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;background:#fff8e1;border:1.5px solid #f9c825;border-radius:8px;padding:0.45rem 0.75rem;">
-                <span style="font-size:1rem;flex-shrink:0;">⚠</span>
-                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all roster fortnight boundaries. Only change this during initial setup or if advised to do so.</span>
-              </div>
-              <label class="form-label" style="margin:0;white-space:nowrap;">Cycle starts</label>
-              <input class="form-input" type="date" id="anchor-date" style="width:auto;border-color:#e6a817;" />
-              <button class="add-emp-btn" style="background:#e6a817;border-color:#e6a817;" onclick="saveAnchorDate()">Save</button>
-            </div>
-          </div>
-          <div class="roster-section" style="margin-bottom:1rem;">
-            <div class="roster-section-title">Pay Cycle Start Date</div>
-            <div class="roster-anchor-bar" style="border-color:#e6a817;">
-              <div style="width:100%;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;background:#fff8e1;border:1.5px solid #f9c825;border-radius:8px;padding:0.45rem 0.75rem;">
-                <span style="font-size:1rem;flex-shrink:0;">⚠</span>
-                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all pay period boundaries in Timesheets and MYOB export. Must be a Tuesday. Only change this during initial setup or if advised to do so.</span>
-              </div>
-              <label class="form-label" style="margin:0;white-space:nowrap;">Period starts</label>
-              <input class="form-input" type="date" id="pay-period-anchor" style="width:auto;border-color:#e6a817;" />
-              <button class="add-emp-btn" style="background:#e6a817;border-color:#e6a817;" onclick="savePayPeriodAnchor()">Save</button>
-            </div>
+            <span style="font-size:0.75rem;color:var(--muted);font-weight:500;display:block;margin-bottom:0.75rem;">Red below yellow, yellow between yellow and green, green at or above the green value.</span>
+            <table class="thresh-table">
+              <thead><tr><th>Role</th><th><span class="thresh-dot" style="background:#f5a623;"></span>Yellow at</th><th><span class="thresh-dot" style="background:#4CAF7D;"></span>Green at</th></tr></thead>
+              <tbody>
+                <tr><td>Receptionist</td><td><input class="form-input thresh-input" type="number" id="cov-yellow-Receptionist" min="1" max="20" step="1"> staff</td><td><input class="form-input thresh-input" type="number" id="cov-green-Receptionist" min="2" max="20" step="1"> staff</td></tr>
+                <tr><td>Nurse</td><td><input class="form-input thresh-input" type="number" id="cov-yellow-Nurse" min="1" max="20" step="1"> staff</td><td><input class="form-input thresh-input" type="number" id="cov-green-Nurse" min="2" max="20" step="1"> staff</td></tr>
+                <tr><td>Manager</td><td><input class="form-input thresh-input" type="number" id="cov-yellow-Manager" min="1" max="20" step="1"> staff</td><td><input class="form-input thresh-input" type="number" id="cov-green-Manager" min="2" max="20" step="1"> staff</td></tr>
+              </tbody>
+            </table>
+            <button class="add-emp-btn" onclick="saveCoverageByRole()" style="margin-top:0.75rem;">Save</button>
           </div>
         </div>
       </div>
@@ -2381,6 +2327,38 @@
         </div>
       </div>
 
+      <!-- Access Control -->
+      <div class="settings-section" id="ss-access">
+        <div class="settings-section-header" onclick="toggleSettingsSection('access')">
+          <div class="settings-section-chevron" id="ss-chevron-access">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Access Control</div>
+            <div class="settings-section-hint">Manage the PIN staff use to view the Who's On roster.</div>
+          </div>
+        </div>
+        <div class="settings-section-body" id="ss-body-access" style="display:none;">
+          <div class="roster-section" style="margin-bottom:1rem;">
+            <div class="roster-section-title">Who's On PIN</div>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:1rem;">
+              <div style="font-size:0.8rem;color:var(--muted);font-weight:500;line-height:1.5;">This PIN is what staff enter to access the Who's On roster view. Choose something easy for staff to remember but not obvious.</div>
+              <div style="display:flex;align-items:flex-end;gap:1.5rem;flex-wrap:wrap;">
+                <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                  <label class="form-label" style="margin:0;">New PIN</label>
+                  <div class="wos-pin-boxes" id="wos-pin-new-wrap">
+                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="0" />
+                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="1" />
+                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="2" />
+                    <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="3" />
+                  </div>
+                </div>
+                <button class="add-emp-btn" id="whos-on-pin-save" onclick="saveWhosOnPIN()" disabled style="opacity:0.4;cursor:not-allowed;margin-bottom:2px;">Save PIN</button>
+              </div>
+              <div id="whos-on-pin-feedback" style="font-size:0.78rem;font-weight:600;min-height:1rem;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Roster Export & Print -->
       <div class="settings-section" id="ss-rosterexport">
         <div class="settings-section-header" onclick="toggleSettingsSection('rosterexport')">
@@ -2441,6 +2419,43 @@
         </div>
         <div class="settings-section-body" id="ss-body-inactive" style="display:none;">
           <div id="ss-inactive-list"></div>
+        </div>
+      </div>
+
+      <!-- Calendar Setup -->
+      <div class="settings-section" id="ss-calendar">
+        <div class="settings-section-header" onclick="toggleSettingsSection('calendar')">
+          <div class="settings-section-chevron" id="ss-chevron-calendar">&#9658;</div>
+          <div style="flex:1;">
+            <div class="settings-section-title">Calendar Setup</div>
+            <div class="settings-section-hint">Foundational date settings. Set once during initial setup — rarely need changing.</div>
+          </div>
+        </div>
+        <div class="settings-section-body" id="ss-body-calendar" style="display:none;">
+          <div class="roster-section" style="margin-bottom:1rem;">
+            <div class="roster-section-title">Roster Cycle Start Date</div>
+            <div class="roster-anchor-bar" style="border-color:#e6a817;">
+              <div style="width:100%;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;background:#fff8e1;border:1.5px solid #f9c825;border-radius:8px;padding:0.45rem 0.75rem;">
+                <span style="font-size:1rem;flex-shrink:0;">⚠</span>
+                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all roster fortnight boundaries. Only change this during initial setup or if advised to do so.</span>
+              </div>
+              <label class="form-label" style="margin:0;white-space:nowrap;">Cycle starts</label>
+              <input class="form-input" type="date" id="anchor-date" style="width:auto;border-color:#e6a817;" />
+              <button class="add-emp-btn" style="background:#e6a817;border-color:#e6a817;" onclick="saveAnchorDate()">Save</button>
+            </div>
+          </div>
+          <div class="roster-section" style="margin-bottom:1rem;">
+            <div class="roster-section-title">Pay Cycle Start Date</div>
+            <div class="roster-anchor-bar" style="border-color:#e6a817;">
+              <div style="width:100%;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;background:#fff8e1;border:1.5px solid #f9c825;border-radius:8px;padding:0.45rem 0.75rem;">
+                <span style="font-size:1rem;flex-shrink:0;">⚠</span>
+                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all pay period boundaries in Timesheets and MYOB export. Must be a Tuesday. Only change this during initial setup or if advised to do so.</span>
+              </div>
+              <label class="form-label" style="margin:0;white-space:nowrap;">Period starts</label>
+              <input class="form-input" type="date" id="pay-period-anchor" style="width:auto;border-color:#e6a817;" />
+              <button class="add-emp-btn" style="background:#e6a817;border-color:#e6a817;" onclick="savePayPeriodAnchor()">Save</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2911,9 +2926,15 @@ async function loadAll() {
     _notes   = notes.map(normaliseNote);
     _mgrs    = mgrs.map(normaliseMgr);
     _rosterConfig    = rosterCfg[0] || null;
-    if(_rosterConfig?.grace_period!=null) GRACE=_rosterConfig.grace_period;
-  if(_rosterConfig?.yellow_threshold!=null) YELLOW_THRESHOLD=_rosterConfig.yellow_threshold;
-  if(_rosterConfig?.red_threshold!=null) RED_THRESHOLD=_rosterConfig.red_threshold;
+    const _lgG=_rosterConfig?.grace_period??10;
+  const _lgY=_rosterConfig?.yellow_threshold??10;
+  const _lgR=_rosterConfig?.red_threshold??20;
+  if(_rosterConfig?.grace_by_role){try{Object.assign(GRACE_BY_ROLE,JSON.parse(_rosterConfig.grace_by_role));}catch(e){}}
+  else _ROLES.forEach(r=>GRACE_BY_ROLE[r]=_lgG);
+  if(_rosterConfig?.yellow_by_role){try{Object.assign(YELLOW_BY_ROLE,JSON.parse(_rosterConfig.yellow_by_role));}catch(e){}}
+  else _ROLES.forEach(r=>YELLOW_BY_ROLE[r]=_lgY);
+  if(_rosterConfig?.red_by_role){try{Object.assign(RED_BY_ROLE,JSON.parse(_rosterConfig.red_by_role));}catch(e){}}
+  else _ROLES.forEach(r=>RED_BY_ROLE[r]=_lgR);
   if(_rosterConfig?.swap_expiry_days!=null) SWAP_EXPIRY_DAYS=_rosterConfig.swap_expiry_days;
   if(_rosterConfig?.show_decline_reason!=null) SHOW_DECLINE_REASON=_rosterConfig.show_decline_reason;
   if(_rosterConfig?.giveaway_enabled_roles!=null){
@@ -3019,9 +3040,10 @@ function showLoading(on) {
   el.style.opacity = on ? '1' : '0';
 }
 
-let GRACE = 10;
-let YELLOW_THRESHOLD = 10;
-let RED_THRESHOLD = 20;
+const _ROLES=['Receptionist','Nurse','Manager'];
+let GRACE_BY_ROLE={Receptionist:10,Nurse:10,Manager:10};
+let YELLOW_BY_ROLE={Receptionist:10,Nurse:10,Manager:10};
+let RED_BY_ROLE={Receptionist:20,Nurse:20,Manager:20};
 let COVERAGE_THRESHOLDS = {
   Receptionist: {yellow:2, green:3},
   Nurse:        {yellow:2, green:3},
@@ -3342,7 +3364,7 @@ async function processRFID(card){
   if(scheduled===null&&action==='in'){
     pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType:'Unrostered arrival'};
     showReasonPrompt(emp.name.split(' ')[0],action,null);
-  }else if(scheduledMin!==null&&diff>GRACE){
+  }else if(scheduledMin!==null&&diff>(GRACE_BY_ROLE[emp.role]??10)){
     const label=diff+' min '+(isAfter?'after':'before')+' scheduled time';
     const noteType=action==='in'?'Arrival note':'Departure note';
     pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType};
@@ -4165,8 +4187,9 @@ function tsIsAutoApproved(entry, shift){
   const rs=shift?.start_time||null;
   const re=shift?.end_time||null;
   if(!fs||!fe||!rs||!re) return false;
-  return Math.abs(timeToMin(fs)-timeToMin(rs))<YELLOW_THRESHOLD &&
-         Math.abs(timeToMin(fe)-timeToMin(re))<YELLOW_THRESHOLD;
+  const _yt=YELLOW_BY_ROLE[entry.role]??10;
+  return Math.abs(timeToMin(fs)-timeToMin(rs))<_yt &&
+         Math.abs(timeToMin(fe)-timeToMin(re))<_yt;
 }
 
 function tsGetFlag(locked, noEntry, finalStart, finalEnd, autoApproved, entryStatus, missedClockOut){
@@ -4204,7 +4227,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const effectiveFinalEnd=isSplitWorked&&finalEnd&&rostEnd&&finalEnd>rostEnd?rostEnd:(finalEnd||(noClockExpected?rostEnd:null));
   // For split worked segments: auto-approve on clockIn proximity only (clockOut belongs to the full shift)
   const autoApproved=isSplitWorked
-    ?(entry?.clockIn&&rostStart?Math.abs(timeToMin(entry.clockIn)-timeToMin(rostStart))<YELLOW_THRESHOLD:false)
+    ?(entry?.clockIn&&rostStart?Math.abs(timeToMin(entry.clockIn)-timeToMin(rostStart))<(YELLOW_BY_ROLE[emp.role]??10):false)
     :tsIsAutoApproved(entry,shift);
   const effectiveAutoApproved=autoApproved||noClockExpected;
   const flag=tsGetFlag(locked,noEntry&&!noClockExpected,effectiveFinalStart,effectiveFinalEnd,effectiveAutoApproved,entryStatus,missedClockOut);
@@ -4217,7 +4240,8 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     const ds=timeToMin(finalStart)-timeToMin(rostStart);
     const de=timeToMin(finalEnd)-timeToMin(rostEnd);
     const fmt=m=>(m>=0?'+':'')+m+'m';
-    const diffColor=Math.abs(ds)>=RED_THRESHOLD||Math.abs(de)>=RED_THRESHOLD?'var(--burgundy)':Math.abs(ds)>=YELLOW_THRESHOLD||Math.abs(de)>=YELLOW_THRESHOLD?'#e6a817':'var(--muted)';
+    const _empYt=YELLOW_BY_ROLE[emp.role]??10;const _empRt=RED_BY_ROLE[emp.role]??20;
+    const diffColor=Math.abs(ds)>=_empRt||Math.abs(de)>=_empRt?'var(--burgundy)':Math.abs(ds)>=_empYt||Math.abs(de)>=_empYt?'#e6a817':'var(--muted)';
     diffLabel=`<span class="ts-diff" style="color:${diffColor}">${fmt(ds)} / ${fmt(de)}</span>`;
   }
 
@@ -5454,7 +5478,7 @@ function renderApprovals(){
       const ds=timeToMin(clockStart)-timeToMin(rostStart);
       const sign=ds>=0?'+':'';
       diffVal=sign+ds+'m start';
-      diffClass=Math.abs(ds)>=RED_THRESHOLD?'diff-bad':Math.abs(ds)>=YELLOW_THRESHOLD?'diff-warn':'diff-ok';
+      diffClass=Math.abs(ds)>=(RED_BY_ROLE[a.role]??20)?'diff-bad':Math.abs(ds)>=(YELLOW_BY_ROLE[a.role]??10)?'diff-warn':'diff-ok';
     }
     const rostEl=rostVal
       ?`<div class="approval-time-val">${rostVal}</div>`
@@ -7327,14 +7351,13 @@ function renderAnchorDate(){
   if(el&&_rosterConfig) el.value=_rosterConfig.cycle_start_date||'';
   const ppEl=document.getElementById('pay-period-anchor');
   if(ppEl) ppEl.value=_rosterConfig?.pay_period_anchor||'2026-04-21';
-  const gEl=document.getElementById('grace-period');
-  if(gEl) gEl.value=_rosterConfig?.grace_period??GRACE;
-  const yEl=document.getElementById('yellow-threshold');
-  if(yEl) yEl.value=_rosterConfig?.yellow_threshold??YELLOW_THRESHOLD;
-  const rEl=document.getElementById('red-threshold');
-  if(rEl) rEl.value=_rosterConfig?.red_threshold??RED_THRESHOLD;
-  // Populate coverage thresholds for the currently active role tab
-  renderCovThresholdInputs();
+  _ROLES.forEach(r=>{
+    const gEl=document.getElementById('grace-'+r); if(gEl) gEl.value=GRACE_BY_ROLE[r]??10;
+    const yEl=document.getElementById('yellow-'+r); if(yEl) yEl.value=YELLOW_BY_ROLE[r]??10;
+    const rEl=document.getElementById('red-'+r); if(rEl) rEl.value=RED_BY_ROLE[r]??20;
+    const cyEl=document.getElementById('cov-yellow-'+r); if(cyEl) cyEl.value=(COVERAGE_THRESHOLDS[r]||{yellow:2}).yellow;
+    const cgEl=document.getElementById('cov-green-'+r); if(cgEl) cgEl.value=(COVERAGE_THRESHOLDS[r]||{green:3}).green;
+  });
 }
 
 function renderRosterGrid(){
@@ -7456,65 +7479,62 @@ async function savePayPeriodAnchor(){
   }catch(e){showToast('Could not save — check connection');console.error(e);}
 }
 
-async function saveGracePeriod(){
-  const v=parseInt(document.getElementById('grace-period').value,10);
-  if(isNaN(v)||v<0||v>60){showToast('Enter a value between 0 and 60');return;}
-  if(!confirm(`Set the grace period to ${v} minute${v===1?'':'s'}?\n\nStaff clocking in/out within ${v} minute${v===1?'':'s'} of their rostered time will not be asked for a reason.`)) return;
+async function saveGraceByRole(){
+  const vals={};
+  for(const r of _ROLES){
+    const v=parseInt(document.getElementById('grace-'+r)?.value,10);
+    if(isNaN(v)||v<0||v>60){showToast(`Grace period for ${r} must be 0–60 minutes`);return;}
+    vals[r]=v;
+  }
   try{
-    if(_rosterConfig) await db.update('roster_config','default',{grace_period:v});
-    else await db.insert('roster_config',{id:'default',grace_period:v});
-    if(_rosterConfig) _rosterConfig.grace_period=v;
-    else _rosterConfig={id:'default',grace_period:v};
-    GRACE=v;
-    showToast('Grace period saved');
+    const patch={grace_by_role:JSON.stringify(vals)};
+    if(_rosterConfig) await db.update('roster_config','default',patch);
+    else await db.insert('roster_config',{id:'default',...patch});
+    if(!_rosterConfig) _rosterConfig={id:'default'};
+    _rosterConfig.grace_by_role=patch.grace_by_role;
+    Object.assign(GRACE_BY_ROLE,vals);
+    showToast('Grace periods saved ✓');
   }catch(e){showToast('Could not save — check connection');console.error(e);}
 }
 
-async function saveDiscrepancyThresholds(){
-  const y=parseInt(document.getElementById('yellow-threshold').value,10);
-  const r=parseInt(document.getElementById('red-threshold').value,10);
-  if(isNaN(y)||y<1||y>120){showToast('Yellow threshold must be 1–120 minutes');return;}
-  if(isNaN(r)||r<1||r>120){showToast('Red threshold must be 1–120 minutes');return;}
-  if(y>=r){showToast('Yellow threshold must be less than red threshold');return;}
-  if(!confirm(`Set discrepancy thresholds to yellow after ${y} min, red after ${r} min?`)) return;
+async function saveDiscrepancyByRole(){
+  const yellows={}, reds={};
+  for(const r of _ROLES){
+    const y=parseInt(document.getElementById('yellow-'+r)?.value,10);
+    const rd=parseInt(document.getElementById('red-'+r)?.value,10);
+    if(isNaN(y)||y<1||y>120){showToast(`Yellow threshold for ${r} must be 1–120 minutes`);return;}
+    if(isNaN(rd)||rd<1||rd>120){showToast(`Red threshold for ${r} must be 1–120 minutes`);return;}
+    if(y>=rd){showToast(`Yellow must be less than red for ${r}`);return;}
+    yellows[r]=y; reds[r]=rd;
+  }
   try{
-    if(_rosterConfig) await db.update('roster_config','default',{yellow_threshold:y,red_threshold:r});
-    else await db.insert('roster_config',{id:'default',yellow_threshold:y,red_threshold:r});
-    if(_rosterConfig){_rosterConfig.yellow_threshold=y;_rosterConfig.red_threshold=r;}
-    else _rosterConfig={id:'default',yellow_threshold:y,red_threshold:r};
-    YELLOW_THRESHOLD=y;
-    RED_THRESHOLD=r;
-    showToast('Thresholds saved');
+    const patch={yellow_by_role:JSON.stringify(yellows),red_by_role:JSON.stringify(reds)};
+    if(_rosterConfig) await db.update('roster_config','default',patch);
+    else await db.insert('roster_config',{id:'default',...patch});
+    if(!_rosterConfig) _rosterConfig={id:'default'};
+    Object.assign(_rosterConfig,patch);
+    Object.assign(YELLOW_BY_ROLE,yellows);
+    Object.assign(RED_BY_ROLE,reds);
+    showToast('Discrepancy thresholds saved ✓');
   }catch(e){showToast('Could not save — check connection');console.error(e);}
 }
 
-let _covThreshRole='Receptionist';
-function switchCovRole(role){
-  _covThreshRole=role;
-  document.querySelectorAll('#cov-role-tabs .rb-role-tab').forEach(b=>b.classList.remove('active'));
-  const tab=document.getElementById('cov-tab-'+role);
-  if(tab) tab.classList.add('active');
-  renderCovThresholdInputs();
-}
-function renderCovThresholdInputs(){
-  const t=COVERAGE_THRESHOLDS[_covThreshRole]||{yellow:2,green:3};
-  const y=document.getElementById('cov-yellow'); if(y) y.value=t.yellow;
-  const g=document.getElementById('cov-green');  if(g) g.value=t.green;
-}
-async function saveCoverageThresholds(){
-  const y=parseInt(document.getElementById('cov-yellow').value,10);
-  const g=parseInt(document.getElementById('cov-green').value,10);
-  if(isNaN(y)||y<1){showToast('Yellow must be at least 1');return;}
-  if(isNaN(g)||g<1){showToast('Green must be at least 1');return;}
-  if(g<=y){showToast('Green threshold must be higher than yellow');return;}
-  COVERAGE_THRESHOLDS[_covThreshRole]={yellow:y,green:g};
+async function saveCoverageByRole(){
+  for(const r of _ROLES){
+    const y=parseInt(document.getElementById('cov-yellow-'+r)?.value,10);
+    const g=parseInt(document.getElementById('cov-green-'+r)?.value,10);
+    if(isNaN(y)||y<1){showToast(`Yellow coverage for ${r} must be at least 1`);return;}
+    if(isNaN(g)||g<1){showToast(`Green coverage for ${r} must be at least 1`);return;}
+    if(g<=y){showToast(`Green must be higher than yellow for ${r}`);return;}
+    COVERAGE_THRESHOLDS[r]={yellow:y,green:g};
+  }
   const patch={coverage_thresholds:JSON.stringify(COVERAGE_THRESHOLDS)};
   try{
     if(_rosterConfig) await db.update('roster_config','default',patch);
     else await db.insert('roster_config',{id:'default',...patch});
     if(!_rosterConfig) _rosterConfig={id:'default'};
     _rosterConfig.coverage_thresholds=patch.coverage_thresholds;
-    showToast(`${_covThreshRole} coverage thresholds saved ✓`);
+    showToast('Coverage thresholds saved ✓');
     renderRoster();
   }catch(e){showToast('Could not save — check connection');console.error(e);}
 }
