@@ -915,11 +915,13 @@
   .rb-group-divider { width:1px; height:44px; align-self:center; background:var(--border); flex-shrink:0; margin:0 0.2rem; }
   /* Settings tab */
   .settings-section { border:1.5px solid var(--border); border-radius:var(--radius); background:var(--white); box-shadow:var(--shadow); margin-bottom:1rem; overflow:hidden; }
-  .thresh-table { border-collapse:collapse; margin-top:0.25rem; }
-  .thresh-table th,.thresh-table td { padding:0.45rem 1.25rem 0.45rem 0; font-size:0.85rem; text-align:left; vertical-align:middle; }
-  .thresh-table th { font-weight:700; color:var(--muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; padding-bottom:0.5rem; }
-  .thresh-table td:first-child { font-weight:600; color:var(--charcoal); min-width:120px; }
-  .thresh-input { width:68px !important; }
+  .thresh-table { border-collapse:collapse; width:auto; table-layout:fixed; }
+  .thresh-table th,.thresh-table td { padding:0.3rem 0.85rem; font-size:0.85rem; vertical-align:middle; white-space:nowrap; }
+  .thresh-table th { font-weight:700; color:var(--muted); font-size:0.66rem; text-transform:uppercase; letter-spacing:0; padding-bottom:0.45rem; text-align:center; }
+  .thresh-table th:first-child,.thresh-table td:first-child { text-align:left; font-weight:600; color:var(--charcoal); padding-left:0; padding-right:1.3rem; width:135px; }
+  .thresh-table th:not(:first-child),.thresh-table td:not(:first-child) { border-left:1px solid var(--border); text-align:center; width:117px; }
+  .thresh-input { width:60px; padding:0.3rem 0.3rem; background:var(--warm-white); border:1.5px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:'Nunito',sans-serif; font-size:0.85rem; font-weight:500; outline:none; transition:border-color 0.2s; text-align:center; }
+  .thresh-input:focus { border-color:var(--burgundy); box-shadow:0 0 0 3px rgba(139,37,53,0.08); }
   .thresh-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; position:relative; top:-1px; }
   .settings-section-header { display:flex; align-items:center; gap:0.75rem; padding:1rem 1.25rem; cursor:pointer; user-select:none; background:var(--warm-white); }
   .settings-section-header:hover { background:var(--blush-lt); }
@@ -1261,7 +1263,7 @@
   .ts-legend-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
   .rb-tl-cov { display:flex; align-items:center; border-top:1.5px solid var(--border); height:22px; }
   .wos-pin-boxes { display:flex; gap:0.5rem; }
-  .wos-pin-box { width:48px; height:52px; border:1.5px solid var(--border); border-radius:10px; background:var(--warm-white); text-align:center; font-size:1.4rem; font-weight:700; font-family:'Nunito',sans-serif; color:var(--charcoal); outline:none; transition:border-color 0.15s, box-shadow 0.15s; -webkit-text-security:disc; }
+  .wos-pin-box { width:48px; height:52px; border:1.5px solid var(--border); border-radius:10px; background:var(--warm-white); text-align:center; font-size:1.4rem; font-weight:700; font-family:'Nunito',sans-serif; color:var(--charcoal); outline:none; transition:border-color 0.15s, box-shadow 0.15s; }
   .wos-pin-box:focus { border-color:var(--burgundy); box-shadow:0 0 0 3px rgba(139,37,53,0.1); background:var(--white); }
   .wos-pin-box.filled { border-color:var(--dusty); background:var(--blush-lt); }
 
@@ -1533,7 +1535,7 @@
       <button class="nav-btn" onclick="showView('login')" style="flex:1;">⚙️ Manager Login</button>
     </div>
   </div>
-  <div class="kiosk-build-credit">Built by Dr Joel Jaya · v0.9</div>
+  <div id="kiosk-build-credit" class="kiosk-build-credit">Built by Dr Joel Jaya · v0.9</div>
 </div>
 
 <!-- REQUESTS VIEW -->
@@ -2215,42 +2217,50 @@
         <div class="settings-section-body" id="ss-body-rolethresholds" style="display:none;">
           <div class="roster-section" style="margin-bottom:1.5rem;">
             <div class="roster-section-title">Clock-in Grace Period</div>
-            <span style="font-size:0.75rem;color:var(--muted);font-weight:500;display:block;margin-bottom:0.75rem;">Staff clocking in/out within this window of their rostered time will not be asked for a reason.</span>
-            <table class="thresh-table">
-              <thead><tr><th>Role</th><th>Minutes</th></tr></thead>
-              <tbody>
-                <tr><td>Receptionist</td><td><input class="form-input thresh-input" type="number" id="grace-Receptionist" min="0" max="60" step="1"></td></tr>
-                <tr><td>Nurse</td><td><input class="form-input thresh-input" type="number" id="grace-Nurse" min="0" max="60" step="1"></td></tr>
-                <tr><td>Manager</td><td><input class="form-input thresh-input" type="number" id="grace-Manager" min="0" max="60" step="1"></td></tr>
-              </tbody>
-            </table>
-            <button class="add-emp-btn" onclick="saveGraceByRole()" style="margin-top:0.75rem;">Save</button>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Staff clocking in/out within this window of their rostered time will not be asked for a reason.</span>
+              <div style="display:flex;align-items:flex-end;gap:1rem;width:100%;">
+                <table class="thresh-table">
+                  <thead><tr><th></th><th>Receptionist</th><th>Nurse</th><th>Manager</th></tr></thead>
+                  <tbody>
+                    <tr><td>Minutes</td><td><input class="thresh-input" type="number" id="grace-Receptionist" min="0" max="60" step="1"></td><td><input class="thresh-input" type="number" id="grace-Nurse" min="0" max="60" step="1"></td><td><input class="thresh-input" type="number" id="grace-Manager" min="0" max="60" step="1"></td></tr>
+                  </tbody>
+                </table>
+                <button class="add-emp-btn" style="margin-left:auto;" onclick="saveGraceByRole()">Save</button>
+              </div>
+            </div>
           </div>
           <div class="roster-section" style="margin-bottom:1.5rem;">
             <div class="roster-section-title">Discrepancy Flagging Thresholds</div>
-            <span style="font-size:0.75rem;color:var(--muted);font-weight:500;display:block;margin-bottom:0.75rem;">Timesheet rows are flagged based on how far the clocked time differs from the rostered time.</span>
-            <table class="thresh-table">
-              <thead><tr><th>Role</th><th><span class="thresh-dot" style="background:#e6a817;"></span>Yellow after</th><th><span class="thresh-dot" style="background:var(--burgundy);"></span>Red after</th></tr></thead>
-              <tbody>
-                <tr><td>Receptionist</td><td><input class="form-input thresh-input" type="number" id="yellow-Receptionist" min="1" max="120" step="1"> min</td><td><input class="form-input thresh-input" type="number" id="red-Receptionist" min="1" max="120" step="1"> min</td></tr>
-                <tr><td>Nurse</td><td><input class="form-input thresh-input" type="number" id="yellow-Nurse" min="1" max="120" step="1"> min</td><td><input class="form-input thresh-input" type="number" id="red-Nurse" min="1" max="120" step="1"> min</td></tr>
-                <tr><td>Manager</td><td><input class="form-input thresh-input" type="number" id="yellow-Manager" min="1" max="120" step="1"> min</td><td><input class="form-input thresh-input" type="number" id="red-Manager" min="1" max="120" step="1"> min</td></tr>
-              </tbody>
-            </table>
-            <button class="add-emp-btn" onclick="saveDiscrepancyByRole()" style="margin-top:0.75rem;">Save</button>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Timesheet rows are flagged based on how far the clocked time differs from the rostered time.</span>
+              <div style="display:flex;align-items:flex-end;gap:1rem;width:100%;">
+                <table class="thresh-table">
+                  <thead><tr><th></th><th>Receptionist</th><th>Nurse</th><th>Manager</th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="thresh-dot" style="background:#e6a817;"></span>Yellow (min)</td><td><input class="thresh-input" type="number" id="yellow-Receptionist" min="1" max="120" step="1"></td><td><input class="thresh-input" type="number" id="yellow-Nurse" min="1" max="120" step="1"></td><td><input class="thresh-input" type="number" id="yellow-Manager" min="1" max="120" step="1"></td></tr>
+                    <tr><td><span class="thresh-dot" style="background:var(--burgundy);"></span>Red (min)</td><td><input class="thresh-input" type="number" id="red-Receptionist" min="1" max="120" step="1"></td><td><input class="thresh-input" type="number" id="red-Nurse" min="1" max="120" step="1"></td><td><input class="thresh-input" type="number" id="red-Manager" min="1" max="120" step="1"></td></tr>
+                  </tbody>
+                </table>
+                <button class="add-emp-btn" style="margin-left:auto;" onclick="saveDiscrepancyByRole()">Save</button>
+              </div>
+            </div>
           </div>
           <div class="roster-section" style="margin-bottom:0.5rem;">
             <div class="roster-section-title">Coverage Bar Thresholds</div>
-            <span style="font-size:0.75rem;color:var(--muted);font-weight:500;display:block;margin-bottom:0.75rem;">Red below yellow, yellow between yellow and green, green at or above the green value.</span>
-            <table class="thresh-table">
-              <thead><tr><th>Role</th><th><span class="thresh-dot" style="background:#f5a623;"></span>Yellow at</th><th><span class="thresh-dot" style="background:#4CAF7D;"></span>Green at</th></tr></thead>
-              <tbody>
-                <tr><td>Receptionist</td><td><input class="form-input thresh-input" type="number" id="cov-yellow-Receptionist" min="1" max="20" step="1"> staff</td><td><input class="form-input thresh-input" type="number" id="cov-green-Receptionist" min="2" max="20" step="1"> staff</td></tr>
-                <tr><td>Nurse</td><td><input class="form-input thresh-input" type="number" id="cov-yellow-Nurse" min="1" max="20" step="1"> staff</td><td><input class="form-input thresh-input" type="number" id="cov-green-Nurse" min="2" max="20" step="1"> staff</td></tr>
-                <tr><td>Manager</td><td><input class="form-input thresh-input" type="number" id="cov-yellow-Manager" min="1" max="20" step="1"> staff</td><td><input class="form-input thresh-input" type="number" id="cov-green-Manager" min="2" max="20" step="1"> staff</td></tr>
-              </tbody>
-            </table>
-            <button class="add-emp-btn" onclick="saveCoverageByRole()" style="margin-top:0.75rem;">Save</button>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Red below yellow, yellow between yellow and green, green at or above the green value.</span>
+              <div style="display:flex;align-items:flex-end;gap:1rem;width:100%;">
+                <table class="thresh-table">
+                  <thead><tr><th></th><th>Receptionist</th><th>Nurse</th><th>Manager</th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="thresh-dot" style="background:#f5a623;"></span>Yellow (staff)</td><td><input class="thresh-input" type="number" id="cov-yellow-Receptionist" min="1" max="20" step="1"></td><td><input class="thresh-input" type="number" id="cov-yellow-Nurse" min="1" max="20" step="1"></td><td><input class="thresh-input" type="number" id="cov-yellow-Manager" min="1" max="20" step="1"></td></tr>
+                    <tr><td><span class="thresh-dot" style="background:#4CAF7D;"></span>Green (staff)</td><td><input class="thresh-input" type="number" id="cov-green-Receptionist" min="2" max="20" step="1"></td><td><input class="thresh-input" type="number" id="cov-green-Nurse" min="2" max="20" step="1"></td><td><input class="thresh-input" type="number" id="cov-green-Manager" min="2" max="20" step="1"></td></tr>
+                  </tbody>
+                </table>
+                <button class="add-emp-btn" style="margin-left:auto;" onclick="saveCoverageByRole()">Save</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2272,36 +2282,42 @@
               <input class="form-input" type="number" id="swap-expiry-days" min="1" max="30" step="1" style="width:70px;" />
               <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">days</span>
               <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Swap requests with no peer response after this many days will auto-expire.</span>
+              <button class="add-emp-btn" style="margin-left:auto;" onclick="saveSwapExpiry()">Save</button>
             </div>
           </div>
           <div class="roster-section" style="margin-bottom:1.5rem;">
             <div class="roster-section-title">Decline Reason Visibility</div>
             <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
               <div style="font-size:0.8rem;color:var(--muted);font-weight:500;line-height:1.5;">Choose whether staff see the manager's reason when a request is declined.</div>
-              <select class="form-input" id="show-decline-reason" style="width:auto;">
-                <option value="true">Show decline reason to employee</option>
-                <option value="false">Show only "Request declined"</option>
-              </select>
-            </div>
-          </div>
-          <div class="roster-section" style="margin-bottom:1.5rem;">
-            <div class="roster-section-title">Give Away Shift</div>
-            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
-              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;line-height:1.5;">Choose which staff roles can submit Give Away shift requests.</span>
-              <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                <label style="display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:600;color:var(--charcoal);cursor:pointer;">
-                  <input type="checkbox" id="giveaway-Receptionist" style="accent-color:var(--burgundy);width:16px;height:16px;"> Receptionists
-                </label>
-                <label style="display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:600;color:var(--charcoal);cursor:pointer;">
-                  <input type="checkbox" id="giveaway-Nurse" style="accent-color:var(--burgundy);width:16px;height:16px;"> Nurses
-                </label>
-                <label style="display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:600;color:var(--charcoal);cursor:pointer;">
-                  <input type="checkbox" id="giveaway-Manager" style="accent-color:var(--burgundy);width:16px;height:16px;"> Managers
-                </label>
+              <div style="display:flex;align-items:center;gap:1rem;width:100%;">
+                <select class="form-input" id="show-decline-reason" style="width:auto;">
+                  <option value="true">Show decline reason to employee</option>
+                  <option value="false">Show only "Request declined"</option>
+                </select>
+                <button class="add-emp-btn" style="margin-left:auto;" onclick="saveDeclineReason()">Save</button>
               </div>
             </div>
           </div>
-          <button class="add-emp-btn" onclick="saveRequestSettings()">Save Request Settings</button>
+          <div class="roster-section" style="margin-bottom:0.5rem;">
+            <div class="roster-section-title">Give Away Shift</div>
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;line-height:1.5;">Choose which staff roles can submit Give Away shift requests.</span>
+              <div style="display:flex;align-items:flex-end;gap:1rem;width:100%;">
+                <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                  <label style="display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:600;color:var(--charcoal);cursor:pointer;">
+                    <input type="checkbox" id="giveaway-Receptionist" style="accent-color:var(--burgundy);width:16px;height:16px;"> Receptionists
+                  </label>
+                  <label style="display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:600;color:var(--charcoal);cursor:pointer;">
+                    <input type="checkbox" id="giveaway-Nurse" style="accent-color:var(--burgundy);width:16px;height:16px;"> Nurses
+                  </label>
+                  <label style="display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:600;color:var(--charcoal);cursor:pointer;">
+                    <input type="checkbox" id="giveaway-Manager" style="accent-color:var(--burgundy);width:16px;height:16px;"> Managers
+                  </label>
+                </div>
+                <button class="add-emp-btn" style="margin-left:auto;" onclick="saveGiveawayRoles()">Save</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2339,11 +2355,11 @@
         <div class="settings-section-body" id="ss-body-access" style="display:none;">
           <div class="roster-section" style="margin-bottom:1rem;">
             <div class="roster-section-title">Who's On PIN</div>
-            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:1rem;">
+            <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
               <div style="font-size:0.8rem;color:var(--muted);font-weight:500;line-height:1.5;">This PIN is what staff enter to access the Who's On roster view. Choose something easy for staff to remember but not obvious.</div>
-              <div style="display:flex;align-items:flex-end;gap:1.5rem;flex-wrap:wrap;">
+              <div style="display:flex;align-items:flex-end;gap:1rem;width:100%;">
                 <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                  <label class="form-label" style="margin:0;">New PIN</label>
+                  <label class="form-label" style="margin:0;">PIN</label>
                   <div class="wos-pin-boxes" id="wos-pin-new-wrap">
                     <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="0" />
                     <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="1" />
@@ -2351,9 +2367,9 @@
                     <input class="wos-pin-box" type="tel" maxlength="1" autocomplete="off" autocorrect="off" data-group="new" data-idx="3" />
                   </div>
                 </div>
-                <button class="add-emp-btn" id="whos-on-pin-save" onclick="saveWhosOnPIN()" disabled style="opacity:0.4;cursor:not-allowed;margin-bottom:2px;">Save PIN</button>
+                <div id="whos-on-pin-feedback" style="font-size:0.78rem;font-weight:600;"></div>
+                <button class="add-emp-btn" id="whos-on-pin-save" style="margin-left:auto;" onclick="saveWhosOnPIN()">Save PIN</button>
               </div>
-              <div id="whos-on-pin-feedback" style="font-size:0.78rem;font-weight:600;min-height:1rem;"></div>
             </div>
           </div>
         </div>
@@ -2579,16 +2595,79 @@
           <div style="padding:0.5rem 0 1.25rem;">
             <div style="font-size:0.82rem;color:var(--charcoal);font-weight:700;margin-bottom:0.2rem;">Running Well</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.1rem;">Built by Dr Joel Jaya</div>
-            <div style="font-size:0.78rem;color:var(--muted);">Version 0.9 &middot; April 2026</div>
+            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 1.4 &middot; June 2026</div>
           </div>
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
-            <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Updates</div>
-            <div style="display:flex;flex-direction:column;gap:0.65rem;">
+            <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
+            <div style="display:flex;flex-direction:column;gap:0.85rem;">
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
-                <div style="font-size:0.72rem;font-weight:800;color:var(--wine);white-space:nowrap;min-width:3.5rem;">v0.9</div>
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v1.4</div>
                 <div>
-                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">April 2026 &mdash; Pre-launch release</div>
-                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Initial build. Kiosk clock-in/out, RFID scanning, roster management, timesheets, staff requests, notes approvals, and manager admin panel.</div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">10 June 2026 &mdash; Roster UX &amp; Per-Role Settings</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Copy fortnight overhauled with conflict detection modal and Ctrl+Z undo. Auto-approve fixed to require an actual clock-in. Settings reorganised into Role Thresholds, Access Control, and Calendar Setup — grace period, discrepancy flagging, and coverage thresholds now configurable per role.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v1.3</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">19 May 2026 &mdash; MYOB Export &amp; Timesheet Tools</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">MYOB export column order matched exactly for direct import. Evening hours split and break deduction logic corrected. Ready for MYOB badge and warnings improved. Timesheet entries can now be hard deleted with Ctrl+Z undo. PDF download per staff member with ZIP bundle.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v1.2</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">2 May 2026 &mdash; Travel Allowance &amp; Database Health</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Travel allowance added for clinic shifts. Live database health check introduced with kiosk indicator and manager safeguard banner. Mobile database status indicator added.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v1.1</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">12 April 2026 &mdash; Mobile Admin &amp; Presence Panel</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Mobile admin panel introduced with read-only timesheets and swipeable roster day view. Live presence panel replaced stat tiles on the team page. Mobile kiosk scroll fixed. Shift swap requests, pending request pill on clock-in screen, pay cycle navigation, and Who's On improvements.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v1.0</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">3 April 2026 &mdash; First complete release</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">MYOB export, staff requests, payroll type selection, and Ready for MYOB badge. All core features complete.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v0.5</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">25 March 2026 &mdash; Clock Intelligence</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Roster-aware clock-in, grace period logic, reason prompts for late and early arrivals, unrostered arrival detection.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v0.4</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">18 March 2026 &mdash; Timesheets &amp; Notes</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Traffic light approval system, lock and approve flow, notes tab for reviewing flagged clock-ins.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v0.3</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">12 March 2026 &mdash; Roster</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Fortnightly A/B roster templates, coverage bar, first GitHub Pages deployment.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v0.2</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">9 March 2026 &mdash; Staff &amp; Admin</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Team tab, employee records, manager PIN login, admin panel.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v0.1</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">6 March 2026 &mdash; Conception</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">RFID card scanning, kiosk clock-in/out, live clock display.</div>
                 </div>
               </div>
             </div>
@@ -3040,6 +3119,8 @@ function showLoading(on) {
   el.style.opacity = on ? '1' : '0';
 }
 
+const APP_VERSION='1.4';
+const APP_VERSION_DATE='June 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 let GRACE_BY_ROLE={Receptionist:10,Nurse:10,Manager:10};
 let YELLOW_BY_ROLE={Receptionist:10,Nurse:10,Manager:10};
@@ -7351,6 +7432,12 @@ function renderAnchorDate(){
   if(el&&_rosterConfig) el.value=_rosterConfig.cycle_start_date||'';
   const ppEl=document.getElementById('pay-period-anchor');
   if(ppEl) ppEl.value=_rosterConfig?.pay_period_anchor||'2026-04-21';
+  const currentPin=_rosterConfig?.roster_view_pin||ROSTER_VIEW_PIN;
+  _savedWosPin=currentPin;
+  [...document.querySelectorAll('.wos-pin-box[data-group="new"]')].forEach((box,i)=>{
+    box.value=currentPin[i]||''; box.classList.toggle('filled',!!box.value);
+  });
+  wosUpdatePinFeedback();
   _ROLES.forEach(r=>{
     const gEl=document.getElementById('grace-'+r); if(gEl) gEl.value=GRACE_BY_ROLE[r]??10;
     const yEl=document.getElementById('yellow-'+r); if(yEl) yEl.value=YELLOW_BY_ROLE[r]??10;
@@ -7392,6 +7479,8 @@ function toggleRosterDayOff(wt,d){
   document.getElementById(`rt-${wt}-${d}-end`).disabled=isOff;
 }
 
+let _savedWosPin='';
+
 function wosGetPin(group){
   return [...document.querySelectorAll(`.wos-pin-box[data-group="${group}"]`)].map(i=>i.value).join('');
 }
@@ -7401,11 +7490,13 @@ function wosUpdatePinFeedback(){
   const feedback=document.getElementById('whos-on-pin-feedback');
   const saveBtn=document.getElementById('whos-on-pin-save');
   const weakPins=new Set(['0000','1111','2222','3333','4444','5555','6666','7777','8888','9999','1234','4321','0123','1212']);
-  let msg='', ok=false;
-  if(newPin.length===4 && weakPins.has(newPin)){ msg='That PIN is too easy to guess — try something less predictable'; }
-  else if(newPin.length===4){ msg='✓ Ready to save'; ok=true; }
+  let msg='', color='', ok=false;
+  if(newPin.length<4){ msg=''; }
+  else if(weakPins.has(newPin)){ msg='That PIN is too easy to guess — try something less predictable'; color='#c0392b'; }
+  else if(newPin===_savedWosPin){ msg='✓ Current PIN'; color='#2e7d32'; ok=true; }
+  else { msg='Click Save to update the PIN'; color='#e6a817'; ok=true; }
   feedback.textContent=msg;
-  feedback.style.color=ok?'#2e7d32':'#c0392b';
+  feedback.style.color=color;
   saveBtn.disabled=!ok;
   saveBtn.style.opacity=ok?'1':'0.4';
   saveBtn.style.cursor=ok?'pointer':'not-allowed';
@@ -7442,11 +7533,9 @@ async function saveWhosOnPIN(){
     else await db.insert('roster_config',{id:'default',roster_view_pin:newPin});
     if(!_rosterConfig) _rosterConfig={id:'default'};
     _rosterConfig.roster_view_pin=newPin;
-    document.querySelectorAll('.wos-pin-box').forEach(i=>{i.value='';i.classList.remove('filled');});
-    document.getElementById('whos-on-pin-feedback').textContent='';
-    document.getElementById('whos-on-pin-save').disabled=true;
-    document.getElementById('whos-on-pin-save').style.opacity='0.4';
-    showToast('Who\'s On PIN updated');
+    _savedWosPin=newPin;
+    wosUpdatePinFeedback();
+    showToast('Who\'s On PIN updated ✓');
   }catch(e){showToast('Could not save PIN — check connection');console.error(e);}
 }
 
@@ -8531,22 +8620,41 @@ function renderRequestSettings(){
   });
 }
 
-async function saveRequestSettings(){
+async function saveSwapExpiry(){
   const days=parseInt(document.getElementById('swap-expiry-days').value)||7;
+  try{
+    const patch={swap_expiry_days:days};
+    if(_rosterConfig) await db.update('roster_config','default',patch);
+    else await db.insert('roster_config',{id:'default',...patch});
+    SWAP_EXPIRY_DAYS=days;
+    if(_rosterConfig) Object.assign(_rosterConfig,patch);
+    showToast('Swap expiry saved ✓');
+  }catch(e){ showToast('Error saving'); console.error(e); }
+}
+async function saveDeclineReason(){
   const showReason=document.getElementById('show-decline-reason').value==='true';
+  try{
+    const patch={show_decline_reason:showReason};
+    if(_rosterConfig) await db.update('roster_config','default',patch);
+    else await db.insert('roster_config',{id:'default',...patch});
+    SHOW_DECLINE_REASON=showReason;
+    if(_rosterConfig) Object.assign(_rosterConfig,patch);
+    showToast('Decline reason visibility saved ✓');
+  }catch(e){ showToast('Error saving'); console.error(e); }
+}
+async function saveGiveawayRoles(){
   const giveawayRoles=['Receptionist','Nurse','Manager'].filter(r=>{
     const el=document.getElementById('giveaway-'+r);
     return el?el.checked:GIVEAWAY_ENABLED[r];
   }).join(',');
   try{
-    const patch={swap_expiry_days:days,show_decline_reason:showReason,giveaway_enabled_roles:giveawayRoles};
+    const patch={giveaway_enabled_roles:giveawayRoles};
     if(_rosterConfig) await db.update('roster_config','default',patch);
     else await db.insert('roster_config',{id:'default',...patch});
-    SWAP_EXPIRY_DAYS=days; SHOW_DECLINE_REASON=showReason;
     ['Receptionist','Nurse','Manager'].forEach(r=>{ GIVEAWAY_ENABLED[r]=giveawayRoles.split(',').includes(r); });
     if(_rosterConfig) Object.assign(_rosterConfig,patch);
-    showToast('Request settings saved');
-  }catch(e){ showToast('Error saving settings'); console.error(e); }
+    showToast('Give Away roles saved ✓');
+  }catch(e){ showToast('Error saving'); console.error(e); }
 }
 
 let _raqPage=0;
@@ -8863,6 +8971,13 @@ if('serviceWorker' in navigator && location.protocol !== 'file:'){
     tab.addEventListener('touchend',onEnd,{passive:true});
   });
 })();
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const kc=document.getElementById('kiosk-build-credit');
+  if(kc) kc.textContent=`Built by Dr Joel Jaya · v${APP_VERSION}`;
+  const av=document.getElementById('about-version');
+  if(av) av.textContent=`Version ${APP_VERSION} · ${APP_VERSION_DATE}`;
+});
 
 window.addEventListener('load', ()=>{
   if(window.matchMedia('(max-width:960px)').matches){
