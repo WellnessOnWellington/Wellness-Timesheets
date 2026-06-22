@@ -7756,6 +7756,8 @@ function toggleExportCustomDates(){
 }
 
 // Returns array of {dates, label} — one per selected fortnight (or one for custom range)
+function rosterFileDateLabel(iso){ const[y,m,d]=iso.split('-'); return `${d}${m}${y.slice(2)}`; }
+
 function getExportDateRanges(){
   const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
   if(document.getElementById('export-fn-custom')?.checked){
@@ -7809,7 +7811,7 @@ async function exportRosterCSV(){
   const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download=`Roster_${dates[0]}_to_${dates[dates.length-1]}.csv`;
+  a.download=`Running_Well_Roster_${rosterFileDateLabel(dates[0])}-${rosterFileDateLabel(dates[dates.length-1])}.csv`;
   a.click();
   showToast(`Exported ${shifts.length} shifts`);
 }
@@ -7898,9 +7900,13 @@ async function printRoster(){
   const sheets=[];
   for(let i=0;i<pages.length;i+=2) sheets.push(`<div class="rp-sheet">${pages.slice(i,i+2).join('')}</div>`);
   document.getElementById('roster-print-area').innerHTML=sheets.join('');
+  const allDates=ranges.flatMap(r=>r.dates).sort();
+  const printTitle=`Running_Well_Roster_${rosterFileDateLabel(allDates[0])}-${rosterFileDateLabel(allDates[allDates.length-1])}`;
+  const prevTitle=document.title;
   setTimeout(()=>{
+    document.title=printTitle;
     window.print();
-    setTimeout(()=>{ document.getElementById('roster-print-area').innerHTML=''; },1500);
+    setTimeout(()=>{ document.title=prevTitle; document.getElementById('roster-print-area').innerHTML=''; },1500);
   },300);
 }
 
