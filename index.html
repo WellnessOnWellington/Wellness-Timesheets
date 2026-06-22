@@ -5351,33 +5351,35 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     const rostOut=(shift.end_time||'').slice(0,5);
 
     if(!entry){
-      tableRows.push({cells:[dateStr,'Not yet finalised',rostIn,rostOut,'','','','',''],type:'pending'});
+      tableRows.push({cells:[dateStr,'Not yet finalised','','','','','',''],type:'pending'});
       return;
     }
     if(entry.leaveType){
       const hrs=entry.hours!=null?parseFloat(entry.hours):null;
       if(hrs!=null&&!isNaN(hrs)) totalLeave+=hrs;
-      tableRows.push({cells:[dateStr,LEAVE_TYPES[entry.leaveType]||entry.leaveType,rostIn,rostOut,'','',hrs!=null?hrs.toFixed(2):'','',''],type:'leave'});
+      tableRows.push({cells:[dateStr,LEAVE_TYPES[entry.leaveType]||entry.leaveType,'','','',hrs!=null?hrs.toFixed(2):'','',''],type:'leave'});
       return;
     }
     // Worked
-    const finalIn=entry.finalStart||entry.clockIn||'';
-    const finalOut=entry.finalEnd||entry.clockOut||'';
+    const finalIn=(entry.finalStart||entry.clockIn||'').slice(0,5);
+    const finalOut=(entry.finalEnd||entry.clockOut||'').slice(0,5);
     const hrs=entry.hours!=null?parseFloat(entry.hours):null;
     if(hrs!=null&&!isNaN(hrs)) totalWorked+=hrs;
+    const breakMins=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:null;
+    const breakStr=breakMins!=null?`${breakMins}m`:'';
     const noteParts=[];
     if(entry.reasonIn) noteParts.push('In: '+entry.reasonIn);
     if(entry.reasonOut) noteParts.push('Out: '+entry.reasonOut);
     const resolvedNotes=empNotes.filter(n=>n.entryId===entry.id&&n.status!=='pending'&&n.resolvedBy);
     const approvedBy=resolvedNotes.length?resolvedNotes[0].resolvedBy:'';
-    tableRows.push({cells:[dateStr,'Worked',rostIn,rostOut,finalIn,finalOut,hrs!=null?hrs.toFixed(2):'',noteParts.join(' · '),approvedBy],type:'worked'});
+    tableRows.push({cells:[dateStr,'Worked',finalIn,finalOut,breakStr,hrs!=null?hrs.toFixed(2):'',noteParts.join(' · '),approvedBy],type:'worked'});
   });
 
   // ── Table ──
   doc.autoTable({
     startY:46,
     margin:{left:margin,right:margin},
-    head:[['Date','Type','R/In','R/Out','F/In','F/Out','Hrs','Notes','Approved By']],
+    head:[['Date','Type','In','Out','Break','Hrs','Notes','Approved By']],
     body:tableRows.map(r=>r.cells),
     styles:{font:'helvetica',fontSize:7.5,cellPadding:2.2,overflow:'linebreak'},
     headStyles:{fillColor:[139,37,53],textColor:255,fontStyle:'bold',fontSize:7.5,cellPadding:2.5},
@@ -5385,13 +5387,12 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     columnStyles:{
       0:{cellWidth:26},
       1:{cellWidth:23},
-      2:{cellWidth:14,halign:'center'},
-      3:{cellWidth:14,halign:'center'},
+      2:{cellWidth:16,halign:'center'},
+      3:{cellWidth:16,halign:'center'},
       4:{cellWidth:14,halign:'center'},
-      5:{cellWidth:14,halign:'center'},
-      6:{cellWidth:11,halign:'right'},
-      7:{cellWidth:34},
-      8:{cellWidth:32},
+      5:{cellWidth:12,halign:'right'},
+      6:{cellWidth:40},
+      7:{cellWidth:35},
     },
     didParseCell(data){
       if(data.section==='body'){
