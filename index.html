@@ -5346,7 +5346,7 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
       ||empEntries.find(e=>e.date===shift.date&&!e.shiftId);
     const dateObj=new Date(shift.date+'T12:00:00');
     const [_y,_m,_d]=shift.date.split('-');
-    const dateStr=dateObj.toLocaleDateString('en-AU',{weekday:'short'})+` ${_d}/${_m}/${_y.slice(2)}`;
+    const dateStr=`${_d}/${_m}/${_y.slice(2)} `+dateObj.toLocaleDateString('en-AU',{weekday:'short'});
     const rostIn=(shift.start_time||'').slice(0,5);
     const rostOut=(shift.end_time||'').slice(0,5);
 
@@ -5356,7 +5356,7 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     }
     if(entry.leaveType){
       const hrs=entry.hours!=null?parseFloat(entry.hours):null;
-      if(hrs!=null&&!isNaN(hrs)) totalLeave+=hrs;
+      if(hrs!=null&&!isNaN(hrs)&&entry.leaveType!=='public_holiday') totalLeave+=hrs;
       tableRows.push({cells:[dateStr,LEAVE_TYPES[entry.leaveType]||entry.leaveType,'','','',hrs!=null?hrs.toFixed(2):'','',''],type:'leave'});
       return;
     }
@@ -5365,13 +5365,15 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     const finalOut=(entry.finalEnd||entry.clockOut||'').slice(0,5);
     const hrs=entry.hours!=null?parseFloat(entry.hours):null;
     if(hrs!=null&&!isNaN(hrs)) totalWorked+=hrs;
-    const breakMins=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:null;
-    const breakStr=breakMins!=null?`${breakMins}m`:'';
+    const hasBreak=entry.unpaidBreakMins!=null||entry.paidBreakMins!=null;
+    const breakStr=hasBreak?`Paid: ${entry.paidBreakMins??0}m\nUnpaid: ${entry.unpaidBreakMins??0}m`:'';
     const noteParts=[];
     if(entry.reasonIn) noteParts.push('In: '+entry.reasonIn);
     if(entry.reasonOut) noteParts.push('Out: '+entry.reasonOut);
+    if(entry.breakNote) noteParts.push('Break: '+entry.breakNote);
+    if(entry.travelKm) noteParts.push('Car: '+entry.travelKm+'km');
     const resolvedNotes=empNotes.filter(n=>n.entryId===entry.id&&n.status!=='pending'&&n.resolvedBy);
-    const approvedBy=resolvedNotes.length?resolvedNotes[0].resolvedBy:'';
+    const approvedBy=resolvedNotes.length?(resolvedNotes[0].resolvedBy||'').split(' ').map(w=>w[0]||'').join(''):'';
     tableRows.push({cells:[dateStr,'Worked',finalIn,finalOut,breakStr,hrs!=null?hrs.toFixed(2):'',noteParts.join(' · '),approvedBy],type:'worked'});
   });
 
@@ -5379,20 +5381,21 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
   doc.autoTable({
     startY:46,
     margin:{left:margin,right:margin},
-    head:[['Date','Type','In','Out','Break','Hrs','Notes','Approved By']],
+    head:[['Date','Shift Type','In','Out','Break','Hours','Notes','Appr.']],
     body:tableRows.map(r=>r.cells),
-    styles:{font:'helvetica',fontSize:7.5,cellPadding:2.2,overflow:'linebreak'},
+    styles:{font:'helvetica',fontSize:7.5,cellPadding:2.2,overflow:'linebreak',halign:'left'},
     headStyles:{fillColor:[139,37,53],textColor:255,fontStyle:'bold',fontSize:7.5,cellPadding:2.5},
+    bodyStyles:{minCellHeight:10},
     alternateRowStyles:{fillColor:[253,248,248]},
     columnStyles:{
-      0:{cellWidth:26},
-      1:{cellWidth:23},
-      2:{cellWidth:16,halign:'center'},
-      3:{cellWidth:16,halign:'center'},
-      4:{cellWidth:14,halign:'center'},
-      5:{cellWidth:12,halign:'right'},
-      6:{cellWidth:40},
-      7:{cellWidth:35},
+      0:{cellWidth:22},
+      1:{cellWidth:22},
+      2:{cellWidth:14},
+      3:{cellWidth:14},
+      4:{cellWidth:20},
+      5:{cellWidth:14,fontStyle:'bold'},
+      6:{cellWidth:62},
+      7:{cellWidth:14},
     },
     didParseCell(data){
       if(data.section==='body'){
@@ -5403,18 +5406,6 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
         } else if(rowType==='leave'){
           data.cell.styles.textColor=[100,80,85];
         }
-      }
-    },
-    didDrawCell(data){
-      // Fine vertical dividers: left of R/In (col 2), left of F/In (col 4), right of F/Out (col 5)
-      const dividerCols=new Set([2,4]);
-      doc.setDrawColor(190,170,175);
-      doc.setLineWidth(0.25);
-      if(dividerCols.has(data.column.index)){
-        doc.line(data.cell.x,data.cell.y,data.cell.x,data.cell.y+data.cell.height);
-      }
-      if(data.column.index===5){
-        doc.line(data.cell.x+data.cell.width,data.cell.y,data.cell.x+data.cell.width,data.cell.y+data.cell.height);
       }
     },
   });
