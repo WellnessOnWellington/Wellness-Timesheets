@@ -2914,7 +2914,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const db = {
   async get(table, filters={}) {
-    let url = `${SUPABASE_URL}/rest/v1/${table}?select=*`;
+    let url = `${SUPABASE_URL}/rest/v1/${table}?select=*&limit=50000`;
     Object.entries(filters).forEach(([k,v]) => url += `&${k}=eq.${encodeURIComponent(v)}`);
     const r = await fetch(url, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }});
     if (!r.ok) throw new Error(await r.text());
