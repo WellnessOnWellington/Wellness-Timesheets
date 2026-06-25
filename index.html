@@ -6820,9 +6820,21 @@ function rbIsLocked(fnStart){ return RB_ROLES.some(r=>rbIsLockedForRole(fnStart,
 function rbIsPublished(fnStart){ return RB_ROLES.some(r=>rbIsPublishedForRole(fnStart,r)); }
 
 let _rbConfirmCallback=null;
+let _rbConfirmCancelCallback=null;
 let _rbCopyPending=null;
-function rbConfirmClose(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); _rbConfirmCallback=null; }
-function rbConfirmProceed(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); if(_rbConfirmCallback) _rbConfirmCallback(); _rbConfirmCallback=null; }
+function rbConfirmClose(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); if(_rbConfirmCancelCallback) _rbConfirmCancelCallback(); _rbConfirmCallback=null; _rbConfirmCancelCallback=null; }
+function rbConfirmProceed(){ document.getElementById('rb-confirm-overlay').classList.remove('show'); if(_rbConfirmCallback) _rbConfirmCallback(); _rbConfirmCallback=null; _rbConfirmCancelCallback=null; }
+
+function rbPastFortGuard(shiftDate, onConfirm, onCancel){
+  if(shiftDate && shiftDate < rbDateKey(new Date())){
+    document.getElementById('rb-confirm-title').textContent='Edit Past Fortnight?';
+    document.getElementById('rb-confirm-msg').textContent='This fortnight has already passed. Are you sure you want to make changes?';
+    const okBtn=document.getElementById('rb-confirm-ok');
+    okBtn.textContent='Edit Anyway'; okBtn.className='rb-confirm-ok danger';
+    _rbConfirmCallback=onConfirm; _rbConfirmCancelCallback=onCancel||null;
+    document.getElementById('rb-confirm-overlay').classList.add('show');
+  } else { onConfirm(); }
+}
 
 /* ── Undo stack ── */
 const _rbUndoStack=[];
@@ -7262,104 +7274,110 @@ function renderDayTimelineForRole(role){
 function rbRoleForEmp(empId){ const e=_emps.find(e=>e.id===empId); return e?.role||null; }
 
 async function rbAddShift(empId,date,role){
-  if(date<rbDateKey(new Date())) return; // past — locked
-  const r=role||rbRoleForEmp(empId);
-  const sched=getScheduledTimes(empId,date);
-  const start=sched?.startMin!=null?minToTimeStr(sched.startMin):'09:00';
-  const end=sched?.endMin!=null?minToTimeStr(sched.endMin):'17:00';
-  const row={id:'SH'+Date.now(),employee_id:empId,date,start_time:start,end_time:end,is_day_off:false};
-  _rosterShifts.push(row);
-  renderDayTimelineForRole(r);
-  const undoEntry={label:'shift added',fn:async()=>{
-    await db.delete('roster_shifts',row.id);
-    _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
+  rbPastFortGuard(date, async()=>{
+    const r=role||rbRoleForEmp(empId);
+    const sched=getScheduledTimes(empId,date);
+    const start=sched?.startMin!=null?minToTimeStr(sched.startMin):'09:00';
+    const end=sched?.endMin!=null?minToTimeStr(sched.endMin):'17:00';
+    const row={id:'SH'+Date.now(),employee_id:empId,date,start_time:start,end_time:end,is_day_off:false};
+    _rosterShifts.push(row);
     renderDayTimelineForRole(r);
-  }};
-  _rbUndoStack.push(undoEntry);
-  try{
-    await db.insert('roster_shifts',row);
-    showToast('Shift added');
-  }catch(e){
-    const idx=_rbUndoStack.indexOf(undoEntry); if(idx!==-1) _rbUndoStack.splice(idx,1);
-    _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
-    renderDayTimelineForRole(r);
-    showToast('Could not add shift');
-    console.error(e);
-  }
+    const undoEntry={label:'shift added',fn:async()=>{
+      await db.delete('roster_shifts',row.id);
+      _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
+      renderDayTimelineForRole(r);
+    }};
+    _rbUndoStack.push(undoEntry);
+    try{
+      await db.insert('roster_shifts',row);
+      showToast('Shift added');
+    }catch(e){
+      const idx=_rbUndoStack.indexOf(undoEntry); if(idx!==-1) _rbUndoStack.splice(idx,1);
+      _rosterShifts=_rosterShifts.filter(s=>s.id!==row.id);
+      renderDayTimelineForRole(r);
+      showToast('Could not add shift');
+      console.error(e);
+    }
+  });
 }
 
 async function rbSplitShift(shiftId,role){
   const shift=_rosterShifts.find(s=>s.id==shiftId);
   if(!shift) return;
-  const sMin=timeStrToMin(shift.start_time)||TL_START;
-  const eMin=timeStrToMin(shift.end_time)||TL_END;
-  if(eMin-sMin<=TL_SNAP){showToast('Shift too short to split');return;}
-  // Split at midpoint, snapped to nearest 15 min
-  const splitTime=minToTimeStr(Math.round((sMin+eMin)/2/TL_SNAP)*TL_SNAP);
-  const originalEnd=shift.end_time;
-  const prevEnd=shift.end_time;
-  shift.end_time=splitTime;
-  const newRow={id:'SH'+Date.now(),employee_id:shift.employee_id,date:shift.date,start_time:splitTime,end_time:originalEnd,is_day_off:false,lane:shift.lane||null};
-  _rosterShifts.push(newRow);
-  renderDayTimelineForRole(role||rbRoleForEmp(shift.employee_id));
-  try{
-    await db.update('roster_shifts',shiftId,{end_time:splitTime});
-    const returned=await db.insert('roster_shifts',newRow);
-    const saved=Array.isArray(returned)?returned[0]:returned;
-    if(saved?.id&&saved.id!==newRow.id){
-      const local=_rosterShifts.find(s=>s.id===newRow.id);
-      if(local) local.id=saved.id;
-    }
-    const savedNewId=(saved?.id&&saved.id!==newRow.id)?saved.id:newRow.id;
-    const splitRole=role||rbRoleForEmp(shift.employee_id);
-    rbPushUndo('shift split',async()=>{
-      await db.delete('roster_shifts',savedNewId);
-      _rosterShifts=_rosterShifts.filter(s=>s.id!==savedNewId);
-      shift.end_time=prevEnd;
-      await db.update('roster_shifts',shiftId,{end_time:prevEnd});
-      renderDayTimelineForRole(splitRole);
-    });
-    showToast('Shift split ✓');
-  }catch(e){
-    shift.end_time=prevEnd;
-    _rosterShifts=_rosterShifts.filter(s=>s.id!==newRow.id);
+  rbPastFortGuard(shift.date, async()=>{
+    const sMin=timeStrToMin(shift.start_time)||TL_START;
+    const eMin=timeStrToMin(shift.end_time)||TL_END;
+    if(eMin-sMin<=TL_SNAP){showToast('Shift too short to split');return;}
+    const splitTime=minToTimeStr(Math.round((sMin+eMin)/2/TL_SNAP)*TL_SNAP);
+    const originalEnd=shift.end_time;
+    const prevEnd=shift.end_time;
+    shift.end_time=splitTime;
+    const newRow={id:'SH'+Date.now(),employee_id:shift.employee_id,date:shift.date,start_time:splitTime,end_time:originalEnd,is_day_off:false,lane:shift.lane||null};
+    _rosterShifts.push(newRow);
     renderDayTimelineForRole(role||rbRoleForEmp(shift.employee_id));
-    showToast('Could not split shift');console.error(e);
-  }
+    try{
+      await db.update('roster_shifts',shiftId,{end_time:splitTime});
+      const returned=await db.insert('roster_shifts',newRow);
+      const saved=Array.isArray(returned)?returned[0]:returned;
+      if(saved?.id&&saved.id!==newRow.id){
+        const local=_rosterShifts.find(s=>s.id===newRow.id);
+        if(local) local.id=saved.id;
+      }
+      const savedNewId=(saved?.id&&saved.id!==newRow.id)?saved.id:newRow.id;
+      const splitRole=role||rbRoleForEmp(shift.employee_id);
+      rbPushUndo('shift split',async()=>{
+        await db.delete('roster_shifts',savedNewId);
+        _rosterShifts=_rosterShifts.filter(s=>s.id!==savedNewId);
+        shift.end_time=prevEnd;
+        await db.update('roster_shifts',shiftId,{end_time:prevEnd});
+        renderDayTimelineForRole(splitRole);
+      });
+      showToast('Shift split ✓');
+    }catch(e){
+      shift.end_time=prevEnd;
+      _rosterShifts=_rosterShifts.filter(s=>s.id!==newRow.id);
+      renderDayTimelineForRole(role||rbRoleForEmp(shift.employee_id));
+      showToast('Could not split shift');console.error(e);
+    }
+  });
 }
 
 async function rbDeleteShift(shiftId,role){
   const shift=_rosterShifts.find(s=>s.id==shiftId);
   const r=role||rbRoleForEmp(shift?.employee_id);
   const snapshot=shift?{...shift}:null;
-  try{
-    await db.delete('roster_shifts',shiftId);
-    _rosterShifts=_rosterShifts.filter(s=>s.id!==shiftId);
-    renderDayTimelineForRole(r);
-    if(snapshot) rbPushUndo('shift deleted',async()=>{
-      await db.insert('roster_shifts',snapshot);
-      _rosterShifts.push(snapshot);
+  rbPastFortGuard(shift?.date, async()=>{
+    try{
+      await db.delete('roster_shifts',shiftId);
+      _rosterShifts=_rosterShifts.filter(s=>s.id!==shiftId);
       renderDayTimelineForRole(r);
-    });
-    showToast('Shift removed');
-  }catch(e){showToast('Could not remove');console.error(e);}
+      if(snapshot) rbPushUndo('shift deleted',async()=>{
+        await db.insert('roster_shifts',snapshot);
+        _rosterShifts.push(snapshot);
+        renderDayTimelineForRole(r);
+      });
+      showToast('Shift removed');
+    }catch(e){showToast('Could not remove');console.error(e);}
+  });
 }
 
 async function rbToggleLane(shiftId, role){
   const shift=_rosterShifts.find(s=>s.id==shiftId);
   if(!shift) return;
-  const secondaryLane=role==='Receptionist'?'admin':'75plus';
-  const newLane=shift.lane===secondaryLane?'floor':secondaryLane;
-  const prevLane=shift.lane;
-  shift.lane=newLane;
-  renderDayTimelineForRole(role);
-  try{
-    await db.update('roster_shifts',shiftId,{lane:newLane});
-  }catch(e){
-    shift.lane=prevLane;
+  rbPastFortGuard(shift.date, async()=>{
+    const secondaryLane=role==='Receptionist'?'admin':'75plus';
+    const newLane=shift.lane===secondaryLane?'floor':secondaryLane;
+    const prevLane=shift.lane;
+    shift.lane=newLane;
     renderDayTimelineForRole(role);
-    showToast('Could not move shift');console.error(e);
-  }
+    try{
+      await db.update('roster_shifts',shiftId,{lane:newLane});
+    }catch(e){
+      shift.lane=prevLane;
+      renderDayTimelineForRole(role);
+      showToast('Could not move shift');console.error(e);
+    }
+  });
 }
 
 async function rbSaveShiftTimes(shiftId,startTime,endTime){
@@ -7389,7 +7407,6 @@ function rbStartDrag(e,shiftId,type){
   // Use loose equality (==) so string '123' matches numeric id 123 from DB
   const shift=_rosterShifts.find(s=>s.id==shiftId);
   if(!shift) return;
-  if(shift.date&&shift.date<rbDateKey(new Date())) return; // past — locked
   const shiftRole=rbRoleForEmp(shift.employee_id);
   if(shiftRole && rbIsLockedForRole(rbGetFnStart(),shiftRole)) return;
   // Walk up from e.target to find the bar element directly, then its track parent
@@ -7429,11 +7446,19 @@ function rbOnMouseMove(e){
 
 function rbOnMouseUp(){
   if(!_rbDrag) return;
-  const{shiftId,curStart,curEnd}=_rbDrag;
-  _rbDrag.barEl.classList.remove('dragging');
+  const{shiftId,curStart,curEnd,barEl}=_rbDrag;
+  barEl.classList.remove('dragging');
   _rbDrag=null;
   rbRemoveDragIndicators();
-  if(curStart!=null&&curEnd!=null) rbSaveShiftTimes(shiftId,minToTimeStr(curStart),minToTimeStr(curEnd));
+  if(curStart!=null&&curEnd!=null){
+    const shift=_rosterShifts.find(s=>s.id==shiftId);
+    const role=shift?rbRoleForEmp(shift.employee_id):null;
+    rbPastFortGuard(
+      shift?.date,
+      ()=>rbSaveShiftTimes(shiftId,minToTimeStr(curStart),minToTimeStr(curEnd)),
+      ()=>role&&renderDayTimelineForRole(role)
+    );
+  }
 }
 
 function rbRemoveDragIndicators(){
