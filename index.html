@@ -7023,8 +7023,9 @@ async function rbCopyModalProceed(){
 function rbRemoveDuplicates(role){
   const fnStart=rbGetFnStart();
   const fnDays=getFortnight14Days(rbDateKey(fnStart));
-  const roleEmpIds=new Set(rbGetEmpsForRole(role).map(e=>e.id));
-  const roleShifts=_rosterShifts.filter(s=>roleEmpIds.has(s.employee_id)&&fnDays.includes(s.date));
+  const roleEmpIds=new Set(rbGetEmpsForRole(role).map(e=>String(e.id)));
+  const roleShifts=_rosterShifts.filter(s=>roleEmpIds.has(String(s.employee_id))&&fnDays.includes(s.date));
+  console.log('[dedup] fnDays:',fnDays,'roleEmpIds:',[...roleEmpIds],'roleShifts:',roleShifts.length);
   const seen=new Map();
   const toDelete=[];
   roleShifts.forEach(s=>{
