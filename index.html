@@ -4354,6 +4354,9 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
 
   const rowClass=['ts-shift-row',locked?'ts-locked':'',`ts-flag-${flag}`].filter(Boolean).join(' ');
 
+  const overrideKey=entryId?String(entryId):`${safeEmpId}_${date}`;
+  const autoOverridden=effectiveAutoApproved&&_tsAutoOverride.has(overrideKey);
+
   const finalMins=(effectiveFinalStart&&effectiveFinalEnd)?timeToMin(effectiveFinalEnd)-timeToMin(effectiveFinalStart):0;
   const billableMins=Math.max(0,finalMins-(entry?.unpaidBreakMins!=null?entry.unpaidBreakMins:expectedUnpaidBreakMins(finalMins/60)));
   const hoursText=billableMins>0?`${(billableMins/60).toFixed(1)}h`:''; // paid hours after unpaid break deduction
@@ -4365,7 +4368,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     ?{...(entry||{}),date,clockIn:shift.start_time,clockOut:shift.end_time,finalStart:null,finalEnd:null}
     :entry;
   const myobPreviewText=(locked||effectiveAutoApproved)&&myobEntry?calcMYOBRows(myobEntry,emp,isPH).map(r=>`${fmtH(r.hours)} ${r.cat}`).join(' · '):'';
-  const payrollDone=locked||effectiveAutoApproved;
+  const payrollDone=locked||(effectiveAutoApproved&&!autoOverridden);
   const payrollInner=payrollDone
     ?`<span class="ts-payroll-label">${PAYROLL_TYPES.find(([v])=>v===payrollType)?.[1]||'Worked'}</span>`
     :`<select class="ts-payroll-select" onclick="event.stopPropagation()" onchange="tsSavePayrollType('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',this.value)">${PAYROLL_TYPES.map(([v,l])=>`<option value="${v}"${payrollType===v?' selected':''}>${l}</option>`).join('')}</select>`;
@@ -4394,8 +4397,6 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       <input class="ts-time-hm" type="text" maxlength="2" placeholder="MM" value="${mm||''}" onclick="event.stopPropagation()" oninput="tsHMInput(this,'m')" onblur="tsHMBlur(this.closest('.ts-time-pair'))" onkeydown="if(event.key==='Enter'){event.preventDefault();tsHMSave(this.closest('.ts-time-pair'))}">
     </div>`;
   };
-  const overrideKey=entryId?String(entryId):`${safeEmpId}_${date}`;
-  const autoOverridden=effectiveAutoApproved&&_tsAutoOverride.has(overrideKey);
   const finalInputs=locked||(effectiveAutoApproved&&!autoOverridden)
     ?`<span class="ts-sub-time" style="font-family:'Courier New',monospace;font-weight:800;font-size:0.88rem;">${effectiveFinalStart||'—'} – ${effectiveFinalEnd||'—'}</span>`
     :`${mkPair(effectiveFinalStart,'start')}<span class="ts-sub-dash">–</span>${mkPair(effectiveFinalEnd,'end')}`;
@@ -4808,11 +4809,8 @@ async function tsUnlockRow(entryId, e){
     await db.update('entries',entryId,{locked:false,locked_by:null,locked_at:null});
     const entry=_entries.find(en=>en.id===entryId);
     if(entry){entry.locked=false;entry.lockedBy=null;}
-    // Force override so row stays editable after unlock:
-    // - no-clock entries (created via roster lock, clockIn is null)
-    // - leave entries (clockIn is set to roster time, not a real clock-in)
-    if(entry&&(!entry.clockIn||entry.leaveType)) _tsAutoOverride.add(String(entryId));
-    else _tsAutoOverride.delete(String(entryId));
+    // Always mark as overridden so row is fully editable after unlock
+    _tsAutoOverride.add(String(entryId));
     _tsExpandEntryId=String(entryId);
     renderTimesheets();
     _tsExpandEntryId=null;
