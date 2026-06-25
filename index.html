@@ -937,6 +937,8 @@
   .rb-copy-btn { background:var(--blush-lt); border:1.5px solid var(--burgundy); border-radius:8px; padding:0.32rem 0.8rem; cursor:pointer; font-size:0.72rem; font-weight:700; color:var(--burgundy); font-family:'Nunito',sans-serif; transition:all 0.15s; }
   .rb-copy-btn:hover { background:var(--burgundy); color:#fff; }
   .rb-copy-btn:disabled { background:var(--warm-white); border-color:var(--border); color:var(--muted); cursor:not-allowed; opacity:0.55; }
+  .rb-dedup-btn { background:var(--warm-white); border:1.5px solid var(--border); border-radius:8px; padding:0.32rem 0.8rem; cursor:pointer; font-size:0.72rem; font-weight:700; color:var(--muted); font-family:'Nunito',sans-serif; transition:all 0.15s; }
+  .rb-dedup-btn:hover { background:#fdf3f0; border-color:#c0392b; color:#c0392b; }
   .rb-publish-btn { background:#e8f5e9; border:1.5px solid #2e7d32; border-radius:8px; padding:0.32rem 0.8rem; cursor:pointer; font-size:0.72rem; font-weight:700; color:#1b5e20; font-family:'Nunito',sans-serif; transition:all 0.15s; }
   .rb-publish-btn:hover { background:#2e7d32; color:#fff; }
   .rb-publish-btn.published { background:#2e7d32; border-color:#1b5e20; color:#fff; }
@@ -6744,6 +6746,7 @@ function renderRosterPanels(){
             <span class="rb-panel-title">${RB_ROLE_LABELS[role]}</span>
           </div>
           <div class="rb-panel-actions" onclick="event.stopPropagation()">
+            <button class="rb-dedup-btn" id="rb-dedup-btn-${role}" onclick="rbRemoveDuplicates('${role}')">Remove Duplicates</button>
             <button class="rb-copy-btn" id="rb-copy-btn-${role}" onclick="rbCopyLastFnForRole('${role}')">Copy Last Fortnight</button>
             <button class="rb-publish-btn" id="rb-publish-btn-${role}" onclick="rbTogglePublishForRole('${role}')">&#10003; Publish Roster</button>
           </div>
@@ -7003,6 +7006,33 @@ async function rbCopyModalProceed(){
       :`${toInsert.length} shift${toInsert.length!==1?'s':''} copied for ${RB_ROLE_LABELS[role]}\nCtrl+Z to undo`;
     showToast(msg);
   }catch(e){showToast('Copy error: '+e.message.slice(0,80));console.error(e);}
+}
+
+function rbRemoveDuplicates(role){
+  const roleEmpIds=new Set(rbGetEmpsForRole(role).map(e=>e.id));
+  const roleShifts=_rosterShifts.filter(s=>roleEmpIds.has(s.employee_id));
+  const seen=new Map();
+  const toDelete=[];
+  roleShifts.forEach(s=>{
+    const key=`${s.employee_id}|${s.date}|${s.start_time}|${s.end_time}`;
+    if(seen.has(key)) toDelete.push(s.id);
+    else seen.set(key,s.id);
+  });
+  if(!toDelete.length){showToast('No duplicate shifts found for '+RB_ROLE_LABELS[role]);return;}
+  document.getElementById('rb-confirm-title').textContent='Remove Duplicate Shifts?';
+  document.getElementById('rb-confirm-msg').innerHTML=`Found <strong>${toDelete.length}</strong> duplicate shift${toDelete.length!==1?'s':''} for ${RB_ROLE_LABELS[role]}. This will permanently delete the extras, keeping one copy of each.`;
+  const okBtn=document.getElementById('rb-confirm-ok');
+  okBtn.textContent='Remove Duplicates';
+  okBtn.className='rb-confirm-ok danger';
+  _rbConfirmCallback=async()=>{
+    try{
+      await Promise.all(toDelete.map(id=>db.delete('roster_shifts',id)));
+      _rosterShifts=_rosterShifts.filter(s=>!toDelete.includes(s.id));
+      renderRoster();
+      showToast(`${toDelete.length} duplicate shift${toDelete.length!==1?'s':''} removed`);
+    }catch(e){showToast('Error removing duplicates: '+e.message.slice(0,80));console.error(e);}
+  };
+  document.getElementById('rb-confirm-overlay').classList.add('show');
 }
 
 function renderFnGridForRole(role){
