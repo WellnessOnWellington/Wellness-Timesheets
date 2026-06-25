@@ -7009,25 +7009,36 @@ async function rbCopyModalProceed(){
 }
 
 function rbRemoveDuplicates(role){
+  const fnStart=rbGetFnStart();
+  const fnDays=getFortnight14Days(rbDateKey(fnStart));
   const roleEmpIds=new Set(rbGetEmpsForRole(role).map(e=>e.id));
-  const roleShifts=_rosterShifts.filter(s=>roleEmpIds.has(s.employee_id));
+  const roleShifts=_rosterShifts.filter(s=>roleEmpIds.has(s.employee_id)&&fnDays.includes(s.date));
   const seen=new Map();
   const toDelete=[];
   roleShifts.forEach(s=>{
     const key=`${s.employee_id}|${s.date}|${s.start_time}|${s.end_time}`;
-    if(seen.has(key)) toDelete.push(s.id);
+    if(seen.has(key)) toDelete.push(s);
     else seen.set(key,s.id);
   });
-  if(!toDelete.length){showToast('No duplicate shifts found for '+RB_ROLE_LABELS[role]);return;}
+  if(!toDelete.length){showToast('No duplicate shifts found for '+RB_ROLE_LABELS[role]+' this fortnight');return;}
+  const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+  const fnEnd=new Date(fnStart); fnEnd.setDate(fnEnd.getDate()+13);
+  const periodLabel=`${new Date(fnStart).toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'2-digit'})} – ${fnEnd.toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'2-digit'})}`;
+  let html=`<div style="margin-bottom:0.8rem;font-size:0.85rem;color:var(--muted);">Deleting duplicates from <strong style="color:var(--charcoal)">${periodLabel}</strong></div>`;
+  html+=toDelete.map(s=>{
+    const empName=_emps.find(e=>e.id===s.employee_id)?.name||'Unknown';
+    return`<div style="display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid var(--border);font-size:0.82rem;"><span>${empName}</span><span style="color:var(--muted)">${fmtD(s.date)} · ${s.start_time}–${s.end_time}</span></div>`;
+  }).join('');
   document.getElementById('rb-confirm-title').textContent='Remove Duplicate Shifts?';
-  document.getElementById('rb-confirm-msg').innerHTML=`Found <strong>${toDelete.length}</strong> duplicate shift${toDelete.length!==1?'s':''} for ${RB_ROLE_LABELS[role]}. This will permanently delete the extras, keeping one copy of each.`;
+  document.getElementById('rb-confirm-msg').innerHTML=html;
   const okBtn=document.getElementById('rb-confirm-ok');
-  okBtn.textContent='Remove Duplicates';
+  okBtn.textContent=`Delete ${toDelete.length} Duplicate${toDelete.length!==1?'s':''}`;
   okBtn.className='rb-confirm-ok danger';
+  const toDeleteIds=toDelete.map(s=>s.id);
   _rbConfirmCallback=async()=>{
     try{
-      await Promise.all(toDelete.map(id=>db.delete('roster_shifts',id)));
-      _rosterShifts=_rosterShifts.filter(s=>!toDelete.includes(s.id));
+      await Promise.all(toDeleteIds.map(id=>db.delete('roster_shifts',id)));
+      _rosterShifts=_rosterShifts.filter(s=>!toDeleteIds.includes(s.id));
       renderRoster();
       showToast(`${toDelete.length} duplicate shift${toDelete.length!==1?'s':''} removed`);
     }catch(e){showToast('Error removing duplicates: '+e.message.slice(0,80));console.error(e);}
