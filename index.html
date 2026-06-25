@@ -7166,7 +7166,7 @@ function renderDayTimelineForRole(role){
   if(!header||!rows||!cov||!selectedDay) return;
   const isLocked=rbIsLockedForRole(rbGetFnStart(),role);
   const isPastDay=selectedDay<rbDateKey(new Date());
-  const readOnly=isLocked||isPastDay;
+  const readOnly=isLocked;
   rows.classList.toggle('published',isLocked&&!isPastDay);
   const isNurse=role==='Nurse';
   const isReceptionist=role==='Receptionist';
