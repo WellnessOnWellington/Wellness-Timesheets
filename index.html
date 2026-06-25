@@ -4628,7 +4628,9 @@ function renderTimesheets(){
       const shift=empShifts.find(s=>s.date===date)||null;
       const dayEntries=empEntries.filter(e=>e.date===date);
       const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
-      return entry?.locked===true||tsIsAutoApproved(entry,shift);
+      const _pt=entry?.payrollType||entry?.leaveType||'';
+      const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
+      return entry?.locked===true||tsIsAutoApproved(entry,shift)||_nce;
     });
     const myobBadge=allLocked?`<div class="ts-emp-myob-badge">Ready for MYOB</div>`:'';
     const totalHrsEl=totalMins>0?`<div class="ts-emp-hours${allLocked?' ready':''}">${(totalMins/60).toFixed(1)}h</div>`:'';
