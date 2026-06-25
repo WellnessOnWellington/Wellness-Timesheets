@@ -4606,7 +4606,7 @@ function renderTimesheets(){
       const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
       const _effAuto=tsIsAutoApproved(entry,shift)||_nce;
       const f=tsGetFlag(entry?.locked||false,!entry&&!!shift&&!_nce,entry?.finalStart||entry?.clockIn||null,entry?.finalEnd||entry?.clockOut||null,_effAuto,entry?.status||null,tsMissedClockOut(entry));
-      if(f==='red'||f==='flagged') acc++;
+      if(f==='red'||f==='flagged'||f==='yellow') acc++;
       return acc;
     },0);
 
