@@ -6981,8 +6981,7 @@ async function rbCopyModalProceed(){
   if(!toInsert.length){showToast('No shifts to copy.');return;}
   try{
     await db.bulkInsert('roster_shifts',toInsert);
-    const freshShifts=await db.get('roster_shifts');
-    _rosterShifts=freshShifts;
+    _rosterShifts.push(...toInsert);
     renderRoster();
     const copiedIds=toInsert.map(s=>s.id);
     rbPushUndo(`${toInsert.length} shifts copied`,async()=>{
