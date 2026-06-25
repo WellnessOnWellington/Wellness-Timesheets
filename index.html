@@ -7025,12 +7025,7 @@ function rbRemoveDuplicates(role){
   const fnDays=getFortnight14Days(rbDateKey(fnStart));
   const roleEmpIds=new Set(rbGetEmpsForRole(role).map(e=>String(e.id)));
   const roleShifts=_rosterShifts.filter(s=>roleEmpIds.has(String(s.employee_id))&&fnDays.includes(s.date));
-  console.log('[dedup] fnDays:',fnDays,'roleEmpIds:',[...roleEmpIds],'roleShifts:',roleShifts.length);
   const normT=t=>t?String(t).slice(0,5):'';
-  // Log any employee+date combos with >1 shift to diagnose time format differences
-  const dateEmpGroups={};
-  roleShifts.forEach(s=>{const k=`${s.employee_id}|${s.date}`;(dateEmpGroups[k]=dateEmpGroups[k]||[]).push(s);});
-  Object.entries(dateEmpGroups).filter(([,v])=>v.length>1).forEach(([k,v])=>console.log('[dedup] dup candidate',k,v.map(s=>({start:s.start_time,end:s.end_time}))));
   const seen=new Map();
   const toDelete=[];
   roleShifts.forEach(s=>{
