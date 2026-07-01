@@ -3480,6 +3480,7 @@ document.addEventListener('click',e=>{
   if(e.target.id==='test-rfid'||e.target.id==='test-rfid-req')return;
   if(e.target.tagName==='BUTTON'&&e.target.onclick?.toString().includes('testScan'))return;
   if(e.target.tagName==='SELECT'||e.target.closest('select'))return;
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
   if(!document.getElementById('reason-overlay').classList.contains('show'))focusRFID();
 });
 rfidEl.addEventListener('input',()=>{
