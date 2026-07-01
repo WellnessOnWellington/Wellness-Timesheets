@@ -8497,7 +8497,9 @@ async function renderRequestForm(){
   const myShiftOptions=_reqMyShifts.length
     ?_reqMyShifts.map(s=>s.on_leave?`<option value="${s.id}" disabled>${reqFmtDate(s.date)} ${s.start_time}–${s.end_time} (Not in)</option>`:`<option value="${s.id}">${reqFmtDate(s.date)} ${s.start_time}–${s.end_time}</option>`).join('')
     :'<option value="">No upcoming shifts found</option>';
-  const sameRoleEmps=_emps.filter(e=>e.id!==emp.id&&e.active!==false&&!e.is_placeholder&&(e.role===emp.role||(emp.classification&&e.classification&&e.classification===emp.classification)));
+  const _nursingClasses=['Registered Nurse','Enrolled Nurse'];
+  const _canSwap=(a,b)=>a.role===b.role||(_nursingClasses.includes(a.classification)&&(b.role==='Nurse'||_nursingClasses.includes(b.classification)));
+  const sameRoleEmps=_emps.filter(e=>e.id!==emp.id&&e.active!==false&&!e.is_placeholder&&_canSwap(emp,e));
   const colleagueOptions=sameRoleEmps.length
     ?'<option value="">Select colleague…</option>'+sameRoleEmps.map(e=>`<option value="${e.id}">${escHtml(e.name)}</option>`).join('')
     :'<option value="">No colleagues of same role found</option>';
@@ -8589,7 +8591,8 @@ async function reqSubmitSwap(){
   const colShift=_reqColleagueShifts.find(s=>s.id===colleagueShiftId);
   const colleague=_emps.find(e=>e.id===colleagueId);
   if(!myShift||!colShift||!colleague){ showToast('Could not find shift data'); return; }
-  const canSwapWith=(a,b)=>a.role===b.role||(a.classification&&b.classification&&a.classification===b.classification);
+  const nursingClasses=['Registered Nurse','Enrolled Nurse'];
+  const canSwapWith=(a,b)=>a.role===b.role||(nursingClasses.includes(a.classification)&&(b.role==='Nurse'||nursingClasses.includes(b.classification)));
   if(!canSwapWith(emp,colleague)){ showToast('Swaps can only be with staff of the same role or classification'); return; }
   const id='REQ'+Date.now();
   const now=new Date().toISOString();
@@ -8613,7 +8616,8 @@ async function reqSubmitGiveaway(){
   const myShift=_reqMyShifts.find(s=>s.id===myShiftId);
   const colleague=_emps.find(e=>e.id===colleagueId);
   if(!myShift||!colleague){ showToast('Could not find shift data'); return; }
-  const canSwapWith=(a,b)=>a.role===b.role||(a.classification&&b.classification&&a.classification===b.classification);
+  const nursingClasses=['Registered Nurse','Enrolled Nurse'];
+  const canSwapWith=(a,b)=>a.role===b.role||(nursingClasses.includes(a.classification)&&(b.role==='Nurse'||nursingClasses.includes(b.classification)));
   if(!canSwapWith(emp,colleague)){ showToast('Can only give a shift to someone of the same role or classification'); return; }
   const id='REQ'+Date.now();
   const now=new Date().toISOString();
