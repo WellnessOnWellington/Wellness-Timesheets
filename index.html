@@ -1060,6 +1060,18 @@
     .rp-shift { color:#000; font-weight:600; }
     .rp-leave { color:#000; font-weight:700; font-style:italic; }
     .rp-off { color:#888; }
+    /* Large / Nurses template overrides */
+    .rp-large .rp-header-logo { height:72px; }
+    .rp-large .rp-header-clinic { font-size:22pt; }
+    .rp-large .rp-header-sub { font-size:16pt; }
+    .rp-large .rp-header-right { font-size:16pt; }
+    .rp-large .rp-role-label { font-size:26pt; margin-bottom:12px; }
+    .rp-large .rp-table { font-size:14pt; }
+    .rp-large .rp-table th { font-size:13pt; padding:6px 8px; }
+    .rp-large .rp-table td { font-size:13pt; padding:6px 8px; }
+    .rp-large .rp-table td.rp-name-cell { font-size:14pt; padding:6px 8px; }
+    /* 75+ lane highlight for Nurses template */
+    .rp-cell-75plus { background:#d8d8d8 !important; }
   }
   .rb-day-hdr { font-size:0.58rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); }
   .rb-day-date { font-size:1.1rem; font-weight:900; color:var(--charcoal); line-height:1.1; }
@@ -2418,6 +2430,15 @@
                 <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;"><input type="checkbox" id="print-role-Manager" checked style="accent-color:var(--burgundy);"> Managers</label>
               </div>
             </div>
+            <div>
+              <div class="form-label" style="margin-bottom:0.6rem;">Template</div>
+              <select id="print-template" class="form-select" style="min-width:140px;">
+                <option value="compact">Compact</option>
+                <option value="large">Large</option>
+                <option value="nurses">Nurses</option>
+              </select>
+              <div class="form-hint" style="margin-top:0.4rem;">Large: landscape, 7 days/page.<br/>Nurses: large + nursing staff only.</div>
+            </div>
           </div>
           <div style="border-top:1.5px solid var(--border);margin-bottom:1.25rem;"></div>
           <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
@@ -2604,9 +2625,16 @@
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
-                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v1.4</div>
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v1.5</div>
                 <div>
-                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">10 June 2026 &mdash; Roster UX &amp; Per-Role Settings</div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">1 July 2026 &mdash; Print Templates &amp; Smart Shift Swaps</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Roster print now offers Compact, Large, and Nurses templates. Large prints landscape across two pages (Week A / Week B) at double size. Nurses template filters to nursing-classified staff with 75+ lane shifts highlighted in grey. Shift swaps and give-aways now match on classification as well as role, allowing the nurse manager to swap shifts with nurses.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v1.4</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">10 June 2026 &mdash; Roster UX &amp; Per-Role Settings</div>
                   <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Copy fortnight overhauled with conflict detection modal and Ctrl+Z undo. Auto-approve fixed to require an actual clock-in. Settings reorganised into Role Thresholds, Access Control, and Calendar Setup — grace period, discrepancy flagging, and coverage thresholds now configurable per role.</div>
                 </div>
               </div>
@@ -2669,7 +2697,7 @@
               <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
                 <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v0.1</div>
                 <div>
-                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">6 March 2026 &mdash; Conception</div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">6 March 2026 &mdash; Inception</div>
                   <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">RFID card scanning, kiosk clock-in/out, live clock display.</div>
                 </div>
               </div>
@@ -3134,8 +3162,8 @@ function showLoading(on) {
   el.style.opacity = on ? '1' : '0';
 }
 
-const APP_VERSION='1.4';
-const APP_VERSION_DATE='June 2026';
+const APP_VERSION='1.5';
+const APP_VERSION_DATE='July 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 let GRACE_BY_ROLE={Receptionist:10,Nurse:10,Manager:10};
 let YELLOW_BY_ROLE={Receptionist:10,Nurse:10,Manager:10};
@@ -7922,6 +7950,9 @@ async function exportRosterCSV(){
 async function printRoster(){
   const ranges=getExportDateRanges();
   if(!ranges) return;
+  const template=document.getElementById('print-template')?.value||'compact';
+  const isLarge=template==='large'||template==='nurses';
+  const isNurses=template==='nurses';
   const selectedRoles=['Receptionist','Nurse','Manager'].filter(r=>document.getElementById('print-role-'+r)?.checked);
   if(!selectedRoles.length){showToast('Select at least one role');return;}
   try{
@@ -7933,75 +7964,96 @@ async function printRoster(){
   const roleLabelMap={Receptionist:'Receptionists',Nurse:'Nurses',Manager:'Managers'};
   const printed=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
   const pages=[];
+  const pgClass=isLarge?' rp-large':'';
+  const nameColPct=isLarge?15:13;
+  const printedSize=isLarge?'14pt':'7pt';
 
-  ranges.forEach(range=>{
-    const days=range.dates;
-    const fnLabel=range.label;
-
-    selectedRoles.forEach(role=>{
-      const roleEmps=_emps.filter(e=>e.role===role&&e.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
-      if(!roleEmps.length) return;
-
-      const dayHeaders=days.map(d=>{
-        const dt=new Date(d+'T12:00:00');
-        return`<th>${dt.toLocaleDateString('en-AU',{weekday:'short'})}<br/>${dt.getDate()}/${dt.getMonth()+1}</th>`;
+  function buildRosterPage(emps,days,pageLabel,fnLabel){
+    const dayHeaders=days.map(d=>{
+      const dt=new Date(d+'T12:00:00');
+      return`<th>${dt.toLocaleDateString('en-AU',{weekday:'short'})}<br/>${dt.getDate()}/${dt.getMonth()+1}</th>`;
+    }).join('');
+    const empRows=emps.map(emp=>{
+      const cells=days.map(d=>{
+        const shifts=_rosterShifts.filter(s=>s.employee_id==emp.id&&s.date===d&&!s.is_day_off);
+        const dayEntries=_entries.filter(e=>e.employeeId===emp.id&&e.date===d&&!e.deleted);
+        if(!shifts.length){
+          const hasLeave=dayEntries.some(e=>e.leaveType);
+          return hasLeave
+            ?`<td><span class="rp-leave" style="text-decoration:line-through;">—</span></td>`
+            :`<td><span class="rp-off">—</span></td>`;
+        }
+        const has75plus=isNurses&&shifts.some(s=>s.lane==='75plus');
+        const cellAttr=has75plus?' class="rp-cell-75plus"':'';
+        return`<td${cellAttr}>${shifts.map(s=>{
+          const match=dayEntries.find(e=>e.shiftId===s.id);
+          const t=(s.start_time||'').slice(0,5);
+          const b=(s.end_time||'').slice(0,5);
+          if(match?.leaveType) return`<span class="rp-leave" style="text-decoration:line-through;">${t}<br/>${b}</span>`;
+          return`<span class="rp-shift">${t}<br/>${b}</span>`;
+        }).join('<br/>')}</td>`;
       }).join('');
-
-      const empRows=roleEmps.map(emp=>{
-        const cells=days.map(d=>{
-          const shifts=_rosterShifts.filter(s=>s.employee_id==emp.id&&s.date===d&&!s.is_day_off);
-          const dayEntries=_entries.filter(e=>e.employeeId===emp.id&&e.date===d&&!e.deleted);
-          // No roster shifts — show leave dash or off
-          if(!shifts.length){
-            const hasLeave=dayEntries.some(e=>e.leaveType);
-            return hasLeave
-              ?`<td><span class="rp-leave" style="text-decoration:line-through;">—</span></td>`
-              :`<td><span class="rp-off">—</span></td>`;
-          }
-          // Match each shift to its entry by shiftId — strike only shifts with a leave entry
-          return`<td>${shifts.map(s=>{
-            const match=dayEntries.find(e=>e.shiftId===s.id);
-            const t=(s.start_time||'').slice(0,5);
-            const b=(s.end_time||'').slice(0,5);
-            if(match?.leaveType) return`<span class="rp-leave" style="text-decoration:line-through;">${t}<br/>${b}</span>`;
-            return`<span class="rp-shift">${t}<br/>${b}</span>`;
-          }).join('<br/>')}</td>`;
-        }).join('');
-        return`<tr><td class="rp-name-cell">${emp.name}</td>${cells}</tr>`;
-      }).join('');
-
-      pages.push(`
-        <div class="rp-page">
-          <div class="rp-header">
-            <div class="rp-header-left">
-              <img src="${logoUrl}" class="rp-header-logo" alt="Wellness on Wellington" />
-              <div>
-                <div class="rp-header-clinic">Wellness on Wellington</div>
-                <div class="rp-header-sub">Running Well — Staff Roster</div>
-              </div>
-            </div>
-            <div class="rp-header-right">
-              <strong>${roleLabelMap[role]||role}</strong><br/>
-              ${fnLabel}<br/>
-              <span style="font-size:7pt;font-weight:400;color:#888;">Printed ${printed}</span>
+      return`<tr><td class="rp-name-cell">${emp.name}</td>${cells}</tr>`;
+    }).join('');
+    return`
+      <div class="rp-page${pgClass}">
+        <div class="rp-header">
+          <div class="rp-header-left">
+            <img src="${logoUrl}" class="rp-header-logo" alt="Wellness on Wellington" />
+            <div>
+              <div class="rp-header-clinic">Wellness on Wellington</div>
+              <div class="rp-header-sub">Running Well — Staff Roster</div>
             </div>
           </div>
-          <div class="rp-role-label">${roleLabelMap[role]||role}</div>
-          <table class="rp-table">
-            <colgroup>
-              <col style="width:13%;">
-              ${days.map(()=>`<col style="width:${(87/days.length).toFixed(2)}%;">`).join('')}
-            </colgroup>
-            <thead><tr><th class="rp-name-col">Name</th>${dayHeaders}</tr></thead>
-            <tbody>${empRows}</tbody>
-          </table>
-        </div>`);
-    });
+          <div class="rp-header-right">
+            <strong>${pageLabel}</strong><br/>
+            ${fnLabel}<br/>
+            <span style="font-size:${printedSize};font-weight:400;color:#888;">Printed ${printed}</span>
+          </div>
+        </div>
+        <div class="rp-role-label">${pageLabel}</div>
+        <table class="rp-table">
+          <colgroup>
+            <col style="width:${nameColPct}%;">
+            ${days.map(()=>`<col style="width:${((100-nameColPct)/days.length).toFixed(2)}%;">`).join('')}
+          </colgroup>
+          <thead><tr><th class="rp-name-col">Name</th>${dayHeaders}</tr></thead>
+          <tbody>${empRows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  ranges.forEach(range=>{
+    const allDays=range.dates;
+    const fnLabel=range.label;
+    const dayChunks=isLarge?[allDays.slice(0,7),allDays.slice(7).filter(Boolean)]:[allDays];
+
+    if(isNurses){
+      const nurseEmps=_emps.filter(e=>(e.classification==='Registered Nurse'||e.classification==='Enrolled Nurse')&&e.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
+      if(!nurseEmps.length){showToast('No staff with a nursing classification found');return;}
+      dayChunks.forEach((days,ci)=>{
+        if(!days.length) return;
+        const weekLabel=dayChunks.length>1?`Nurses — Week ${ci===0?'A':'B'}`:'Nurses';
+        pages.push(buildRosterPage(nurseEmps,days,weekLabel,fnLabel));
+      });
+    } else {
+      selectedRoles.forEach(role=>{
+        const roleEmps=_emps.filter(e=>e.role===role&&e.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
+        if(!roleEmps.length) return;
+        dayChunks.forEach((days,ci)=>{
+          if(!days.length) return;
+          const roleLabel=roleLabelMap[role]||role;
+          const weekLabel=isLarge&&dayChunks.length>1?`${roleLabel} — Week ${ci===0?'A':'B'}`:roleLabel;
+          pages.push(buildRosterPage(roleEmps,days,weekLabel,fnLabel));
+        });
+      });
+    }
   });
 
   if(!pages.length){showToast('No data to print');return;}
+  const pps=isLarge?1:2;
   const sheets=[];
-  for(let i=0;i<pages.length;i+=2) sheets.push(`<div class="rp-sheet">${pages.slice(i,i+2).join('')}</div>`);
+  for(let i=0;i<pages.length;i+=pps) sheets.push(`<div class="rp-sheet">${pages.slice(i,i+pps).join('')}</div>`);
   document.getElementById('roster-print-area').innerHTML=sheets.join('');
   const allDates=ranges.flatMap(r=>r.dates).sort();
   const printTitle=`Running_Well_Roster_${rosterFileDateLabel(allDates[0])}-${rosterFileDateLabel(allDates[allDates.length-1])}`;
@@ -8295,7 +8347,7 @@ async function renderRequestForm(){
   const myShiftOptions=_reqMyShifts.length
     ?_reqMyShifts.map(s=>s.on_leave?`<option value="${s.id}" disabled>${reqFmtDate(s.date)} ${s.start_time}–${s.end_time} (Not in)</option>`:`<option value="${s.id}">${reqFmtDate(s.date)} ${s.start_time}–${s.end_time}</option>`).join('')
     :'<option value="">No upcoming shifts found</option>';
-  const sameRoleEmps=_emps.filter(e=>e.role===emp.role&&e.id!==emp.id&&e.active!==false);
+  const sameRoleEmps=_emps.filter(e=>e.id!==emp.id&&e.active!==false&&(e.role===emp.role||(emp.classification&&e.classification&&e.classification===emp.classification)));
   const colleagueOptions=sameRoleEmps.length
     ?'<option value="">Select colleague…</option>'+sameRoleEmps.map(e=>`<option value="${e.id}">${escHtml(e.name)}</option>`).join('')
     :'<option value="">No colleagues of same role found</option>';
@@ -8313,14 +8365,14 @@ async function renderRequestForm(){
       <button class="req-new-btn" id="req-leave-submit-btn" onclick="reqSubmitLeave()" disabled style="opacity:0.45;cursor:not-allowed;">Submit Leave Request</button>`;
   } else if(_reqFormType==='swap'){
     formBody=`<div class="form-group"><label class="form-label">Your shift to swap</label><select class="form-input" id="req-my-shift">${myShiftOptions}</select></div>
-      <div class="form-group"><label class="form-label">Swap with (same role only)</label><select class="form-input" id="req-colleague" onchange="reqLoadColleagueShifts(this.value)">${colleagueOptions}</select></div>
+      <div class="form-group"><label class="form-label">Swap with</label><select class="form-input" id="req-colleague" onchange="reqLoadColleagueShifts(this.value)">${colleagueOptions}</select></div>
       <div class="form-group" id="req-colleague-shift-group" style="display:none;"><label class="form-label">Their shift to swap</label><select class="form-input" id="req-colleague-shift"><option value="">Loading…</option></select></div>
       <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. family commitment"></textarea></div>
       <button class="req-new-btn" onclick="reqSubmitSwap()">Submit Swap Request</button>`;
   } else {
     formBody=`<div class="req-giveaway-notice">⚠ You are giving away your shift. The selected colleague will receive it — you will not receive anything in return.</div>
       <div class="form-group"><label class="form-label">Your shift to give away</label><select class="form-input" id="req-my-shift">${myShiftOptions}</select></div>
-      <div class="form-group"><label class="form-label">Give to (same role only)</label><select class="form-input" id="req-colleague">${colleagueOptions}</select></div>
+      <div class="form-group"><label class="form-label">Give to</label><select class="form-input" id="req-colleague">${colleagueOptions}</select></div>
       <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. personal commitment"></textarea></div>
       <button class="req-new-btn" onclick="reqSubmitGiveaway()">Submit Give Away Request</button>`;
   }
@@ -8387,7 +8439,8 @@ async function reqSubmitSwap(){
   const colShift=_reqColleagueShifts.find(s=>s.id===colleagueShiftId);
   const colleague=_emps.find(e=>e.id===colleagueId);
   if(!myShift||!colShift||!colleague){ showToast('Could not find shift data'); return; }
-  if(colleague.role!==emp.role){ showToast('Swaps can only be with staff of the same role'); return; }
+  const canSwapWith=(a,b)=>a.role===b.role||(a.classification&&b.classification&&a.classification===b.classification);
+  if(!canSwapWith(emp,colleague)){ showToast('Swaps can only be with staff of the same role or classification'); return; }
   const id='REQ'+Date.now();
   const now=new Date().toISOString();
   const expiresAt=new Date(Date.now()+SWAP_EXPIRY_DAYS*86400000).toISOString();
@@ -8410,7 +8463,8 @@ async function reqSubmitGiveaway(){
   const myShift=_reqMyShifts.find(s=>s.id===myShiftId);
   const colleague=_emps.find(e=>e.id===colleagueId);
   if(!myShift||!colleague){ showToast('Could not find shift data'); return; }
-  if(colleague.role!==emp.role){ showToast('Can only give a shift to someone of the same role'); return; }
+  const canSwapWith=(a,b)=>a.role===b.role||(a.classification&&b.classification&&a.classification===b.classification);
+  if(!canSwapWith(emp,colleague)){ showToast('Can only give a shift to someone of the same role or classification'); return; }
   const id='REQ'+Date.now();
   const now=new Date().toISOString();
   const expiresAt=new Date(Date.now()+SWAP_EXPIRY_DAYS*86400000).toISOString();
