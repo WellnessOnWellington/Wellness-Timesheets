@@ -3935,7 +3935,11 @@ const AUTO_LOGOUT_MS = 30*60*1000;
 
 let currentManager=null, logoutTimer=null;
 
-function hashPIN(pin){return pin;}
+function hashPIN(pin){
+  let h=0;
+  for(let i=0;i<pin.length;i++) h=(Math.imul(31,h)+pin.charCodeAt(i))|0;
+  return h.toString(16)+pin.length;
+}
 
 function validatePIN(pin){
   if(!/^\d{4,8}$/.test(pin))   return 'PIN must be 4–8 digits.';
