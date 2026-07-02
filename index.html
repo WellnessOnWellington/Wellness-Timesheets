@@ -4852,6 +4852,14 @@ function renderTimesheets(){
     const myobBadge=allLocked?`<div class="ts-emp-myob-badge">Ready for MYOB</div>`:'';
     const totalHrsEl=totalMins>0?`<div class="ts-emp-hours${allLocked?' ready':''}">${(totalMins/60).toFixed(1)}h</div>`:'';
 
+    const hasDuplicates=activeDays.some(date=>{
+      const dayShifts=empShifts.filter(s=>s.date===date);
+      if(dayShifts.length<=1) return false;
+      const dayEntries=empEntries.filter(e=>e.date===date);
+      return !dayShifts.some(seg=>dayEntries.find(e=>e.shiftId===seg.id&&e.leaveType));
+    });
+    const dupBadge=hasDuplicates?`<div style="font-size:0.68rem;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;border-radius:20px;padding:0.15rem 0.55rem;font-weight:700;">⚠ Duplicate shifts</div>`:'';
+
     const empIdStr=String(emp.id);
     const collapsed=_tsCollapsed.has(empIdStr);
     return`<div class="ts-emp-block${collapsed?' collapsed':''}" data-emp-id="${empIdStr}">
@@ -4859,7 +4867,7 @@ function renderTimesheets(){
         <div class="ts-emp-chevron" style="transform:rotate(${collapsed?'0':'90'}deg)">&#9658;</div>
         <div class="ts-emp-name">${emp.name}</div>
         <div class="ts-emp-role-badge">${emp.role}</div>
-        ${statusEl}
+        ${statusEl}${dupBadge}
         <div class="ts-emp-right">${myobBadge}${totalHrsEl}</div>
       </div>
       <div class="ts-emp-rows" style="display:${collapsed?'none':'block'}">
