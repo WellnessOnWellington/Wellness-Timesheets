@@ -4121,17 +4121,22 @@ function openEditManager(id){
   document.getElementById('edit-mgr-email').value=mgr.email||'';
   document.getElementById('edit-mgr-active').checked=mgr.active!==false;
   document.getElementById('edit-mgr-error').textContent='';
-  // Role dropdown — only partners can change designation
+  // Role dropdown — partner only
   const roleEl=document.getElementById('edit-mgr-role');
   roleEl.value=mgr.role||'manager';
   roleEl.disabled=!_isPartner();
+  roleEl.style.opacity=_isPartner()?'':'0.35';
+  roleEl.style.cursor=_isPartner()?'':'not-allowed';
+  roleEl.style.background=_isPartner()?'':'#f0f0f0';
   // Change PIN button — partner can change anyone's, non-partner only own
   const pinBtn=document.getElementById('edit-mgr-pin-btn');
   pinBtn.style.display=(_isPartner()||id===currentManager?.id)?'':'none';
-  // Active toggle — only partners can suspend others
+  // Active toggle — partner only
   const activeEl=document.getElementById('edit-mgr-active');
-  activeEl.disabled=(!_isPartner()&&id!==currentManager?.id);
-  // Linked staff card dropdown
+  activeEl.disabled=!_isPartner();
+  const activeLabel=activeEl.closest('label');
+  if(activeLabel){activeLabel.style.opacity=_isPartner()?'':'0.35';activeLabel.style.cursor=_isPartner()?'':'not-allowed';}
+  // Linked staff card — partner only
   const staffSel=document.getElementById('edit-mgr-staff');
   staffSel.innerHTML='<option value="">— None —</option>';
   _emps.filter(e=>e.active!==false&&!e.is_placeholder).forEach(e=>{
@@ -4143,6 +4148,10 @@ function openEditManager(id){
     }
   });
   staffSel.value=mgr.employeeId||'';
+  staffSel.disabled=!_isPartner();
+  staffSel.style.opacity=_isPartner()?'':'0.35';
+  staffSel.style.cursor=_isPartner()?'':'not-allowed';
+  staffSel.style.background=_isPartner()?'':'#f0f0f0';
   document.getElementById('edit-mgr-modal').classList.add('show');
   setTimeout(()=>document.getElementById('edit-mgr-first').focus(),120);
 }
@@ -4161,13 +4170,12 @@ async function saveEditManager(){
   const email=document.getElementById('edit-mgr-email').value.trim()||null;
   const active=document.getElementById('edit-mgr-active').checked;
   const staffId=document.getElementById('edit-mgr-staff').value||null;
-  const patch={name,first_name:firstName,last_name:lastName,email,employee_id:staffId};
-  if(_isPartner()) patch.role=role;
-  if(_isPartner()||_editingMgrId===currentManager?.id) patch.active=active;
+  const patch={name,first_name:firstName,last_name:lastName,email};
+  if(_isPartner()){patch.role=role;patch.active=active;patch.employee_id=staffId;}
   try{
     await db.update('managers',_editingMgrId,patch);
     const idx=_mgrs.findIndex(m=>m.id===_editingMgrId);
-    if(idx>=0) _mgrs[idx]={..._mgrs[idx],name,firstName,lastName,role:role||_mgrs[idx].role,email,active,employeeId:staffId};
+    if(idx>=0) _mgrs[idx]={..._mgrs[idx],name,firstName,lastName,email,...(_isPartner()?{role,active,employeeId:staffId}:{})};
     if(_editingMgrId===currentManager?.id){currentManager.name=name;if(role)currentManager.role=role;setAdminAvatar();}
     closeEditMgrModal();
     renderManagersTab();
