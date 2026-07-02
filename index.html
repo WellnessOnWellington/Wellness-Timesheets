@@ -2370,11 +2370,11 @@
         </div>
         <div class="settings-section-body" id="ss-body-managers" style="display:none;">
           <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
-            <button class="add-emp-btn" onclick="openAddManager()">+ Add manager</button>
+            <button class="add-emp-btn" id="mgr-add-btn" onclick="openAddManager()">+ Add manager</button>
           </div>
           <div class="table-wrap">
             <table class="timesheet-table">
-              <thead><tr><th>Name</th><th>Last login</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Name</th><th>Last login</th><th>Actions</th><th>Role</th></tr></thead>
               <tbody id="managers-body"></tbody>
             </table>
           </div>
@@ -2642,15 +2642,22 @@
           <div style="padding:0.5rem 0 1.25rem;">
             <div style="font-size:0.82rem;color:var(--charcoal);font-weight:700;margin-bottom:0.2rem;">Running Well</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.1rem;">Built by Dr Joel Jaya</div>
-            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 1.4 &middot; June 2026</div>
+            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 1.6 &middot; July 2026</div>
           </div>
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
-                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v1.5</div>
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v1.6</div>
                 <div>
-                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">1 July 2026 &mdash; Print Templates &amp; Smart Shift Swaps</div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">2 July 2026 &mdash; Manager Profiles</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Manager accounts expanded with first and last name, linked staff card, email, designation, and an active toggle for clean offboarding. Edit modal replaces the old change-PIN flow.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v1.5</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">1 July 2026 &mdash; Print Templates &amp; Smart Shift Swaps</div>
                   <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Roster print now offers Compact, Large, and Nurses templates. Large prints landscape across two pages (Week A / Week B) at double size. Nurses template filters to nursing-classified staff with 75+ lane shifts highlighted in grey. Shift swaps and give-aways now match on classification as well as role, allowing the nurse manager to swap shifts with nurses.</div>
                 </div>
               </div>
@@ -2902,9 +2909,22 @@
 <div class="modal-bg" id="mgr-modal" onclick="if(event.target===this)closeMgrModal()">
   <div class="modal">
     <div class="modal-title" id="mgr-modal-title">Add manager login</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">First Name</label>
+        <input class="form-input" type="text" id="mgr-first" placeholder="First" />
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Last Name</label>
+        <input class="form-input" type="text" id="mgr-last" placeholder="Last" />
+      </div>
+    </div>
     <div class="form-group">
-      <label class="form-label">Full Name</label>
-      <input class="form-input" type="text" id="mgr-name" placeholder="e.g. Rob Stone" />
+      <label class="form-label">Designation</label>
+      <select class="form-select" id="mgr-role">
+        <option value="manager">Manager</option>
+        <option value="partner">Partner</option>
+      </select>
     </div>
     <div class="form-group">
       <label class="form-label">PIN <span style="font-weight:400;text-transform:none;letter-spacing:0;">(4–8 digits)</span></label>
@@ -2919,6 +2939,54 @@
     <div class="modal-actions">
       <button class="btn-ghost"   onclick="closeMgrModal()">Cancel</button>
       <button class="btn-primary" onclick="saveManager()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MANAGER MODAL -->
+<div class="modal-bg" id="edit-mgr-modal" onclick="if(event.target===this)closeEditMgrModal()">
+  <div class="modal">
+    <div class="modal-title" id="edit-mgr-title">Edit Manager</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">First Name</label>
+        <input class="form-input" type="text" id="edit-mgr-first" placeholder="First" />
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Last Name</label>
+        <input class="form-input" type="text" id="edit-mgr-last" placeholder="Last" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Designation</label>
+      <select class="form-select" id="edit-mgr-role">
+        <option value="manager">Manager</option>
+        <option value="partner">Partner</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Linked Staff Card</label>
+      <select class="form-select" id="edit-mgr-staff">
+        <option value="">— None —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+      <input class="form-input" type="email" id="edit-mgr-email" placeholder="e.g. manager@clinic.co.nz" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;text-transform:none;font-size:0.85rem;font-weight:600;letter-spacing:0;">
+        <input type="checkbox" id="edit-mgr-active" style="accent-color:var(--burgundy);" />
+        Active (uncheck to suspend without deleting)
+      </label>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:0.9rem;margin-top:0.1rem;margin-bottom:0.5rem;">
+      <button id="edit-mgr-pin-btn" onclick="openChangePINFromEdit()" style="background:var(--blush);color:var(--burgundy);border:1px solid var(--border);border-radius:7px;padding:0.35rem 1rem;font-size:0.8rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Change PIN</button>
+    </div>
+    <div style="font-size:0.75rem;color:var(--danger);min-height:1rem;margin-bottom:0.5rem;" id="edit-mgr-error"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeEditMgrModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveEditManager()">Save</button>
     </div>
   </div>
 </div>
@@ -3189,7 +3257,9 @@ let _clinicTimerInterval=null;
 let _clinicTimerSecs=15;
 
 function normaliseMgr(r) {
-  return { id: r.id, name: r.name, pinHash: r.pin_hash, lastLogin: r.last_login, employeeId: r.employee_id||null };
+  const firstName=r.first_name||(r.name?r.name.split(' ')[0]:'');
+  const lastName=r.last_name||(r.name?r.name.split(' ').slice(1).join(' '):'');
+  return{id:r.id,name:(firstName+' '+lastName).trim()||r.name||'',firstName,lastName,role:r.role||'manager',email:r.email||null,active:r.active!==false,pinHash:r.pin_hash,lastLogin:r.last_login,employeeId:r.employee_id||null};
 }
 
 function showLoading(on) {
@@ -3203,7 +3273,7 @@ function showLoading(on) {
   el.style.opacity = on ? '1' : '0';
 }
 
-const APP_VERSION='1.5';
+const APP_VERSION='1.6';
 const APP_VERSION_DATE='July 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 let GRACE_BY_ROLE={Receptionist:10,Nurse:10,Manager:10};
@@ -3944,7 +4014,7 @@ async function managerLogin(){
     errEl.textContent='Incorrect PIN — please try again.';
     return;
   }
-  currentManager={id:mgr.id,name:mgr.name};
+  currentManager={id:mgr.id,name:mgr.name,role:mgr.role||'manager'};
   document.getElementById('manager-pin').value='';
   try { await db.update('managers',mgr.id,{last_login:new Date().toISOString()}); } catch(e){}
   showView('admin');
@@ -3952,6 +4022,8 @@ async function managerLogin(){
 }
 
 function managerLogout(){currentManager=null;clearTimeout(logoutTimer);showView('kiosk');}
+
+function _isPartner(){return currentManager?.role==='partner';}
 
 function resetLogoutTimer(){
   clearTimeout(logoutTimer);
@@ -3961,57 +4033,53 @@ document.addEventListener('click',()=>{if(currentManager)resetLogoutTimer();});
 document.getElementById('manager-pin').addEventListener('keydown',e=>{if(e.key==='Enter')managerLogin();});
 
 /* ── MANAGER CRUD ── */
-let editingMgrId=null, firstRunMode=false, changePinMgrId=null;
+let firstRunMode=false, changePinMgrId=null;
 
 function openAddManager(isFirstRun){
-  firstRunMode=!!isFirstRun; editingMgrId=null;
+  if(!isFirstRun&&!_isPartner()){showToast('Only partners can add manager accounts.');return;}
+  firstRunMode=!!isFirstRun;
   document.getElementById('mgr-modal-title').textContent='Add manager login';
-  document.getElementById('mgr-name').value='';
+  document.getElementById('mgr-first').value='';
+  document.getElementById('mgr-last').value='';
+  document.getElementById('mgr-role').value='manager';
   document.getElementById('mgr-pin').value='';
   document.getElementById('mgr-pin2').value='';
   document.getElementById('mgr-error').textContent='';
   document.getElementById('mgr-modal').classList.add('show');
   document.querySelector('#mgr-modal .btn-ghost').style.display=firstRunMode?'none':'';
-  setTimeout(()=>document.getElementById('mgr-name').focus(),120);
+  setTimeout(()=>document.getElementById('mgr-first').focus(),120);
 }
 
 function closeMgrModal(){if(firstRunMode)return;document.getElementById('mgr-modal').classList.remove('show');}
 
 async function saveManager(){
-  const name=document.getElementById('mgr-name').value.trim();
+  const firstName=document.getElementById('mgr-first').value.trim();
+  const lastName=document.getElementById('mgr-last').value.trim();
+  const name=(firstName+' '+lastName).trim();
+  const role=document.getElementById('mgr-role').value||'manager';
   const pin=document.getElementById('mgr-pin').value;
   const pin2=document.getElementById('mgr-pin2').value;
   const errEl=document.getElementById('mgr-error');
   errEl.textContent='';
-  if(!name){errEl.textContent='Please enter a name.';return;}
+  if(!firstName){errEl.textContent='Please enter a first name.';return;}
   const pinErr=validatePIN(pin);
   if(pinErr){errEl.textContent=pinErr;return;}
   if(pin!==pin2){errEl.textContent='PINs don\'t match — please re-enter.';return;}
   try {
-    const row={id:'M'+Date.now(),name,pin_hash:hashPIN(pin),last_login:null};
+    const row={id:'M'+Date.now(),name,first_name:firstName,last_name:lastName,role,pin_hash:hashPIN(pin),last_login:null,active:true};
     await db.insert('managers',row);
-    _mgrs.push({id:row.id,name,pinHash:row.pin_hash,lastLogin:null});
+    _mgrs.push(normaliseMgr(row));
     document.getElementById('mgr-modal').classList.remove('show');
     firstRunMode=false;
-    if(currentManager?.id==='setup') currentManager={id:row.id,name};
+    if(currentManager?.id==='setup') currentManager={id:row.id,name,role};
     renderManagersTab();
     setAdminAvatar();
     showToast(name+' added ✓');
   } catch(e){ errEl.textContent='Could not save — please try again.'; console.error(e); }
 }
 
-async function deleteManager(id){
-  if(_mgrs.length<=1){showToast('You must keep at least one manager account.');return;}
-  if(id===currentManager?.id){showToast('You can\'t delete your own account while logged in.');return;}
-  if(!confirm('Remove this manager login? This cannot be undone.'))return;
-  try {
-    await db.delete('managers',id);
-    _mgrs=_mgrs.filter(m=>m.id!==id);
-    renderManagersTab(); showToast('Manager login removed.');
-  } catch(e){ showToast('Could not remove — please try again.'); }
-}
-
 function openChangePIN(id){
+  if(!_isPartner()&&id!==currentManager?.id){showToast('You can only change your own PIN.');return;}
   changePinMgrId=id;
   const mgr=_mgrs.find(m=>m.id===id);
   document.getElementById('pin-modal-name').textContent=mgr?.name||'';
@@ -4040,46 +4108,97 @@ async function savePinChange(){
   } catch(e){ errEl.textContent='Could not update — please try again.'; }
 }
 
+let _editingMgrId=null;
+
+function openEditManager(id){
+  if(!_isPartner()&&id!==currentManager?.id){showToast('You can only edit your own account.');return;}
+  const mgr=_mgrs.find(m=>m.id===id);
+  if(!mgr) return;
+  _editingMgrId=id;
+  document.getElementById('edit-mgr-title').textContent='Edit — '+mgr.name;
+  document.getElementById('edit-mgr-first').value=mgr.firstName||'';
+  document.getElementById('edit-mgr-last').value=mgr.lastName||'';
+  document.getElementById('edit-mgr-email').value=mgr.email||'';
+  document.getElementById('edit-mgr-active').checked=mgr.active!==false;
+  document.getElementById('edit-mgr-error').textContent='';
+  // Role dropdown — only partners can change designation
+  const roleEl=document.getElementById('edit-mgr-role');
+  roleEl.value=mgr.role||'manager';
+  roleEl.disabled=!_isPartner();
+  // Change PIN button — partner can change anyone's, non-partner only own
+  const pinBtn=document.getElementById('edit-mgr-pin-btn');
+  pinBtn.style.display=(_isPartner()||id===currentManager?.id)?'':'none';
+  // Active toggle — only partners can suspend others
+  const activeEl=document.getElementById('edit-mgr-active');
+  activeEl.disabled=(!_isPartner()&&id!==currentManager?.id);
+  // Linked staff card dropdown
+  const staffSel=document.getElementById('edit-mgr-staff');
+  staffSel.innerHTML='<option value="">— None —</option>';
+  _emps.filter(e=>e.active!==false&&!e.is_placeholder).forEach(e=>{
+    const taken=_mgrs.some(x=>x.employeeId===e.id&&x.id!==id);
+    if(!taken){
+      const o=document.createElement('option');
+      o.value=e.id; o.textContent=e.name+(e.role?' ('+e.role+')':'');
+      staffSel.appendChild(o);
+    }
+  });
+  staffSel.value=mgr.employeeId||'';
+  document.getElementById('edit-mgr-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('edit-mgr-first').focus(),120);
+}
+
+function closeEditMgrModal(){document.getElementById('edit-mgr-modal').classList.remove('show');_editingMgrId=null;}
+
+async function saveEditManager(){
+  if(!_editingMgrId) return;
+  const errEl=document.getElementById('edit-mgr-error');
+  errEl.textContent='';
+  const firstName=document.getElementById('edit-mgr-first').value.trim();
+  const lastName=document.getElementById('edit-mgr-last').value.trim();
+  const name=(firstName+' '+lastName).trim();
+  if(!firstName){errEl.textContent='Please enter a first name.';return;}
+  const role=_isPartner()?document.getElementById('edit-mgr-role').value:'';
+  const email=document.getElementById('edit-mgr-email').value.trim()||null;
+  const active=document.getElementById('edit-mgr-active').checked;
+  const staffId=document.getElementById('edit-mgr-staff').value||null;
+  const patch={name,first_name:firstName,last_name:lastName,email,employee_id:staffId};
+  if(_isPartner()) patch.role=role;
+  if(_isPartner()||_editingMgrId===currentManager?.id) patch.active=active;
+  try{
+    await db.update('managers',_editingMgrId,patch);
+    const idx=_mgrs.findIndex(m=>m.id===_editingMgrId);
+    if(idx>=0) _mgrs[idx]={..._mgrs[idx],name,firstName,lastName,role:role||_mgrs[idx].role,email,active,employeeId:staffId};
+    if(_editingMgrId===currentManager?.id){currentManager.name=name;if(role)currentManager.role=role;setAdminAvatar();}
+    closeEditMgrModal();
+    renderManagersTab();
+    showToast(name+' updated ✓');
+  }catch(e){errEl.textContent='Could not save — please try again.';console.error(e);}
+}
+
+function openChangePINFromEdit(){
+  if(_editingMgrId) openChangePIN(_editingMgrId);
+}
+
 function renderManagersTab(){
+  const addBtn=document.getElementById('mgr-add-btn');
+  if(addBtn) addBtn.style.display=_isPartner()?'':'none';
   const tbody=document.getElementById('managers-body');
-  if(!_mgrs.length){tbody.innerHTML=`<tr><td colspan="3"><div class="empty-state"><div class="empty-icon">🔑</div><div class="empty-msg">No manager accounts yet</div></div></td></tr>`;return;}
+  if(!_mgrs.length){tbody.innerHTML=`<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">🔑</div><div class="empty-msg">No manager accounts yet</div></div></td></tr>`;return;}
   tbody.innerHTML=_mgrs.map(m=>{
     const last=m.lastLogin?new Date(m.lastLogin).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Never';
     const isMe=m.id===currentManager?.id;
-    const linkedBadge=m.employeeId?'<span style="font-size:0.68rem;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:0.1rem 0.45rem;border-radius:20px;font-weight:700;margin-left:0.4rem;">Linked</span>':'';
     const noPinBadge=!m.pinHash?'<span style="font-size:0.68rem;background:#fff8e1;color:#7a5c00;border:1px solid #f9c825;padding:0.1rem 0.45rem;border-radius:20px;font-weight:700;margin-left:0.4rem;">PIN not set</span>':'';
-    const pinBtn=m.pinHash
-      ?`<button onclick="openChangePIN('${m.id}')" style="background:var(--blush);color:var(--burgundy);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-right:0.5rem;">Change PIN</button>`
-      :`<button onclick="openChangePIN('${m.id}')" style="background:#fff8e1;color:#7a5c00;border:1px solid #f9c825;border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-right:0.5rem;">Set PIN</button>`;
-    const unlinkableEmps=_emps.filter(e=>e.role==='Manager'&&!_mgrs.some(x=>x.employeeId===e.id));
-    const linkBtn=!m.employeeId&&unlinkableEmps.length?`<button onclick="openLinkManager('${m.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-right:0.5rem;">Link to card</button>`:'';
+    const inactiveBadge=!m.active?'<span style="font-size:0.68rem;background:#f5f5f5;color:#999;border:1px solid #ddd;padding:0.1rem 0.45rem;border-radius:20px;font-weight:700;margin-left:0.4rem;">Inactive</span>':'';
+    const roleBadge=m.role==='partner'
+      ?`<span style="font-size:0.72rem;background:#ede7f6;color:#5e35b1;border:1px solid #ce93d8;padding:0.15rem 0.55rem;border-radius:20px;font-weight:700;">Partner</span>`
+      :`<span style="font-size:0.72rem;background:var(--blush);color:var(--burgundy);border:1px solid var(--border);padding:0.15rem 0.55rem;border-radius:20px;font-weight:700;">Manager</span>`;
     return`<tr>
-      <td><strong>${m.name}</strong>${isMe?' <span style="font-size:0.7rem;background:var(--blush);color:var(--burgundy);padding:0.1rem 0.45rem;border-radius:20px;font-weight:700;">You</span>':''}${linkedBadge}${noPinBadge}</td>
+      <td><strong>${m.name}</strong>${isMe?' <span style="font-size:0.7rem;background:var(--blush);color:var(--burgundy);padding:0.1rem 0.45rem;border-radius:20px;font-weight:700;">You</span>':''}${noPinBadge}${inactiveBadge}</td>
       <td style="color:var(--muted);font-size:0.8rem;">${m.pinHash?last:'—'}</td>
-      <td>
-        ${linkBtn}${pinBtn}
-        ${!isMe?`<button onclick="deleteManager('${m.id}')" style="background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Remove</button>`:''}
-      </td>
+      <td><button onclick="openEditManager('${m.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Edit</button></td>
+      <td>${roleBadge}</td>
     </tr>`;
   }).join('');
-}
-
-async function openLinkManager(mgrId){
-  const unlinkableEmps=_emps.filter(e=>e.role==='Manager'&&!_mgrs.some(x=>x.employeeId===e.id));
-  if(!unlinkableEmps.length){showToast('No unlinked Manager employee cards found');return;}
-  const opts=unlinkableEmps.map(e=>`${e.id}: ${e.name}`).join('\n');
-  const choice=prompt(`Link this manager login to an employee card.\n\nEnter the number next to the name:\n${unlinkableEmps.map((e,i)=>`${i+1}. ${e.name}`).join('\n')}`);
-  if(!choice) return;
-  const idx=parseInt(choice)-1;
-  if(isNaN(idx)||idx<0||idx>=unlinkableEmps.length){showToast('Invalid selection');return;}
-  const emp=unlinkableEmps[idx];
-  try{
-    await db.update('managers',mgrId,{employee_id:emp.id});
-    const mgr=_mgrs.find(m=>m.id===mgrId);
-    if(mgr) mgr.employeeId=emp.id;
-    renderManagersTab();
-    showToast(`Linked to ${emp.name} ✓`);
-  }catch(e){showToast('Could not link — please try again.');console.error(e);}
 }
 
 function setAdminAvatar(){
