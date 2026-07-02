@@ -4533,7 +4533,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const isLeaveShift=!!payrollType; // any non-empty = leave type set
   const isSplitWorked=splitSegment&&!isLeaveShift;
   // isSplitWorked: no clock-in means manager locks with roster times (same as leave/Manager path)
-  const noClockExpected=!entry?.clockIn&&!!rostStart&&!!rostEnd&&(emp.role==='Manager'||isLeaveShift||isSplitWorked);
+  const noClockExpected=!entry?.clockIn&&!!rostStart&&!!rostEnd&&(emp.role==='Manager'||isLeaveShift||(isSplitWorked&&!!entry));
   // For split worked segments: cap effectiveFinalEnd to segment boundary (clockOut is full-shift end)
   const effectiveFinalStart=finalStart||(noClockExpected?rostStart:null);
   const effectiveFinalEnd=isSplitWorked&&finalEnd&&rostEnd&&finalEnd>rostEnd?rostEnd:(finalEnd||(noClockExpected?rostEnd:null));
