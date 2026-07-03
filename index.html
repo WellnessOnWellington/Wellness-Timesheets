@@ -6504,7 +6504,7 @@ function adminMobFilterRole(role){
 }
 
 function adminMobSyncFilterChecks(){
-  const ROLES=['Receptionist','Nurse','Manager'];
+  const ROLES=['Receptionist','Nurse','Manager','Doctor'];
   const activeTab=document.querySelector('.tab-panel.active')?.id;
   document.getElementById('admin-mob-filter-popover')?.classList.toggle('checkbox-mode',activeTab==='tab-team');
   if(activeTab==='tab-team'){
@@ -8524,7 +8524,7 @@ function renderRequestsList(){
         html+=`<div style="background:var(--white);border:1.5px solid ${borderColor};border-left:4px solid ${borderColor};border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.6rem;">
           <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:${borderColor};margin-bottom:0.3rem;">${ok?'✓ Approved':'⚠ Action required'}</div>
           <div style="font-size:0.86rem;font-weight:600;color:var(--charcoal);line-height:1.5;margin-bottom:0.65rem;">${escHtml(staffNoteMessage(n))}</div>
-          <button onclick="acknowledgeStaffNotifInline('${n.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.85rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Got it</button>
+          <button onclick="acknowledgeStaffNotifInline('${n.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.45rem 1rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;min-height:40px;">Got it</button>
         </div>`;
       } else {
         html+=`<div class="req-notif-card" onclick="reqShowDetail('${n.requestId}')">
