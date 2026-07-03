@@ -3614,19 +3614,17 @@ async function processRFID(card){
   const diff=scheduledMin!==null?Math.abs(actualMin-scheduledMin):0;
   const isAfter=scheduledMin!==null?actualMin>scheduledMin:false;
   const sheetTimeStr=roundToRoster(timeStr,scheduledMin);
-  checkStaffNotifications(emp.id, async ()=>{
-    if(scheduled===null&&action==='in'){
-      pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType:'Unrostered arrival'};
-      showReasonPrompt(emp.name.split(' ')[0],action,null);
-    }else if(scheduledMin!==null&&diff>(GRACE_BY_ROLE[emp.role]??10)){
-      const label=diff+' min '+(isAfter?'after':'before')+' scheduled time';
-      const noteType=action==='in'?'Arrival note':'Departure note';
-      pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType};
-      showReasonPrompt(emp.name.split(' ')[0],action,label);
-    }else{
-      await maybeBreakConfirm(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,null,null);
-    }
-  });
+  if(scheduled===null&&action==='in'){
+    pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType:'Unrostered arrival'};
+    showReasonPrompt(emp.name.split(' ')[0],action,null);
+  }else if(scheduledMin!==null&&diff>(GRACE_BY_ROLE[emp.role]??10)){
+    const label=diff+' min '+(isAfter?'after':'before')+' scheduled time';
+    const noteType=action==='in'?'Arrival note':'Departure note';
+    pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType};
+    showReasonPrompt(emp.name.split(' ')[0],action,label);
+  }else{
+    await maybeBreakConfirm(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,null,null);
+  }
   // Silently refresh cache in background for next scan
   Promise.all([db.get('employees'),db.get('entries'),db.get('requests').catch(()=>[])]).then(([emps,entries,reqs])=>{
     _emps=emps.filter(e=>e.active!==false); _entries=entries.map(normaliseEntry); _requests=reqs.map(normaliseRequest);
@@ -8435,7 +8433,6 @@ async function staffPINLogin(){
   if(_lockoutInterval){clearInterval(_lockoutInterval);_lockoutInterval=null;}
   _reqEmployee=emp;
   await reqShowList();
-  checkStaffNotifications(emp.id, null);
 }
 
 async function processRequestsRFID(card){
@@ -8484,7 +8481,22 @@ function renderRequestsList(){
     .filter(r=>!['approved','declined','expired'].includes(r.status)||(r.managerDecidedAt&&now-new Date(r.managerDecidedAt).getTime()<sevenDays))
     .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const empNotifs=_notifications.filter(n=>n.employeeId===emp.id&&!n.seenAt).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const mgmtNotes=_notes.filter(n=>n.employeeId===emp.id&&(n.status==='approved'||n.status==='flagged')&&!n.staffAcknowledged);
   let html=`<div class="req-emp-greeting">Hi, ${escHtml(emp.name.split(' ')[0])}!</div><div class="req-role-badge">${emp.role}</div>`;
+  // Management updates section
+  if(mgmtNotes.length){
+    html+=`<div class="req-section-label">Management Updates (${mgmtNotes.length})</div>`;
+    mgmtNotes.forEach(n=>{
+      const ok=n.status==='approved';
+      const borderColor=ok?'var(--success)':'#e67e22';
+      html+=`<div style="background:var(--white);border:1.5px solid ${borderColor};border-left:4px solid ${borderColor};border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.6rem;">
+        <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:${borderColor};margin-bottom:0.3rem;">${ok?'✓ Approved':'⚠ Flagged for discussion'}</div>
+        <div style="font-size:0.86rem;font-weight:600;color:var(--charcoal);line-height:1.5;margin-bottom:0.65rem;">${escHtml(staffNoteMessage(n))}</div>
+        <button onclick="acknowledgeStaffNotifInline('${n.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.85rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Got it</button>
+      </div>`;
+    });
+  }
+  // Swap/leave notifications
   if(empNotifs.length){
     html+=`<div class="req-section-label">Notifications (${empNotifs.length})</div>`;
     empNotifs.forEach(n=>{
@@ -8495,6 +8507,7 @@ function renderRequestsList(){
       </div>`;
     });
   }
+  // Requests
   if(empReqs.length){
     html+=`<div class="req-section-label">Your Requests</div>`;
     empReqs.forEach(r=>{
@@ -8506,10 +8519,17 @@ function renderRequestsList(){
       </div>`;
     });
   }
-  if(!empNotifs.length&&!empReqs.length){
-    html+=`<div class="req-empty">📭 No pending requests</div>`;
+  if(!mgmtNotes.length&&!empNotifs.length&&!empReqs.length){
+    html+=`<div class="req-empty">✓ You're all caught up</div>`;
   }
   document.getElementById('req-list-content').innerHTML=html;
+}
+
+async function acknowledgeStaffNotifInline(noteId){
+  const note=_notes.find(n=>n.id===noteId);
+  if(!note) return;
+  try{await db.update('notes',noteId,{staff_acknowledged:true});note.staffAcknowledged=true;}catch(e){}
+  renderRequestsList();
 }
 
 function reqTitle(r,isInitiator){
