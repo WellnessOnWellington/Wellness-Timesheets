@@ -2000,6 +2000,11 @@
           <span class="sr-fp-label">Managers</span>
           <span class="sr-fp-check active" id="admin-mob-fpc-Manager"></span>
         </div>
+        <div class="sr-fp-row" onclick="adminMobFilterRole('Doctor')">
+          <span class="sr-fp-dot" style="background:#C0392B"></span>
+          <span class="sr-fp-label">Doctors</span>
+          <span class="sr-fp-check active" id="admin-mob-fpc-Doctor"></span>
+        </div>
       </div>
     </div>
     <div class="admin-kiosk-btn-wrap">
@@ -4271,6 +4276,7 @@ function renderTeam(){
     {role:'Receptionist',label:'Receptionists'},
     {role:'Nurse',       label:'Nurses'},
     {role:'Manager',     label:'Managers'},
+    {role:'Doctor',      label:'Doctors'},
   ];
   const cardHtml=emp=>{
     const initials=emp.name.replace(/^(Dr\.|Nurse|Reception|Practice Mgr)\s*/i,'').split(' ').slice(0,2).map(n=>n[0]).join('');
@@ -6194,7 +6200,7 @@ function testScanReq(){
 ═══════════════════════════════════════════ */
 let srOffset=0, srRoles=new Set(['Receptionist','Nurse','Manager']), srLayout='day', _srDnMap={};
 let srDayDate='';
-let teamRoles=new Set(['Receptionist','Nurse','Manager']);
+let teamRoles=new Set(['Receptionist','Nurse','Manager','Doctor']);
 function teamToggleRole(role,btn){
   if(teamRoles.has(role)) teamRoles.delete(role); else teamRoles.add(role);
   btn.classList.toggle('active', teamRoles.has(role));
