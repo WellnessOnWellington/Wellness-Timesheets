@@ -240,7 +240,7 @@
   }
 
   .flash-sub { font-size: 0.95rem; color: rgba(255,255,255,0.55); font-weight: 500; margin-top: 0.4rem; }
-  .flash-pending { display:none; margin-top:1.25rem; background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.35); border-radius:999px; padding:0.45rem 1.1rem; font-size:0.82rem; font-weight:700; color:#fff; letter-spacing:0.01em; animation:nameIn 0.35s 0.2s ease both; }
+  .flash-pending { display:none; margin-top:1.25rem; background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.35); border-radius:999px; padding:0.45rem 1.1rem; font-size:0.82rem; font-weight:700; color:#fff; letter-spacing:0.01em; animation:nameIn 0.35s 0.2s ease both; cursor:pointer; }
   .flash-pending.visible { display:block; }
 
   /* ══════════════════════════════
@@ -1796,7 +1796,7 @@
   <div class="flash-greeting" id="flash-greeting"></div>
   <div class="flash-name"     id="flash-name"></div>
   <div class="flash-sub"      id="flash-sub"></div>
-  <div class="flash-pending"  id="flash-pending"></div>
+  <div class="flash-pending"  id="flash-pending" onclick="clearTimeout(flashT);document.getElementById('flash').classList.remove('show');openRequestsAsFlashEmp();"></div>
 </div>
 
 <!-- REASON -->
@@ -3648,7 +3648,7 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
         await addNote(emp,'Leave conflict',timeStr,`Clocked in but was marked as ${leaveName} for today — please review`,leaveEntry.id,todayKey);
         const unseenLv=_requests.filter(r=>(r.status==='pending_manager'||r.status==='pending_peer')&&(r.initiatorId===emp.id||(r.colleagueId===emp.id&&r.status==='pending_peer'))).length;
         const pendingMsgLv=unseenLv===1?'📋 You have 1 pending request':unseenLv>1?`📋 You have ${unseenLv} pending requests`:'';
-        showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,pendingMsgLv);
+        showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,pendingMsgLv,emp);
         return;
       }
       const row = {
@@ -3660,7 +3660,7 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
       if(reason) await addNote(emp,noteType||'Arrival note',timeStr,reason,row.id,todayKey);
       const unseenIn=_requests.filter(r=>(r.status==='pending_manager'||r.status==='pending_peer')&&(r.initiatorId===emp.id||(r.colleagueId===emp.id&&r.status==='pending_peer'))).length;
       const pendingMsgIn=unseenIn===1?'📋 You have 1 pending request':unseenIn>1?`📋 You have ${unseenIn} pending requests`:'';
-      showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,pendingMsgIn);
+      showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,pendingMsgIn,emp);
     } else {
       const[ih,im]=open.clockIn.split(':').map(Number);
       const[oh,om]=sheetTimeStr.split(':').map(Number);
@@ -3684,7 +3684,7 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
       if(breakFlagged) await addNote(emp,'Break note',timeStr,`Break shorter than expected — unpaid: ${unpaidBreakMins} min (expected ${unpaidExpected} min)${breakNote?' · '+breakNote:''}`,open.id,todayKey);
       const unseenOut=_requests.filter(r=>(r.status==='pending_manager'||r.status==='pending_peer')&&(r.initiatorId===emp.id||(r.colleagueId===emp.id&&r.status==='pending_peer'))).length;
       const pendingMsgOut=unseenOut===1?'📋 You have 1 pending request':unseenOut>1?`📋 You have ${unseenOut} pending requests`:'';
-      showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],'Checked out · '+timeStr+' · '+hoursStr+'h',pendingMsgOut);
+      showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],'Checked out · '+timeStr+' · '+hoursStr+'h',pendingMsgOut,emp);
     }
   } catch(e) {
     showFlash('error','⚠','','Database error','Please try again');
@@ -3704,8 +3704,9 @@ async function addNote(emp,type,time,reason,entryId,date){
 /* ═══════════════════════════════════════════
    FLASH + REASON
 ═══════════════════════════════════════════ */
-let flashT=null;
-function showFlash(type,wave,greeting,name,sub,pendingMsg=''){
+let flashT=null,_flashEmp=null;
+function showFlash(type,wave,greeting,name,sub,pendingMsg='',emp=null){
+  _flashEmp=emp||null;
   const o=document.getElementById('flash');
   o.className='flash-overlay show '+type;
   document.getElementById('flash-wave').textContent=wave;
@@ -8363,6 +8364,16 @@ async function openRequestsView(){
   if(pinInput) pinInput.value='';
   if(_lockoutInterval){clearInterval(_lockoutInterval);_lockoutInterval=null;}
   showView('requests');
+}
+
+async function openRequestsAsFlashEmp(){
+  if(_flashEmp){
+    showView('requests');
+    _reqEmployee=_flashEmp;
+    await reqShowList();
+  } else {
+    openRequestsView();
+  }
 }
 
 function onStaffNameSelect(){
