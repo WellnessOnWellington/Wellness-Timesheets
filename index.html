@@ -4368,7 +4368,7 @@ async function saveEmployee(){
   const name=[firstName,surname].filter(Boolean).join(' ');
   const preferredName=document.getElementById('emp-preferred-name').value.trim()||null;
   const role=document.getElementById('emp-role').value;
-  const rfid=document.getElementById('emp-rfid').value.trim().replace(/\D/g,'');
+  const rfid=document.getElementById('emp-rfid').value.trim().replace(/\D/g,'')||null;
   const type=document.getElementById('emp-type').value;
   const isPlaceholder=document.getElementById('emp-placeholder').checked;
   const classification=isPlaceholder?null:document.getElementById('emp-classification').value||null;
