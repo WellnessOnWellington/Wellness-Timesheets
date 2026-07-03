@@ -4520,8 +4520,6 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const rostEnd=shift?.end_time||null;
   const clockStart=entry?.clockIn||null;
   const clockEnd=entry?.clockOut||null;
-  const finalStart=entry?.finalStart||clockStart;
-  const finalEnd=entry?.finalEnd||clockEnd;
   const locked=entry?.locked||false;
   const lockedBy=entry?.lockedBy||null;
   const manuallyAdjusted=entry?.manuallyAdjusted||false;
@@ -4530,17 +4528,19 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const missedClockOut=tsMissedClockOut(entry);
   const entryStatus=entry?.status||null;
   const payrollType=entry?.payrollType||entry?.leaveType||'';
-  const isLeaveShift=!!payrollType; // any non-empty = leave type set
+  const isLeaveShift=!!payrollType;
   const isSplitWorked=splitSegment&&!isLeaveShift;
-  // isSplitWorked: no clock-in means manager locks with roster times (same as leave/Manager path)
+  // Compute autoApproved first so we can snap finalStart/finalEnd to roster times for display & MYOB
+  const autoApproved=isSplitWorked
+    ?(entry?.clockIn&&rostStart?Math.abs(timeToMin(entry.clockIn)-timeToMin(rostStart))<(YELLOW_BY_ROLE[emp.role]??10):false)
+    :tsIsAutoApproved(entry,shift);
+  // Auto-approved: snap to roster times; manager-set finalStart/finalEnd always take priority
+  const finalStart=entry?.finalStart||(autoApproved&&rostStart?rostStart:clockStart);
+  const finalEnd=entry?.finalEnd||(autoApproved&&rostEnd?rostEnd:clockEnd);
   const noClockExpected=!entry?.clockIn&&!!rostStart&&!!rostEnd&&(emp.role==='Manager'||isLeaveShift||(isSplitWorked&&!!entry));
   // For split worked segments: cap effectiveFinalEnd to segment boundary (clockOut is full-shift end)
   const effectiveFinalStart=finalStart||(noClockExpected?rostStart:null);
   const effectiveFinalEnd=isSplitWorked&&finalEnd&&rostEnd&&finalEnd>rostEnd?rostEnd:(finalEnd||(noClockExpected?rostEnd:null));
-  // For split worked segments: auto-approve on clockIn proximity only (clockOut belongs to the full shift)
-  const autoApproved=isSplitWorked
-    ?(entry?.clockIn&&rostStart?Math.abs(timeToMin(entry.clockIn)-timeToMin(rostStart))<(YELLOW_BY_ROLE[emp.role]??10):false)
-    :tsIsAutoApproved(entry,shift);
   const effectiveAutoApproved=autoApproved||noClockExpected;
   const flag=tsGetFlag(locked,noEntry&&!noClockExpected,effectiveFinalStart,effectiveFinalEnd,effectiveAutoApproved,entryStatus,missedClockOut);
   const autoExpand=flag==='red'||flag==='flagged'||entryId==_tsExpandEntryId;
@@ -4584,7 +4584,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const myobEntry=splitSegment&&!isLeaveShift&&shift?.start_time
     ?{...(entry||{}),date,clockIn:shift.start_time,clockOut:shift.end_time,finalStart:null,finalEnd:null}
     :entry;
-  const myobPreviewText=(locked||effectiveAutoApproved)&&myobEntry?calcMYOBRows(myobEntry,emp,isPH).map(r=>`${fmtH(r.hours)} ${r.cat}`).join(' · '):'';
+  const myobPreviewText=(locked||effectiveAutoApproved)&&myobEntry?calcMYOBRows(myobEntry,emp,isPH,shift).map(r=>`${fmtH(r.hours)} ${r.cat}`).join(' · '):'';
   const payrollDone=locked||(effectiveAutoApproved&&!autoOverridden);
   const payrollInner=payrollDone
     ?`<span class="ts-payroll-label">${PAYROLL_TYPES.find(([v])=>v===payrollType)?.[1]||'Worked'}</span>`
@@ -5295,9 +5295,10 @@ const MYOB_CATS={
   'Casual':          {day:'casual Day CE',evening:'Casual evening CE',saturday:'Casual WoW weekend',sunday:'Casual WoW weekend',publicHoliday:null,annualLeave:null,personalLeave:null,compassionateLeave:null,longServiceLeave:null,unpaidLeave:null,isNurse:false},
 };
 
-function calcMYOBRows(entry, emp, isPH=false){
-  const start=entry.finalStart||entry.clockIn;
-  const end=entry.finalEnd||entry.clockOut;
+function calcMYOBRows(entry, emp, isPH=false, shift=null){
+  const _snap=!entry.finalStart&&!entry.finalEnd&&tsIsAutoApproved(entry,shift);
+  const start=entry.finalStart||(_snap&&shift?.start_time?shift.start_time:entry.clockIn);
+  const end=entry.finalEnd||(_snap&&shift?.end_time?shift.end_time:entry.clockOut);
   if(!start||!end) return [];
   const startMins=timeToMin(start);
   const endMins=timeToMin(end);
@@ -5390,7 +5391,8 @@ function exportMYOB(){
     const firstName=nameParts[0]||'';
     const lastName=nameParts.slice(1).join(' ')||'';
     const dateF=entry.date.split('-').reverse().join('/');
-    const myobRows=calcMYOBRows(entry,emp,_publicHolidays?.has(entry.date)||false);
+    const shift=_rosterShifts.find(s=>s.employee_id===entry.employeeId&&s.date===entry.date&&!s.is_day_off)||null;
+    const myobRows=calcMYOBRows(entry,emp,_publicHolidays?.has(entry.date)||false,shift);
     myobRows.forEach(({cat,hours})=>{
       const units=hours.toFixed(2);
       const row=[lastName,firstName,cat,'','','','',dateF,units,'*None',emp?.myob_record_id||'','','',''];
