@@ -8482,29 +8482,30 @@ function renderRequestsList(){
     .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const empNotifs=_notifications.filter(n=>n.employeeId===emp.id&&!n.seenAt).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const mgmtNotes=_notes.filter(n=>n.employeeId===emp.id&&(n.status==='approved'||n.status==='flagged')&&!n.staffAcknowledged);
+  // Merge management notes and swap notifications into one updates list, sorted by date
+  const allUpdates=[
+    ...mgmtNotes.map(n=>({_type:'note',_date:n.date,n})),
+    ...empNotifs.map(n=>({_type:'notif',_date:n.createdAt,n}))
+  ].sort((a,b)=>new Date(b._date)-new Date(a._date));
   let html=`<div class="req-emp-greeting">Hi, ${escHtml(emp.name.split(' ')[0])}!</div><div class="req-role-badge">${emp.role}</div>`;
-  // Management updates section
-  if(mgmtNotes.length){
-    html+=`<div class="req-section-label">Management Updates (${mgmtNotes.length})</div>`;
-    mgmtNotes.forEach(n=>{
-      const ok=n.status==='approved';
-      const borderColor=ok?'var(--success)':'#e67e22';
-      html+=`<div style="background:var(--white);border:1.5px solid ${borderColor};border-left:4px solid ${borderColor};border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.6rem;">
-        <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:${borderColor};margin-bottom:0.3rem;">${ok?'✓ Approved':'⚠ Flagged for discussion'}</div>
-        <div style="font-size:0.86rem;font-weight:600;color:var(--charcoal);line-height:1.5;margin-bottom:0.65rem;">${escHtml(staffNoteMessage(n))}</div>
-        <button onclick="acknowledgeStaffNotifInline('${n.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.85rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Got it</button>
-      </div>`;
-    });
-  }
-  // Swap/leave notifications
-  if(empNotifs.length){
-    html+=`<div class="req-section-label">Notifications (${empNotifs.length})</div>`;
-    empNotifs.forEach(n=>{
-      html+=`<div class="req-notif-card" onclick="reqShowDetail('${n.requestId}')">
-        <div class="req-notif-label">New notification</div>
-        <div class="req-notif-msg">${escHtml(n.message)}</div>
-        <div class="req-notif-time">${reqFmtDate(n.createdAt)}</div>
-      </div>`;
+  if(allUpdates.length){
+    html+=`<div class="req-section-label">Updates (${allUpdates.length})</div>`;
+    allUpdates.forEach(({_type,n})=>{
+      if(_type==='note'){
+        const ok=n.status==='approved';
+        const borderColor=ok?'var(--success)':'#e67e22';
+        html+=`<div style="background:var(--white);border:1.5px solid ${borderColor};border-left:4px solid ${borderColor};border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.6rem;">
+          <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:${borderColor};margin-bottom:0.3rem;">${ok?'✓ Approved':'⚠ Action required'}</div>
+          <div style="font-size:0.86rem;font-weight:600;color:var(--charcoal);line-height:1.5;margin-bottom:0.65rem;">${escHtml(staffNoteMessage(n))}</div>
+          <button onclick="acknowledgeStaffNotifInline('${n.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.85rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Got it</button>
+        </div>`;
+      } else {
+        html+=`<div class="req-notif-card" onclick="reqShowDetail('${n.requestId}')">
+          <div class="req-notif-label">Shift update</div>
+          <div class="req-notif-msg">${escHtml(n.message)}</div>
+          <div class="req-notif-time">${reqFmtDate(n.createdAt)}</div>
+        </div>`;
+      }
     });
   }
   // Requests
@@ -8519,7 +8520,7 @@ function renderRequestsList(){
       </div>`;
     });
   }
-  if(!mgmtNotes.length&&!empNotifs.length&&!empReqs.length){
+  if(!allUpdates.length&&!empReqs.length){
     html+=`<div class="req-empty">✓ You're all caught up</div>`;
   }
   document.getElementById('req-list-content').innerHTML=html;
