@@ -4379,7 +4379,7 @@ async function saveEmployee(){
   if(pin&&!/^\d{4}$/.test(pin)){showToast('Staff PIN must be exactly 4 digits');return;}
   if(!isPlaceholder&&!rfid&&!confirm('No RFID card number entered — this staff member won\'t be able to clock in until one is assigned. Save anyway?')) return;
   // Check RFID clash (exclude self when editing)
-  if(_emps.find(e=>e.rfid===rfid&&e.id!==_editingEmpId)){showToast('That card is already registered to someone');return;}
+  if(rfid&&_emps.find(e=>e.rfid===rfid&&e.id!==_editingEmpId)){showToast('That card is already registered to someone');return;}
   try{
     if(_editingEmpId){
       await db.update('employees',_editingEmpId,{name,role,rfid,type,classification,pin,myob_record_id:myobRecordId,preferred_name:preferredName,can_travel:canTravel,is_placeholder:isPlaceholder});
