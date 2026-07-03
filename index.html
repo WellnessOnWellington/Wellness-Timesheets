@@ -3011,6 +3011,19 @@
   </div>
 </div>
 
+<!-- STAFF NOTIFICATION MODAL -->
+<div class="modal-bg" id="staff-notif-modal">
+  <div class="modal" style="max-width:420px;text-align:center;">
+    <div id="staff-notif-icon" style="font-size:2rem;margin-bottom:0.5rem;"></div>
+    <div class="modal-title" id="staff-notif-heading" style="margin-bottom:0.75rem;"></div>
+    <div id="staff-notif-message" style="font-size:0.88rem;line-height:1.65;color:var(--charcoal);margin-bottom:1.25rem;"></div>
+    <div id="staff-notif-count" style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem;"></div>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn-primary" onclick="acknowledgeStaffNotif()">Got it</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- DB offline manager banner -->
@@ -3218,7 +3231,8 @@ function normaliseNote(r) {
     id: r.id, entryId: r.entry_id, employeeId: r.employee_id,
     employeeName: r.employee_name, role: r.role, type: r.type,
     time: r.time, date: r.date, reason: r.reason, status: r.status,
-    resolvedBy: r.resolved_by || null
+    resolvedBy: r.resolved_by || null,
+    staffAcknowledged: r.staff_acknowledged || false
   };
 }
 
@@ -3586,6 +3600,7 @@ async function processRFID(card){
   if(!emp){showFlash('error','🤷','','Card not recognised','Please see your manager');return;}
   // Fresh fetch before committing — prevents duplicate entries when multiple kiosks are in use
   try{ _entries=(await db.get('entries')).map(normaliseEntry); }catch(e){}
+  try{ _notes=(await db.get('notes')).map(normaliseNote); }catch(e){}
   if(!_requests.length){ try{ _requests=(await db.get('requests')).map(normaliseRequest); }catch(e){} }
   const now=new Date();
   const todayKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -3599,17 +3614,19 @@ async function processRFID(card){
   const diff=scheduledMin!==null?Math.abs(actualMin-scheduledMin):0;
   const isAfter=scheduledMin!==null?actualMin>scheduledMin:false;
   const sheetTimeStr=roundToRoster(timeStr,scheduledMin);
-  if(scheduled===null&&action==='in'){
-    pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType:'Unrostered arrival'};
-    showReasonPrompt(emp.name.split(' ')[0],action,null);
-  }else if(scheduledMin!==null&&diff>(GRACE_BY_ROLE[emp.role]??10)){
-    const label=diff+' min '+(isAfter?'after':'before')+' scheduled time';
-    const noteType=action==='in'?'Arrival note':'Departure note';
-    pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType};
-    showReasonPrompt(emp.name.split(' ')[0],action,label);
-  }else{
-    await maybeBreakConfirm(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,null,null);
-  }
+  checkStaffNotifications(emp.id, async ()=>{
+    if(scheduled===null&&action==='in'){
+      pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType:'Unrostered arrival'};
+      showReasonPrompt(emp.name.split(' ')[0],action,null);
+    }else if(scheduledMin!==null&&diff>(GRACE_BY_ROLE[emp.role]??10)){
+      const label=diff+' min '+(isAfter?'after':'before')+' scheduled time';
+      const noteType=action==='in'?'Arrival note':'Departure note';
+      pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType};
+      showReasonPrompt(emp.name.split(' ')[0],action,label);
+    }else{
+      await maybeBreakConfirm(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,null,null);
+    }
+  });
   // Silently refresh cache in background for next scan
   Promise.all([db.get('employees'),db.get('entries'),db.get('requests').catch(()=>[])]).then(([emps,entries,reqs])=>{
     _emps=emps.filter(e=>e.active!==false); _entries=entries.map(normaliseEntry); _requests=reqs.map(normaliseRequest);
@@ -6098,6 +6115,60 @@ async function resolveNote(id,status){
 }
 
 /* ═══════════════════════════════════════════
+   STAFF NOTIFICATIONS
+═══════════════════════════════════════════ */
+let _staffNotifQueue=[];
+let _staffNotifCallback=null;
+
+function staffNoteMessage(note){
+  const d=new Date(note.date+'T12:00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'});
+  const ok=note.status==='approved';
+  if(note.type==='Departure note')
+    return ok?`Your late departure on ${d} was approved — overtime will be included in your pay.`
+             :`Your late departure on ${d} has been noted for discussion. Please speak with your manager.`;
+  if(note.type==='Arrival note')
+    return ok?`Your late arrival on ${d} has been noted and approved.`
+             :`Your late arrival on ${d} has been noted for discussion. Please speak with your manager.`;
+  if(note.type==='Unrostered arrival')
+    return ok?`Your unrostered shift on ${d} was approved.`
+             :`Your unrostered shift on ${d} has been flagged for discussion. Please speak with your manager.`;
+  return ok?`A note from ${d} has been approved.`:`A note from ${d} has been flagged for discussion. Please speak with your manager.`;
+}
+
+function checkStaffNotifications(empId, callback){
+  const pending=_notes.filter(n=>n.employeeId===empId&&(n.status==='approved'||n.status==='flagged')&&!n.staffAcknowledged);
+  if(!pending.length){if(callback)callback();return;}
+  _staffNotifQueue=[...pending];
+  _staffNotifCallback=callback||null;
+  showNextStaffNotif();
+}
+
+function showNextStaffNotif(){
+  if(!_staffNotifQueue.length) return;
+  const note=_staffNotifQueue[0];
+  const ok=note.status==='approved';
+  document.getElementById('staff-notif-icon').textContent=ok?'✓':'⚠';
+  document.getElementById('staff-notif-heading').textContent=ok?'Update from management':'Action required';
+  document.getElementById('staff-notif-message').textContent=staffNoteMessage(note);
+  const rem=_staffNotifQueue.length;
+  document.getElementById('staff-notif-count').textContent=rem>1?`${rem} updates to review`:'';
+  document.getElementById('staff-notif-modal').classList.add('show');
+}
+
+async function acknowledgeStaffNotif(){
+  if(!_staffNotifQueue.length) return;
+  const note=_staffNotifQueue.shift();
+  try{await db.update('notes',note.id,{staff_acknowledged:true});note.staffAcknowledged=true;}catch(e){}
+  document.getElementById('staff-notif-modal').classList.remove('show');
+  if(_staffNotifQueue.length){
+    setTimeout(showNextStaffNotif,200);
+  } else if(_staffNotifCallback){
+    const cb=_staffNotifCallback; _staffNotifCallback=null;
+    setTimeout(cb,200);
+  }
+}
+
+/* ═══════════════════════════════════════════
    TOAST + TEST SCAN
 ═══════════════════════════════════════════ */
 let toastT=null;
@@ -8364,6 +8435,7 @@ async function staffPINLogin(){
   if(_lockoutInterval){clearInterval(_lockoutInterval);_lockoutInterval=null;}
   _reqEmployee=emp;
   await reqShowList();
+  checkStaffNotifications(emp.id, null);
 }
 
 async function processRequestsRFID(card){
