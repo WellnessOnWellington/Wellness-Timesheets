@@ -1635,6 +1635,16 @@
     <div id="req-detail-content"></div>
     <button class="req-back-btn" onclick="reqShowList()">← Back to Staff Portal</button>
   </div>
+  <!-- Annual leave conflict modal -->
+  <div id="leave-conflict-modal" style="display:none;position:fixed;inset:0;background:rgba(30,10,15,0.45);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+    <div style="background:#fff;border-radius:16px;max-width:440px;width:100%;padding:1.75rem 1.5rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+      <div style="font-size:1.05rem;font-weight:700;color:var(--charcoal);margin-bottom:0.85rem;">⚠ Annual Leave Conflict</div>
+      <p style="font-size:0.88rem;color:var(--charcoal);margin-bottom:0.75rem;">The following staff already have annual leave during your requested dates:</p>
+      <div id="leave-conflict-list" style="margin-bottom:1rem;"></div>
+      <p style="font-size:0.83rem;color:var(--burgundy);font-weight:600;margin-bottom:1.25rem;">This annual leave request cannot be processed. Please request different dates or speak with your manager.</p>
+      <button class="btn-primary" onclick="document.getElementById('leave-conflict-modal').style.display='none'" style="width:100%;">Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- COPY FORTNIGHT MODAL -->
@@ -8816,6 +8826,34 @@ async function reqSubmitLeave(){
   const reason=document.getElementById('req-reason').value.trim();
   if(!startDate||!endDate){ showToast('Please select start and end dates'); return; }
   if(endDate<startDate){ showToast('End date must be after start date'); return; }
+  // Annual leave conflict check
+  if(leaveType==='annual_leave'){
+    const nursingClasses=['Registered Nurse','Enrolled Nurse'];
+    const inNursingPool=e=>e.role==='Nurse'||nursingClasses.includes(e.classification);
+    const sameGroup=(a,b)=>a.role===b.role||(inNursingPool(a)&&inNursingPool(b));
+    const dates=[];
+    const cur=new Date(startDate+'T12:00:00'), endD=new Date(endDate+'T12:00:00');
+    while(cur<=endD){dates.push(rbDateKey(cur));cur.setDate(cur.getDate()+1);}
+    let conflicts=[];
+    try{
+      const leaveEntries=await db.get('entries',{leave_type:'annual_leave'});
+      for(const row of leaveEntries){
+        if(row.employee_id===emp.id||!dates.includes(row.date)) continue;
+        const other=_emps.find(e=>e.id===row.employee_id);
+        if(!other||!sameGroup(emp,other)) continue;
+        conflicts.push({empName:other.name,date:row.date});
+      }
+      conflicts.sort((a,b)=>a.date.localeCompare(b.date));
+    }catch(e){ console.warn('Leave conflict check failed',e); }
+    if(conflicts.length){
+      document.getElementById('leave-conflict-list').innerHTML=conflicts.map(c=>`
+        <div style="padding:0.4rem 0;border-bottom:1px solid #f0e8e8;font-size:0.87rem;">
+          <strong>${escHtml(c.empName)}</strong> — ${new Date(c.date+'T12:00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'})}
+        </div>`).join('');
+      document.getElementById('leave-conflict-modal').style.display='flex';
+      return;
+    }
+  }
   const id='REQ'+Date.now();
   const now=new Date().toISOString();
   try{
