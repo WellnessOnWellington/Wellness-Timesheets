@@ -1555,7 +1555,7 @@
     <div id="db-status-mob" style="margin-bottom:0.5rem;"></div>
     <button class="nav-btn" onclick="openRosterPIN()" style="width:100%;">👥 Who's On</button>
     <div style="display:flex;gap:0.75rem;width:100%;">
-      <button class="nav-btn" onclick="openRequestsView()" style="flex:1;">📋 Requests</button>
+      <button class="nav-btn" onclick="openRequestsView()" style="flex:1;">📋 Staff Portal</button>
       <button class="nav-btn" onclick="showView('login')" style="flex:1;">⚙️ Manager Login</button>
     </div>
   </div>
@@ -1579,7 +1579,7 @@
         </svg>
       </div>
     </div>
-    <div class="req-view-title">Staff Requests</div>
+    <div class="req-view-title">Staff Portal</div>
     <div id="req-user-label" style="display:none;font-size:0.72rem;font-weight:600;color:var(--muted);margin-top:0.2rem;"></div>
   </div>
   <!-- Auth panel: scan card -->
@@ -1628,12 +1628,12 @@
   <!-- Form panel: new request -->
   <div class="req-panel" id="req-panel-form" style="display:none;">
     <div id="req-form-content"></div>
-    <button class="req-back-btn" onclick="reqShowList()">← Back to My Requests</button>
+    <button class="req-back-btn" onclick="reqShowList()">← Back to Staff Portal</button>
   </div>
   <!-- Detail panel: view + respond to a request -->
   <div class="req-panel" id="req-panel-detail" style="display:none;">
     <div id="req-detail-content"></div>
-    <button class="req-back-btn" onclick="reqShowList()">← Back to My Requests</button>
+    <button class="req-back-btn" onclick="reqShowList()">← Back to Staff Portal</button>
   </div>
 </div>
 
@@ -1956,7 +1956,7 @@
         <div class="sr-lp-row" onclick="adminMobileSwitchTab('team')"><span class="sr-lp-radio active" id="admin-mp-r-team"></span><span class="sr-lp-label">Team</span></div>
         <div class="sr-lp-row" id="admin-mob-nav-roster" onclick="adminMobileSwitchTab('roster')"><span class="sr-lp-radio" id="admin-mp-r-roster"></span><span class="sr-lp-label">Roster</span></div>
         <div class="sr-lp-row" onclick="adminMobileSwitchTab('notes')"><span class="sr-lp-radio" id="admin-mp-r-notes"></span><span class="sr-lp-label">Notes</span></div>
-        <div class="sr-lp-row" onclick="adminMobileSwitchTab('requests')"><span class="sr-lp-radio" id="admin-mp-r-requests"></span><span class="sr-lp-label">Requests</span></div>
+        <div class="sr-lp-row" onclick="adminMobileSwitchTab('requests')"><span class="sr-lp-radio" id="admin-mp-r-requests"></span><span class="sr-lp-label">Staff Portal</span></div>
         <div class="sr-lp-row" onclick="adminMobileSwitchTab('timesheets')"><span class="sr-lp-radio" id="admin-mp-r-timesheets"></span><span class="sr-lp-label">Timesheets</span></div>
         <div class="sr-lp-row" onclick="adminMobileSwitchTab('analytics')"><span class="sr-lp-radio" id="admin-mp-r-analytics"></span><span class="sr-lp-label">Analytics</span></div>
         <div class="sr-lp-row" onclick="adminMobileSwitchTab('settings')"><span class="sr-lp-radio" id="admin-mp-r-settings"></span><span class="sr-lp-label">Settings</span></div>
@@ -1974,7 +1974,7 @@
       <button class="tab active" onclick="switchTab('team',this)">Team</button>
       <button class="tab"        onclick="switchTab('roster',this)">Roster</button>
       <button class="tab"        onclick="switchTab('notes',this)">Notes<span class="notif-badge" id="notif-badge" style="display:none"></span></button>
-      <button class="tab"        onclick="switchTab('requests',this)">Requests<span class="notif-badge" id="req-admin-badge" style="display:none"></span></button>
+      <button class="tab"        onclick="switchTab('requests',this)">Staff Portal<span class="notif-badge" id="req-admin-badge" style="display:none"></span></button>
       <button class="tab"        onclick="switchTab('timesheets',this)">Timesheets</button>
       <button class="tab"        onclick="switchTab('analytics',this)">Analytics</button>
       <button class="tab"        onclick="switchTab('settings',this)">Settings</button>
@@ -2227,7 +2227,7 @@
     <div id="tab-requests" class="tab-panel">
       <div class="page-ribbon">
         <div>
-          <div class="page-ribbon-title">Requests</div>
+          <div class="page-ribbon-title">Staff Portal</div>
           <div class="page-ribbon-hint">Pending leave requests and peer-approved shift swaps awaiting your decision</div>
         </div>
       </div>
@@ -2555,7 +2555,7 @@
               </div>
 
               <div class="hg-card">
-                <div class="hg-card-head"><span class="hg-card-icon">📋</span><span class="hg-card-title">Requests</span></div>
+                <div class="hg-card-head"><span class="hg-card-icon">📋</span><span class="hg-card-title">Staff Portal</span></div>
                 <ul class="hg-list">
                   <li>Staff scan their card at the Requests screen (kiosk footer) to submit and track requests</li>
                   <li><strong>Leave</strong> — goes directly to the manager for approval</li>
@@ -6450,7 +6450,7 @@ function adminToggleTabPicker(e){
 
 function adminMobileSwitchTab(name){
   document.getElementById('admin-mob-popover')?.classList.remove('open');
-  const LABELS={team:'Team',roster:'Roster',notes:'Notes',requests:'Requests',timesheets:'Timesheets',analytics:'Analytics',settings:'Settings'};
+  const LABELS={team:'Team',roster:'Roster',notes:'Notes',requests:'Staff Portal',timesheets:'Timesheets',analytics:'Analytics',settings:'Settings'};
   const pill=document.getElementById('admin-mob-pill-label');
   if(pill) pill.textContent=LABELS[name]||name;
   document.querySelectorAll('#admin-mob-popover .sr-lp-radio').forEach(r=>r.classList.remove('active'));
