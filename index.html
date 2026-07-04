@@ -1238,7 +1238,7 @@
   .ts-row-main:hover { background:var(--blush-lt); }
   .ts-row-date { width:115px; flex-shrink:0; font-size:0.88rem; font-weight:700; color:var(--charcoal); }
   .ts-row-times { width:200px; flex-shrink:0; display:flex; align-items:center; gap:0.6rem; font-size:0.88rem; }
-  .ts-times-rost { color:var(--muted); font-family:'Courier New',monospace; }
+  .ts-times-rost { color:var(--muted); font-family:'Courier New',monospace; min-width:6.2rem; display:inline-block; }
   .ts-times-arrow { color:var(--border); font-size:0.68rem; }
   .ts-times-clock { color:var(--charcoal); font-weight:800; font-family:'Courier New',monospace; }
   .ts-times-clock.ts-times-flagged { color:var(--burgundy); }
@@ -4656,7 +4656,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const compactRow=`<div class="ts-row-main" onclick="tsToggleRow(this.closest('.ts-shift-row'))">
     <div class="ts-row-date">${dateLabel}</div>
     <div class="ts-row-times">
-      <span class="ts-times-rost">${rostStart&&rostEnd?rostStart+'–'+rostEnd:'—'}</span>
+      <span class="ts-times-rost">${rostStart&&rostEnd?rostStart+'–'+rostEnd:'<em style="font-style:italic;font-family:inherit;font-size:0.8em;">Nil</em>'}</span>
       <span class="ts-times-arrow">→</span>
       <span class="ts-times-clock${flag==='red'?' ts-times-flagged':flag==='flagged'?' ts-times-flagged-follow':''}">${effectiveFinalStart&&effectiveFinalEnd?effectiveFinalStart+'–'+effectiveFinalEnd:clockStart&&clockEnd?clockStart+'–'+clockEnd:missedClockOut?clockStart+' – No clock-out':noClockExpected?'No clock required':noEntry?'No clock-in':'—'}</span>${earlyLabel}
     </div>
@@ -4899,14 +4899,29 @@ function renderTimesheets(){
     }).join('');
 
     const flagCounts=activeDays.reduce((acc,date)=>{
-      const shift=empShifts.find(s=>s.date===date)||null;
+      const dayShifts=empShifts.filter(s=>s.date===date);
       const dayEntries=empEntries.filter(e=>e.date===date);
-      const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
-      const _pt=entry?.payrollType||entry?.leaveType||'';
-      const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
-      const _effAuto=tsIsAutoApproved(entry,shift)||_nce;
-      const f=tsGetFlag(entry?.locked||false,!entry&&!!shift&&!_nce,entry?.finalStart||entry?.clockIn||null,entry?.finalEnd||entry?.clockOut||null,_effAuto,entry?.status||null,tsMissedClockOut(entry));
-      if(f==='red'||f==='flagged'||f==='yellow') acc++;
+      if(dayShifts.length>1){
+        // Split shift — evaluate each segment exactly as tsBuildRow does
+        dayShifts.forEach(seg=>{
+          const leaveEntry=dayEntries.find(e=>e.shiftId===seg.id&&e.leaveType)||null;
+          const entry=leaveEntry||(dayEntries.find(e=>!e.leaveType&&(e.clockIn||e.finalStart||e.locked))||null);
+          const _pt=entry?.payrollType||entry?.leaveType||'';
+          const _isLeave=!!_pt;
+          const _nce=!entry?.clockIn&&!!seg.start_time&&!!seg.end_time&&(emp.role==='Manager'||_isLeave);
+          const _effAuto=tsIsAutoApproved(entry,seg)||_nce;
+          const f=tsGetFlag(entry?.locked||false,!entry&&!_nce,entry?.finalStart||entry?.clockIn||null,entry?.finalEnd||entry?.clockOut||null,_effAuto,entry?.status||null,tsMissedClockOut(entry));
+          if(f==='red'||f==='flagged'||f==='yellow') acc++;
+        });
+      } else {
+        const shift=dayShifts[0]||null;
+        const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
+        const _pt=entry?.payrollType||entry?.leaveType||'';
+        const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
+        const _effAuto=tsIsAutoApproved(entry,shift)||_nce;
+        const f=tsGetFlag(entry?.locked||false,!entry&&!!shift&&!_nce,entry?.finalStart||entry?.clockIn||null,entry?.finalEnd||entry?.clockOut||null,_effAuto,entry?.status||null,tsMissedClockOut(entry));
+        if(f==='red'||f==='flagged'||f==='yellow') acc++;
+      }
       return acc;
     },0);
 
@@ -4925,8 +4940,18 @@ function renderTimesheets(){
     },0);
 
     const allLocked=activeDays.length>0&&activeDays.every(date=>{
-      const shift=empShifts.find(s=>s.date===date)||null;
+      const dayShifts=empShifts.filter(s=>s.date===date);
       const dayEntries=empEntries.filter(e=>e.date===date);
+      if(dayShifts.length>1){
+        return dayShifts.every(seg=>{
+          const leaveEntry=dayEntries.find(e=>e.shiftId===seg.id&&e.leaveType)||null;
+          const entry=leaveEntry||(dayEntries.find(e=>!e.leaveType&&(e.clockIn||e.finalStart||e.locked))||null);
+          const _pt=entry?.payrollType||entry?.leaveType||'';
+          const _nce=!entry?.clockIn&&!!seg.start_time&&!!seg.end_time&&(emp.role==='Manager'||!!_pt);
+          return entry?.locked===true||tsIsAutoApproved(entry,seg)||_nce;
+        });
+      }
+      const shift=dayShifts[0]||null;
       const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
       const _pt=entry?.payrollType||entry?.leaveType||'';
       const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
@@ -4971,10 +4996,22 @@ function renderTimesheets(){
       const activeDays=[...new Set([...empShifts.map(s=>s.date),...empEntries.map(e=>e.date)])];
       if(!activeDays.length) return true; // no shifts this fortnight — not blocking
       return activeDays.every(date=>{
-        const shift=empShifts.find(s=>s.date===date)||null;
+        const dayShifts=empShifts.filter(s=>s.date===date);
         const dayEntries=empEntries.filter(e=>e.date===date);
+        if(dayShifts.length>1){
+          return dayShifts.every(seg=>{
+            const leaveEntry=dayEntries.find(e=>e.shiftId===seg.id&&e.leaveType)||null;
+            const entry=leaveEntry||(dayEntries.find(e=>!e.leaveType&&(e.clockIn||e.finalStart||e.locked))||null);
+            const _pt=entry?.payrollType||entry?.leaveType||'';
+            const _nce=!entry?.clockIn&&!!seg.start_time&&!!seg.end_time&&(emp.role==='Manager'||!!_pt);
+            return entry?.locked===true||tsIsAutoApproved(entry,seg)||_nce;
+          });
+        }
+        const shift=dayShifts[0]||null;
         const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
-        return entry?.locked===true||tsIsAutoApproved(entry,shift);
+        const _pt=entry?.payrollType||entry?.leaveType||'';
+        const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
+        return entry?.locked===true||tsIsAutoApproved(entry,shift)||_nce;
       });
     });
     exportBtn.classList.toggle('ready',allEmpsReady);
@@ -4994,10 +5031,22 @@ function renderTimesheets(){
       const activeDays=[...new Set([...empShifts.map(s=>s.date),...empEntries.map(e=>e.date)])];
       if(!activeDays.length) return true;
       return activeDays.every(date=>{
-        const shift=empShifts.find(s=>s.date===date)||null;
+        const dayShifts=empShifts.filter(s=>s.date===date);
         const dayEntries=empEntries.filter(e=>e.date===date);
+        if(dayShifts.length>1){
+          return dayShifts.every(seg=>{
+            const leaveEntry=dayEntries.find(e=>e.shiftId===seg.id&&e.leaveType)||null;
+            const entry=leaveEntry||(dayEntries.find(e=>!e.leaveType&&(e.clockIn||e.finalStart||e.locked))||null);
+            const _pt=entry?.payrollType||entry?.leaveType||'';
+            const _nce=!entry?.clockIn&&!!seg.start_time&&!!seg.end_time&&(emp.role==='Manager'||!!_pt);
+            return entry?.locked===true||tsIsAutoApproved(entry,seg)||_nce;
+          });
+        }
+        const shift=dayShifts[0]||null;
         const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
-        return entry?.locked===true||tsIsAutoApproved(entry,shift);
+        const _pt=entry?.payrollType||entry?.leaveType||'';
+        const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
+        return entry?.locked===true||tsIsAutoApproved(entry,shift)||_nce;
       });
     });
     tab.classList.toggle('ready',roleReady);
@@ -5443,11 +5492,15 @@ function exportMYOB(){
   const fnDays=getFortnight14Days(fnStart);
   const allEntries=_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted);
 
-  // An entry is "ready" if explicitly locked OR auto-approved (within threshold of roster)
+  // An entry is "ready" if explicitly locked, auto-approved, or no clock required (leave/manager)
   const isReady=e=>{
     if(e.locked) return true;
-    const shift=_rosterShifts.find(s=>s.employee_id===e.employeeId&&s.date===e.date);
-    return tsIsAutoApproved(e,shift);
+    const emp=_emps.find(em=>em.id===e.employeeId);
+    const shift=(e.shiftId&&_rosterShifts.find(s=>String(s.id)===String(e.shiftId)))
+      ||_rosterShifts.find(s=>s.employee_id===e.employeeId&&s.date===e.date&&!s.is_day_off);
+    const _pt=e.payrollType||e.leaveType||'';
+    const _nce=!e.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp?.role==='Manager'||!!_pt);
+    return _nce||tsIsAutoApproved(e,shift);
   };
 
   const ready=allEntries.filter(e=>isReady(e)&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
@@ -5463,7 +5516,10 @@ function exportMYOB(){
     if(!confirm(`${notReady.length} entr${notReady.length===1?'y':'ies'} are not yet locked and will not be included:\n\n${detail}\n\nExport ${ready.length} ready entr${ready.length===1?'y':'ies'} anyway?`)) return;
   }
 
-  const fnLabel=srFortnightLabel(fnStart).replace(/[^a-zA-Z0-9-]/g,'-');
+  const _fmtD=d=>{const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=String(d.getFullYear()).slice(-2);return dd+mm+yy;};
+  const fnStartDate=new Date(fnStart+'T12:00:00');
+  const fnEndDate=new Date(fnStart+'T12:00:00');fnEndDate.setDate(fnEndDate.getDate()+13);
+  const fnFileLabel=`Running_Well_MYOB_Export_${_fmtD(fnStartDate)}-${_fmtD(fnEndDate)}`;
   const lines=['{}'];
   const headers=['Employee Co./Last Name','Employee First Name','Payroll Category','Job','Customer Co./Last Name','Customer First Name','Notes','Date','Units','Employee Card ID','Employee Record ID','Start/Stop Time','Customer Card ID','Customer Record ID'];
   lines.push(headers.join('\t'));
@@ -5494,7 +5550,7 @@ function exportMYOB(){
   const txt=lines.join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));
-  a.download=`timesheets-${fnLabel}.txt`;
+  a.download=`${fnFileLabel}.txt`;
   a.click();
   showToast(`Exported ${ready.length} entr${ready.length===1?'y':'ies'} ✓`);
 }
