@@ -5103,16 +5103,20 @@ async function tsLockRow(entryId, empId, date, e){
   const mgr=currentManager?.name||'Manager';
   try{
     const entry=_entries.find(en=>en.id===entryId);
+    // Find any sibling entries for the same employee+date (e.g. second shift same day)
+    const siblings=_entries.filter(en=>en.id!==entryId&&en.employeeId===empId&&en.date===date&&!en.locked&&!en.leaveType&&!en.deleted);
     await Promise.all([
       tsAnimateLockClose(entryId),
-      db.update('entries',entryId,{locked:true,locked_by:mgr,locked_at:new Date().toISOString()})
+      db.update('entries',entryId,{locked:true,locked_by:mgr,locked_at:new Date().toISOString()}),
+      ...siblings.map(s=>db.update('entries',s.id,{locked:true,locked_by:mgr,locked_at:new Date().toISOString()}))
     ]);
     if(entry){entry.locked=true;entry.lockedBy=mgr;}
+    siblings.forEach(s=>{s.locked=true;s.lockedBy=mgr;});
     await tsSaveAudit({entry_id:entryId,employee_id:empId,employee_name:entry?.employeeName||'',date,
       rostered_start:null,rostered_end:null,
       clocked_start:entry?.clockIn||null,clocked_end:entry?.clockOut||null,
       final_start:entry?.finalStart||entry?.clockIn||null,final_end:entry?.finalEnd||entry?.clockOut||null,
-      action:'lock',reason:'Locked by manager',manager_name:mgr});
+      action:'lock',reason:'Locked by manager'+(siblings.length?` (+ ${siblings.length} sibling entr${siblings.length===1?'y':'ies'} same day)`:''),manager_name:mgr});
     renderTimesheets();showToast('Entry locked.');
   }catch(err){showToast('Could not lock entry');console.error(err);}
 }
