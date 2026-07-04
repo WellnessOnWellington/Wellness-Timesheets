@@ -1255,7 +1255,7 @@
   .ts-payroll-label { font-size:0.72rem; font-weight:700; color:var(--muted); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ts-locked-label { font-size:0.68rem; color:var(--muted); font-weight:600; white-space:nowrap; width:70px; text-align:left; }
   .ts-row-detail { background:rgba(250,245,246,0.7); border-top:1px solid rgba(234,217,220,0.5); max-height:0; overflow:hidden; transition:max-height 0.22s ease-out; position:relative; }
-  .ts-row-detail.ts-detail-open { max-height:250px; }
+  .ts-row-detail.ts-detail-open { max-height:600px; }
   .ts-row-detail-inner { padding:0.5rem 1.1rem 0.75rem; }
   .ts-sub-row { display:flex; align-items:center; gap:0.75rem; padding:0.3rem 0; font-size:0.8rem; }
   .ts-sub-label { width:72px; flex-shrink:0; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); }
@@ -3655,7 +3655,7 @@ async function processRFID(card){
   if(scheduled===null&&action==='in'){
     pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType:'Unrostered arrival'};
     showReasonPrompt(emp.name.split(' ')[0],action,null);
-  }else if(scheduledMin!==null&&diff>(GRACE_BY_ROLE[emp.role]??10)){
+  }else if(scheduledMin!==null&&diff>(GRACE_BY_ROLE[emp.role]??10)&&(action==='out'||isAfter)){
     const label=diff+' min '+(isAfter?'after':'before')+' scheduled time';
     const noteType=action==='in'?'Arrival note':'Departure note';
     pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType};
@@ -4555,8 +4555,10 @@ function tsIsAutoApproved(entry, shift){
   const re=shift?.end_time||null;
   if(!fs||!fe||!rs||!re) return false;
   const _yt=YELLOW_BY_ROLE[entry.role]??10;
-  return Math.abs(timeToMin(fs)-timeToMin(rs))<_yt &&
-         Math.abs(timeToMin(fe)-timeToMin(re))<_yt;
+  // Early clock-in never blocks auto-approval — payroll always snaps to roster start
+  const inMin=timeToMin(fs)-timeToMin(rs);
+  const inOk=inMin<=0||inMin<_yt;
+  return inOk && Math.abs(timeToMin(fe)-timeToMin(re))<_yt;
 }
 
 function tsGetFlag(locked, noEntry, finalStart, finalEnd, autoApproved, entryStatus, missedClockOut){
@@ -4587,7 +4589,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const isSplitWorked=splitSegment&&!isLeaveShift;
   // Compute autoApproved first so we can snap finalStart/finalEnd to roster times for display & MYOB
   const autoApproved=isSplitWorked
-    ?(entry?.clockIn&&rostStart?Math.abs(timeToMin(entry.clockIn)-timeToMin(rostStart))<(YELLOW_BY_ROLE[emp.role]??10):false)
+    ?(entry?.clockIn&&rostStart?(()=>{const m=timeToMin(entry.clockIn)-timeToMin(rostStart);return m<=0||m<(YELLOW_BY_ROLE[emp.role]??10);})():false)
     :tsIsAutoApproved(entry,shift);
   // Auto-approved: snap to roster times; manager-set finalStart/finalEnd always take priority
   const finalStart=entry?.finalStart||(autoApproved&&rostStart?rostStart:clockStart);
@@ -4601,6 +4603,12 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const autoExpand=flag==='red'||flag==='flagged'||entryId==_tsExpandEntryId;
   const flagColors={green:'var(--success)',yellow:'#e6a817',red:'var(--burgundy)',flagged:'#e67e22'};
   const flagColor=flagColors[flag]||flagColors.yellow;
+
+  // Early clock-in label — shown inline in times cell, only when not auto-approved/locked
+  const earlyMins=(clockStart&&rostStart&&!autoApproved&&!locked&&!isLeaveShift)
+    ?Math.max(0,timeToMin(rostStart)-timeToMin(clockStart)):0;
+  const earlyLabel=earlyMins>0
+    ?`<span style="font-size:0.6rem;font-weight:700;color:${earlyMins>20?'#e6a817':'var(--muted)'};white-space:nowrap;flex-shrink:0;">↑ early</span>`:'';
 
   let diffLabel='';
   if(rostStart&&finalStart&&rostEnd&&finalEnd){
@@ -4650,7 +4658,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     <div class="ts-row-times">
       <span class="ts-times-rost">${rostStart&&rostEnd?rostStart+'–'+rostEnd:'—'}</span>
       <span class="ts-times-arrow">→</span>
-      <span class="ts-times-clock${flag==='red'?' ts-times-flagged':flag==='flagged'?' ts-times-flagged-follow':''}">${effectiveFinalStart&&effectiveFinalEnd?effectiveFinalStart+'–'+effectiveFinalEnd:clockStart&&clockEnd?clockStart+'–'+clockEnd:missedClockOut?clockStart+' – No clock-out':noClockExpected?'No clock required':noEntry?'No clock-in':'—'}</span>
+      <span class="ts-times-clock${flag==='red'?' ts-times-flagged':flag==='flagged'?' ts-times-flagged-follow':''}">${effectiveFinalStart&&effectiveFinalEnd?effectiveFinalStart+'–'+effectiveFinalEnd:clockStart&&clockEnd?clockStart+'–'+clockEnd:missedClockOut?clockStart+' – No clock-out':noClockExpected?'No clock required':noEntry?'No clock-in':'—'}</span>${earlyLabel}
     </div>
     <div class="ts-row-right">
       <div class="ts-payroll-wrap">${payrollInner}</div>
@@ -4698,39 +4706,59 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       </div>
     </div>`;
 
-  const detailSection=`<div class="ts-row-detail${autoExpand?' ts-detail-open':''}">${deleteBtn}<div class="ts-row-detail-inner">
-    <div class="ts-sub-row ts-sub-rostered">
-      <span class="ts-sub-label">Rostered</span>
-      <span class="ts-sub-time">${rostStart&&rostEnd?rostStart+' – '+rostEnd:'— Not rostered'}</span>
-    </div>
-    <div class="ts-sub-row ts-sub-clocked">
-      <span class="ts-sub-label">Clocked</span>
-      <span class="ts-sub-time">${clockStart?clockStart+' – '+(clockEnd||(missedClockOut?'<span style="color:var(--burgundy);font-weight:700">No clock-out</span>':'Still in')):noClockExpected?'<em style="color:var(--muted)">No clock required.</em>':'<em style="color:var(--muted)">No clock-in recorded.</em>'}</span>
-      ${diffLabel}
-    </div>
-    <div class="ts-sub-row ts-sub-final">
-      <div class="ts-sub-final-left">
-        <span class="ts-sub-label">Final</span>
-        ${finalInputs}
+  const _entryNotes=entryId?_notes.filter(n=>n.entryId===entryId&&n.reason):[];
+  const _noteCards=_entryNotes.map(n=>{
+    const isApproved=n.status==='approved';
+    const isFlagged=n.status==='flagged';
+    const borderColor=isApproved?'var(--border)':isFlagged?'#e67e22':'var(--burgundy)';
+    const textColor=isApproved?'var(--muted)':'var(--charcoal)';
+    const bg=isApproved?'transparent':isFlagged?'rgba(230,126,34,0.05)':'rgba(139,37,53,0.04)';
+    const approvedBy=isApproved&&n.resolvedBy?n.resolvedBy.split(' ').map(w=>w[0]).join('').toUpperCase():'';
+    const marker=isApproved?`<span style="margin-left:0.4rem;color:var(--success);">✓ Approved${approvedBy?' · '+approvedBy:''}</span>`
+      :isFlagged?`<span style="margin-left:0.4rem;color:#e67e22;">⚑ Flagged</span>`:'';
+    return`<div style="border-left:3px solid ${borderColor};padding:0.3rem 0.55rem;margin-bottom:0.4rem;background:${bg};border-radius:0 4px 4px 0;">
+      <div style="font-size:0.58rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:${borderColor};display:flex;align-items:center;flex-wrap:wrap;gap:0.2rem;margin-bottom:0.15rem;">${escHtml(n.type||'')}${marker}</div>
+      <div style="font-size:0.75rem;color:${textColor};line-height:1.4;font-style:italic;">"${escHtml(n.reason)}"</div>
+    </div>`;
+  }).join('');
+  const _notesCol=_noteCards?`<div style="flex:1;min-width:0;border-left:1.5px dashed rgba(200,180,185,0.6);padding-left:0.9rem;align-self:stretch;padding-top:0.1rem;">${_noteCards}</div>`:'';
+
+  const detailSection=`<div class="ts-row-detail${autoExpand?' ts-detail-open':''}">${deleteBtn}<div class="ts-row-detail-inner" style="display:flex;align-items:flex-start;gap:0;">
+    <div style="flex:1;min-width:0;${_noteCards?'padding-right:0.9rem;':''}">
+      <div class="ts-sub-row ts-sub-rostered">
+        <span class="ts-sub-label">Rostered</span>
+        <span class="ts-sub-time">${rostStart&&rostEnd?rostStart+' – '+rostEnd:'— Not rostered'}</span>
       </div>
-      <div class="ts-sub-final-right">
-        ${locked
-          ?lockBtn
-          :effectiveAutoApproved&&!autoOverridden
-            ?`<button class="ts-lock-btn locked" onclick="tsOverrideAutoApproved('${overrideKey}',event)" title="Click to override auto-approval">🔒 Locked</button>`
-            :entry||shift?lockBtn:''}
+      <div class="ts-sub-row ts-sub-clocked">
+        <span class="ts-sub-label">Clocked</span>
+        <span class="ts-sub-time">${clockStart?clockStart+' – '+(clockEnd||(missedClockOut?'<span style="color:var(--burgundy);font-weight:700">No clock-out</span>':'Still in')):noClockExpected?'<em style="color:var(--muted)">No clock required.</em>':'<em style="color:var(--muted)">No clock-in recorded.</em>'}</span>
+        ${diffLabel}
       </div>
+      <div class="ts-sub-row ts-sub-final">
+        <div class="ts-sub-final-left">
+          <span class="ts-sub-label">Final</span>
+          ${finalInputs}
+        </div>
+        <div class="ts-sub-final-right">
+          ${locked
+            ?lockBtn
+            :effectiveAutoApproved&&!autoOverridden
+              ?`<button class="ts-lock-btn locked" onclick="tsOverrideAutoApproved('${overrideKey}',event)" title="Click to override auto-approval">🔒 Locked</button>`
+              :entry||shift?lockBtn:''}
+        </div>
+      </div>
+      ${breakRowHtml}
+      ${emp.can_travel&&entry&&!entry.leaveType?`<div class="ts-sub-row">
+        <span class="ts-sub-label">Travel</span>
+        <div style="display:flex;align-items:center;gap:0.45rem;">
+          ${locked||(effectiveAutoApproved&&!autoOverridden)
+            ?`<span style="font-weight:700;font-size:0.82rem;">${entry.travelKm?'🚗 '+entry.travelKm+' km':'—'}</span>`
+            :`<span style="font-size:0.9rem;">🚗</span><input class="ts-break-input" type="number" min="0" max="500" step="0.1" value="${entry.travelKm||''}" placeholder="km" title="km travelled" onclick="event.stopPropagation()" onchange="tsSaveTravel('${entryId}',this.value,event)"><span style="font-size:0.72rem;color:var(--muted);">km (leave blank if none)</span>`}
+        </div>
+      </div>`:''}
+      ${manuallyAdjusted&&entry?.adjustedBy?`<div class="ts-sub-adj-note">Adjusted by ${entry.adjustedBy}${entry.adjustmentReason?' · '+entry.adjustmentReason:''}</div>`:''}
     </div>
-    ${breakRowHtml}
-    ${emp.can_travel&&entry&&!entry.leaveType?`<div class="ts-sub-row">
-      <span class="ts-sub-label">Travel</span>
-      <div style="display:flex;align-items:center;gap:0.45rem;">
-        ${locked||(effectiveAutoApproved&&!autoOverridden)
-          ?`<span style="font-weight:700;font-size:0.82rem;">${entry.travelKm?'🚗 '+entry.travelKm+' km':'—'}</span>`
-          :`<span style="font-size:0.9rem;">🚗</span><input class="ts-break-input" type="number" min="0" max="500" step="0.1" value="${entry.travelKm||''}" placeholder="km" title="km travelled" onclick="event.stopPropagation()" onchange="tsSaveTravel('${entryId}',this.value,event)"><span style="font-size:0.72rem;color:var(--muted);">km (leave blank if none)</span>`}
-      </div>
-    </div>`:''}
-    ${manuallyAdjusted&&entry?.adjustedBy?`<div class="ts-sub-adj-note">Adjusted by ${entry.adjustedBy}${entry.adjustmentReason?' · '+entry.adjustmentReason:''}</div>`:''}
+    ${_notesCol}
   </div></div>`;
 
   return`<div class="${rowClass}" data-entry-id="${entryId||''}" data-shift-id="${shiftId||''}" data-date="${date}" data-emp-id="${safeEmpId}">
