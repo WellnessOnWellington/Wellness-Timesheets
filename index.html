@@ -5210,23 +5210,27 @@ async function tsDeleteRow(entryId, shiftId, empId, empName, date, e){
   if(!rwDbGuard())return;
   const mgr=currentManager?.name||'Manager';
 
+  // If other shifts remain for same employee+date, preserve the clock entry — it belongs to the day, not this shift
+  const siblingShifts=hasShift?_rosterShifts.filter(s=>String(s.id)!==String(shiftId)&&s.employee_id===empId&&s.date===date&&!s.is_day_off):[];
+  const effectiveHasEntry=hasEntry&&siblingShifts.length===0;
+
   // Confirmation text adapts to what will actually be removed
   let confirmMsg;
-  if(hasEntry&&hasShift){
+  if(effectiveHasEntry&&hasShift){
     confirmMsg=`Remove timesheet entry AND roster shift for ${empName} on ${date}?\n\nBoth the clock record and the roster slot will be permanently deleted.\n\nPress Ctrl+Z immediately after to undo.`;
-  }else if(hasEntry){
+  }else if(effectiveHasEntry){
     confirmMsg=`Remove clock record for ${empName} on ${date}?\n\nThe clock record will be removed from timesheets. Press Ctrl+Z to undo.`;
   }else{
     confirmMsg=`Remove roster shift for ${empName} on ${date}?\n\nThis shift has no clock data and will be fully removed from timesheets. Press Ctrl+Z to undo.`;
   }
   if(!confirm(confirmMsg))return;
 
-  const entry=hasEntry?_entries.find(en=>String(en.id)===String(entryId)):null;
+  const entry=effectiveHasEntry?_entries.find(en=>String(en.id)===String(entryId)):null;
   const shift=hasShift?_rosterShifts.find(s=>String(s.id)===String(shiftId)):null;
   let entryAuditId=null, shiftAuditId=null;
 
   try{
-    if(hasEntry){
+    if(effectiveHasEntry){
       entryAuditId=await tsSaveAudit({entry_id:entryId,employee_id:empId,employee_name:empName,date,
         rostered_start:shift?.start_time||null,rostered_end:shift?.end_time||null,
         clocked_start:entry?.clockIn||null,clocked_end:entry?.clockOut||null,
@@ -5246,13 +5250,13 @@ async function tsDeleteRow(entryId, shiftId, empId, empName, date, e){
     }
 
     _tsDeleteStack.push({
-      entryId:hasEntry?String(entryId):null, entryAuditId, entrySnapshot:entry?{...entry}:null,
+      entryId:effectiveHasEntry?String(entryId):null, entryAuditId, entrySnapshot:entry?{...entry}:null,
       shiftId:hasShift?String(shiftId):null, shiftAuditId, shiftSnapshot:shift?{...shift}:null,
     });
 
-    // Find the row by entryId or shiftId and animate it out
+    // Find the row by shiftId if available, else entryId
     const row=document.querySelector(
-      hasEntry?`.ts-shift-row[data-entry-id="${entryId}"]`:`.ts-shift-row[data-shift-id="${shiftId}"]`
+      hasShift?`.ts-shift-row[data-shift-id="${shiftId}"]`:`.ts-shift-row[data-entry-id="${entryId}"]`
     );
     if(row){
       row.style.transition='opacity 0.25s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease';
