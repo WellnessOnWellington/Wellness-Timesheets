@@ -4569,7 +4569,9 @@ function tsIsAutoApproved(entry, shift){
 }
 
 function tsGetFlag(locked, noEntry, finalStart, finalEnd, autoApproved, entryStatus, missedClockOut){
-  if(locked||autoApproved) return 'green';
+  if(autoApproved) return 'green';
+  if(locked && !finalEnd) return 'red'; // locked but no end time — incomplete hours
+  if(locked) return 'green';
   if(entryStatus==='flagged') return 'flagged';
   if(noEntry||missedClockOut) return 'red';
   if(!finalStart||!finalEnd) return 'yellow'; // still in — in progress
@@ -4897,11 +4899,14 @@ function renderTimesheets(){
         return [tsBuildRow(emp,date,shift,entry)];
       }
       // Split shift — one row per segment
+      const nonLeaveSegs=dayShifts.filter(s=>!dayEntries.find(e=>e.shiftId===s.id&&e.leaveType));
+      const sharedWorked=dayEntries.find(e=>!e.leaveType&&(e.clockIn||e.finalStart||e.locked))||null;
       return dayShifts.map(seg=>{
         const leaveEntry=dayEntries.find(e=>e.shiftId===seg.id&&e.leaveType);
         if(leaveEntry) return tsBuildRow(emp,date,seg,leaveEntry,false);
-        const workedEntry=dayEntries.find(e=>!e.leaveType&&(e.clockIn||e.finalStart||e.locked))||null;
-        return tsBuildRow(emp,date,seg,workedEntry,true); // splitSegment=true → use segment times for MYOB
+        // Only assign the entry to the segment that owns it — prevents deleting clock data when removing a duplicate shift
+        const isOwner=sharedWorked&&(sharedWorked.shiftId===seg.id||(!sharedWorked.shiftId&&seg===nonLeaveSegs[0]));
+        return tsBuildRow(emp,date,seg,isOwner?sharedWorked:null,true);
       });
     }).join('');
 
@@ -4955,14 +4960,14 @@ function renderTimesheets(){
           const entry=leaveEntry||(dayEntries.find(e=>!e.leaveType&&(e.clockIn||e.finalStart||e.locked))||null);
           const _pt=entry?.payrollType||entry?.leaveType||'';
           const _nce=!entry?.clockIn&&!!seg.start_time&&!!seg.end_time&&(emp.role==='Manager'||!!_pt);
-          return entry?.locked===true||tsIsAutoApproved(entry,seg)||_nce;
+          return (entry?.locked===true&&!!(entry?.finalEnd||entry?.clockOut))||tsIsAutoApproved(entry,seg)||_nce;
         });
       }
       const shift=dayShifts[0]||null;
       const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
       const _pt=entry?.payrollType||entry?.leaveType||'';
       const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
-      return entry?.locked===true||tsIsAutoApproved(entry,shift)||_nce;
+      return (entry?.locked===true&&!!(entry?.finalEnd||entry?.clockOut))||tsIsAutoApproved(entry,shift)||_nce;
     });
     const myobBadge=allLocked?`<div class="ts-emp-myob-badge">Ready for MYOB</div>`:'';
     const totalHrsEl=totalMins>0?`<div class="ts-emp-hours${allLocked?' ready':''}">${(totalMins/60).toFixed(1)}h</div>`:'';
@@ -5011,14 +5016,14 @@ function renderTimesheets(){
             const entry=leaveEntry||(dayEntries.find(e=>!e.leaveType&&(e.clockIn||e.finalStart||e.locked))||null);
             const _pt=entry?.payrollType||entry?.leaveType||'';
             const _nce=!entry?.clockIn&&!!seg.start_time&&!!seg.end_time&&(emp.role==='Manager'||!!_pt);
-            return entry?.locked===true||tsIsAutoApproved(entry,seg)||_nce;
+            return (entry?.locked===true&&!!(entry?.finalEnd||entry?.clockOut))||tsIsAutoApproved(entry,seg)||_nce;
           });
         }
         const shift=dayShifts[0]||null;
         const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
         const _pt=entry?.payrollType||entry?.leaveType||'';
         const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
-        return entry?.locked===true||tsIsAutoApproved(entry,shift)||_nce;
+        return (entry?.locked===true&&!!(entry?.finalEnd||entry?.clockOut))||tsIsAutoApproved(entry,shift)||_nce;
       });
     });
     exportBtn.classList.toggle('ready',allEmpsReady);
@@ -5046,14 +5051,14 @@ function renderTimesheets(){
             const entry=leaveEntry||(dayEntries.find(e=>!e.leaveType&&(e.clockIn||e.finalStart||e.locked))||null);
             const _pt=entry?.payrollType||entry?.leaveType||'';
             const _nce=!entry?.clockIn&&!!seg.start_time&&!!seg.end_time&&(emp.role==='Manager'||!!_pt);
-            return entry?.locked===true||tsIsAutoApproved(entry,seg)||_nce;
+            return (entry?.locked===true&&!!(entry?.finalEnd||entry?.clockOut))||tsIsAutoApproved(entry,seg)||_nce;
           });
         }
         const shift=dayShifts[0]||null;
         const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
         const _pt=entry?.payrollType||entry?.leaveType||'';
         const _nce=!entry?.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp.role==='Manager'||!!_pt);
-        return entry?.locked===true||tsIsAutoApproved(entry,shift)||_nce;
+        return (entry?.locked===true&&!!(entry?.finalEnd||entry?.clockOut))||tsIsAutoApproved(entry,shift)||_nce;
       });
     });
     tab.classList.toggle('ready',roleReady);
@@ -5505,7 +5510,7 @@ function exportMYOB(){
 
   // An entry is "ready" if explicitly locked, auto-approved, or no clock required (leave/manager)
   const isReady=e=>{
-    if(e.locked) return true;
+    if(e.locked&&!!(e.finalEnd||e.clockOut)) return true;
     const emp=_emps.find(em=>em.id===e.employeeId);
     const shift=(e.shiftId&&_rosterShifts.find(s=>String(s.id)===String(e.shiftId)))
       ||_rosterShifts.find(s=>s.employee_id===e.employeeId&&s.date===e.date&&!s.is_day_off);
