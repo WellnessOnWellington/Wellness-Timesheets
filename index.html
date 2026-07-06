@@ -6819,6 +6819,10 @@ function renderStaffRoster(){
     content.innerHTML='<div style="text-align:center;padding:4rem 2rem;color:var(--muted);font-size:0.85rem;font-weight:600;">Select a staff member to view their roster.</div>';
     return;
   }
+  if(srLayout==='person'&&emps.length===1&&emps[0].is_placeholder){
+    content.innerHTML=`<div class="sr-fortnight-block">${srCoverShiftsList(emps[0],today)}</div>`;
+    return;
+  }
   content.innerHTML=srRenderFortnight(fn1Start, fn1Days, emps, fn1Published, today);
   if(window.matchMedia('(max-width:960px)').matches){
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -7065,6 +7069,37 @@ function srByPerson(days,emps,today){
     return`<div class="sr-person-card"><div class="sr-person-header"><div class="sr-person-avatar ${roleClass}">${initials}</div><div><div class="sr-person-name">${emp.name}</div><div class="sr-person-role">${emp.role}</div></div></div><div class="sr-person-days">${dayRows}</div></div>`;
   }).join('');
   return`<div class="sr-person-list">${cards}</div>`;
+}
+
+function srCoverShiftsList(emp, today){
+  const initials=emp.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+  const future=_rosterShifts
+    .filter(s=>s.employee_id===emp.id&&s.date>today&&!s.is_day_off&&s.start_time&&s.end_time)
+    .sort((a,b)=>a.date.localeCompare(b.date))
+    .slice(0,14);
+  const header=`<div class="sr-person-header" style="border-bottom-color:rgba(230,126,34,0.3);">
+    <div class="sr-person-avatar" style="background:#fdebd0;color:#e67e22;">${initials}</div>
+    <div><div class="sr-person-name">${emp.name}</div><div class="sr-person-role">${emp.role} · Cover required</div></div>
+  </div>`;
+  if(!future.length){
+    return`<div class="sr-person-list"><div class="sr-person-card" style="border-color:#e67e22;">${header}<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.82rem;">No upcoming shifts to cover in the next 6 months.</div></div></div>`;
+  }
+  const rows=future.map(s=>{
+    const d=new Date(s.date+'T12:00:00');
+    const isToday=s.date===today;
+    const dayName=SR_DAYS[d.getDay()].slice(0,3);
+    const dateLabel=`${d.getDate()} ${SR_MONTHS[d.getMonth()].slice(0,3)}`;
+    const start=s.start_time.slice(0,5);
+    const end=s.end_time.slice(0,5);
+    return`<div class="sr-person-day${isToday?' today-row':''}">
+      <div class="sr-person-day-label">
+        <div class="sr-person-day-name" style="color:#e67e22;">${dayName}${isToday?' ·':''}</div>
+        <div class="sr-person-day-date">${dateLabel}</div>
+      </div>
+      <span class="sr-person-day-time" style="color:#e67e22;">${start} – ${end}</span>
+    </div>`;
+  }).join('');
+  return`<div class="sr-person-list"><div class="sr-person-card" style="border-color:#e67e22;">${header}<div class="sr-person-days">${rows}</div></div></div>`;
 }
 
 /* ═══════════════════════════════════════════
