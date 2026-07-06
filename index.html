@@ -1170,6 +1170,9 @@
   .rb-shift-bar.long-service-leave { background:linear-gradient(135deg,#26a69a,#00897b); }
   .rb-shift-bar.long-service-leave:hover { box-shadow:0 2px 8px rgba(0,137,123,0.28); }
   .rb-shift-bar.long-service-leave .rb-shift-label { color:#fff; }
+  .rb-shift-bar.cover-required { background:repeating-linear-gradient(45deg,#e67e22 0px,#e67e22 5px,#fdebd0 5px,#fdebd0 14px); }
+  .rb-shift-bar.cover-required:hover { box-shadow:0 2px 8px rgba(230,126,34,0.35); }
+  .rb-shift-bar.cover-required .rb-shift-label { color:#7a3800; }
   .rb-panels { display:flex; flex-direction:column; gap:1rem; }
   .rb-panel { border:1.5px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--white); box-shadow:var(--shadow); }
   .rb-panel-header { display:flex; align-items:center; padding:0.65rem 1rem; background:var(--warm-white); border-bottom:1.5px solid var(--border); gap:1rem; cursor:pointer; user-select:none; }
@@ -6946,8 +6949,9 @@ function srByDayGantt(dateStr, today){
       const name=_srDnMap[emp.id]||empFirstName(emp);
       const isSecondaryLane=!onLeave&&(shift.lane==='75plus'||shift.lane==='admin');
       const laneTag=shift.lane==='75plus'?' · clinic':shift.lane==='admin'?' · admin':'';
-      const barBg=onLeave?'#c8c4c6':roleBar.bg;
-      const barText=onLeave?'var(--muted)':roleBar.text;
+      const isPlaceholder=!!emp.is_placeholder;
+      const barBg=isPlaceholder?'#e67e22':onLeave?'#c8c4c6':roleBar.bg;
+      const barText=isPlaceholder?'#fff':onLeave?'var(--muted)':roleBar.text;
       const barFilter=isSecondaryLane?'filter:brightness(0.78);':'';
       const nameStyle=onLeave?'color:var(--muted);':'';
       const tooltip=`${name}: ${shift.start}–${shift.end}${laneTag}`;
@@ -6985,9 +6989,15 @@ function srByDayGantt(dateStr, today){
       const name=_srDnMap[emp.id]||empFirstName(emp);
       const onNow=isToday&&nowMin>=startMin&&nowMin<endMin;
       const finished=isToday&&nowMin>=endMin;
+      const isMobPlaceholder=!!emp.is_placeholder;
       const statusClass=onNow?'on-now':finished?'finished':'coming-up';
-      const badge=onNow?`<span class="sr-gnow-mobile-badge" style="background:${roleBar.bg};color:${roleBar.text};">On now</span>`:'';
-      const rowStyle=onNow?`style="background:${roleBar.bg}33;border-color:${roleBar.bg}88;"`:'';
+      const badge=isMobPlaceholder
+        ?`<span class="sr-gnow-mobile-badge" style="background:#fdebd0;color:#e67e22;">Cover needed</span>`
+        :onNow?`<span class="sr-gnow-mobile-badge" style="background:${roleBar.bg};color:${roleBar.text};">On now</span>`:'';
+      const rowStyle=isMobPlaceholder
+        ?`style="border-left:3px solid #e67e22;border-color:#e67e2266;"`
+        :onNow?`style="background:${roleBar.bg}33;border-color:${roleBar.bg}88;"`:'';
+      const barFill=isMobPlaceholder?'#e67e22':roleBar.bg;
       const barLeft=gnowPct(startMin).toFixed(1);
       const barWidth=(gnowPct(endMin)-gnowPct(startMin)).toFixed(1);
       return`<div class="sr-gnow-mobile-row ${statusClass}" ${rowStyle}>
@@ -6996,7 +7006,7 @@ function srByDayGantt(dateStr, today){
           <span class="sr-gnow-mobile-time">${shift.start.slice(0,5)}–${shift.end.slice(0,5)}</span>
           ${badge}
         </div>
-        <div class="sr-gnow-mobile-bar-track"><div class="sr-gnow-mobile-bar-fill" style="left:${barLeft}%;width:${barWidth}%;background:${roleBar.bg};"></div></div>
+        <div class="sr-gnow-mobile-bar-track"><div class="sr-gnow-mobile-bar-fill" style="left:${barLeft}%;width:${barWidth}%;background:${barFill};"></div></div>
       </div>`;
     }).filter(Boolean);
     if(!rows.length) return null;
@@ -7036,7 +7046,7 @@ function srByDay(days,emps,today){
     const items=shifts.length
       ?shifts.map(({emp,shift})=>{
         const onLeave=isOnLeave(emp.id,date);
-        const p=onLeave?{bg:'rgba(180,180,180,0.13)',color:'#b0a8ac'}:(SR_ROLE_PILL[emp.role]||{bg:'rgba(180,160,170,0.12)',color:'var(--charcoal)'});
+        const p=emp.is_placeholder?{bg:'rgba(230,126,34,0.15)',color:'#c0622a'}:onLeave?{bg:'rgba(180,180,180,0.13)',color:'#b0a8ac'}:(SR_ROLE_PILL[emp.role]||{bg:'rgba(180,160,170,0.12)',color:'var(--charcoal)'});
         const sMin=timeStrToMin(shift.start)||TL_START;
         const eMin=timeStrToMin(shift.end)||TL_END;
         const lPct=((sMin-TL_START)/TL_RANGE*100).toFixed(1);
@@ -7689,7 +7699,8 @@ function renderDayTimelineForRole(role){
     const leaveBtn=`<select class="rb-leave-select" onmousedown="event.stopPropagation()" onchange="event.stopPropagation();rbMarkLeave('${emp.id}','${selectedDay}','${s.id}',this.value)">${leaveOpts}</select>`;
     const leaveClass=currentLeave?' on-leave '+currentLeave.replace(/_/g,'-'):'';
     const lockedClass=readOnly?' locked':'';
-    return`<div class="rb-shift-bar${leaveClass}${lockedClass}" data-shift-id="${s.id}" style="left:${lPct.toFixed(2)}%;width:${wPct.toFixed(2)}%"${drag} title="${emp.name}: ${lbl}${currentLeave?' ('+formatLeaveType(currentLeave)+')':''}">
+    const coverClass=emp.is_placeholder?' cover-required':'';
+    return`<div class="rb-shift-bar${leaveClass}${lockedClass}${coverClass}" data-shift-id="${s.id}" style="left:${lPct.toFixed(2)}%;width:${wPct.toFixed(2)}%"${drag} title="${emp.name}: ${lbl}${currentLeave?' ('+formatLeaveType(currentLeave)+')':''}">
       ${lHandle}${laneBtn}<span class="rb-shift-label">${lbl}</span>${rHandle}${leaveBtn}${splitBtn}${delBtn}
     </div>`;
   }
@@ -7754,7 +7765,7 @@ function renderDayTimelineForRole(role){
   // Coverage segments — floor-only for Nurses
   let slots='';
   for(let m=TL_START;m<TL_END;m+=TL_SNAP){
-    const cnt=_rosterShifts.filter(s=>s.date===selectedDay&&!s.is_day_off&&emps.some(e=>e.id===s.employee_id)
+    const cnt=_rosterShifts.filter(s=>s.date===selectedDay&&!s.is_day_off&&emps.some(e=>e.id===s.employee_id&&!e.is_placeholder)
       &&(!isNurse||s.lane==='floor'||!s.lane)&&(!isReceptionist||s.lane==='floor'||!s.lane)
       &&(timeStrToMin(s.start_time)||TL_START)<=m&&(timeStrToMin(s.end_time)||TL_END)>m).length;
     const col=cnt>=3?'#4CAF7D':cnt>=2?'#f5a623':'#c0392b';
