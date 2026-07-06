@@ -7447,7 +7447,7 @@ async function rbCopyLastFnForRole(role){
   prevShifts.forEach((s,i)=>{
     const d=new Date(s.date+'T12:00:00'); d.setDate(d.getDate()+14);
     const newDate=d.toISOString().slice(0,10);
-    const newShift={id:'SH'+(base+i),employee_id:s.employee_id,date:newDate,start_time:s.start_time,end_time:s.end_time,is_day_off:s.is_day_off};
+    const newShift={id:'SH'+(base+i),employee_id:s.employee_id,date:newDate,start_time:s.start_time,end_time:s.end_time,is_day_off:s.is_day_off,lane:s.lane};
     const hasOverlap=_rosterShifts.some(ex=>ex.employee_id===s.employee_id&&ex.date===newDate&&!ex.is_day_off&&rbTimesOverlap(ex.start_time,ex.end_time,s.start_time,s.end_time));
     if(hasOverlap) conflicts.push({...newShift,empName:_emps.find(e=>e.id===s.employee_id)?.name||'Unknown'});
     else toInsert.push(newShift);
