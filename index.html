@@ -3651,7 +3651,7 @@ async function processRFID(card){
   const todayKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const timeStr=now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false});
   const isoNow=now.toISOString();
-  const open=_entries.find(en=>en.employeeId===emp.id&&en.date===todayKey&&!en.clockOut);
+  const open=_entries.find(en=>en.employeeId===emp.id&&en.date===todayKey&&en.clockIn&&!en.clockOut);
   const action=open?'out':'in';
   const scheduled=getScheduledTimes(emp.id,todayKey);
   const scheduledMin=scheduled?(action==='in'?scheduled.startMin:scheduled.endMin):null;
@@ -3691,13 +3691,17 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
         showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,pendingMsgLv,emp);
         return;
       }
-      const row = {
-        id:'T'+Date.now(), employee_id:emp.id, employee_name:emp.name, role:emp.role,
-        date:todayKey, clock_in:sheetTimeStr, clock_in_iso:isoNow,
-        reason_in:reason||null, status:reason?'pending':'normal'
-      };
-      await db.insert('entries', row);
-      if(reason) await addNote(emp,noteType||'Arrival note',timeStr,reason,row.id,todayKey);
+      const stub=_entries.find(en=>en.employeeId===emp.id&&en.date===todayKey&&!en.clockIn&&!en.clockOut);
+      let entryId;
+      if(stub){
+        await db.update('entries',stub.id,{clock_in:sheetTimeStr,clock_in_iso:isoNow,reason_in:reason||null,status:reason?'pending':'normal'});
+        entryId=stub.id;
+      } else {
+        const row={id:'T'+Date.now(),employee_id:emp.id,employee_name:emp.name,role:emp.role,date:todayKey,clock_in:sheetTimeStr,clock_in_iso:isoNow,reason_in:reason||null,status:reason?'pending':'normal'};
+        await db.insert('entries',row);
+        entryId=row.id;
+      }
+      if(reason) await addNote(emp,noteType||'Arrival note',timeStr,reason,entryId,todayKey);
       const unseenIn=_requests.filter(r=>(r.status==='pending_manager'||r.status==='pending_peer')&&(r.initiatorId===emp.id||(r.colleagueId===emp.id&&r.status==='pending_peer'))).length;
       const pendingMsgIn=unseenIn===1?'📋 You have 1 pending request':unseenIn>1?`📋 You have ${unseenIn} pending requests`:'';
       showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,pendingMsgIn,emp);
@@ -3727,7 +3731,9 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
       showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],'Checked out · '+timeStr+' · '+hoursStr+'h',pendingMsgOut,emp);
     }
   } catch(e) {
-    showFlash('error','⚠','','Database error','Please try again');
+    let detail='Please try again';
+    try{const j=JSON.parse(e.message);detail=(j.message||j.details||detail).slice(0,90);}catch(x){if(e.message)detail=e.message.slice(0,90);}
+    showFlash('error','⚠','','Database error',detail);
     console.error(e);
   }
 }
