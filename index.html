@@ -3389,6 +3389,7 @@ let _reqDetailId = null;
 let _reqMyShifts = [];
 let _reqColleagueShifts = [];
 let _pickupPending = {shiftId:null,date:null,start:null,end:null,placeholderId:null,placeholderName:null};
+let _reqCoverShifts = [];
 let SWAP_EXPIRY_DAYS = 7;
 let SHOW_DECLINE_REASON = true;
 let GIVEAWAY_ENABLED = {Receptionist: true, Nurse: true, Manager: true};
@@ -9061,7 +9062,10 @@ async function renderRequestForm(){
   try{
     const allShifts=await db.get('roster_shifts');
     _reqMyShifts=allShifts.filter(s=>s.employee_id===emp.id&&s.date>today).sort((a,b)=>a.date.localeCompare(b.date));
-  }catch(e){ _reqMyShifts=[]; }
+    const sixMonthsStr=rbDateKey(new Date(Date.now()+6*30.5*86400000));
+    const placeholderIds=new Set(_emps.filter(e=>e.is_placeholder&&e.role===emp.role).map(e=>e.id));
+    _reqCoverShifts=allShifts.filter(s=>placeholderIds.has(s.employee_id)&&s.date>today&&s.date<=sixMonthsStr&&!s.is_day_off&&s.start_time&&s.end_time).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,14);
+  }catch(e){ _reqMyShifts=[]; _reqCoverShifts=[]; }
   const myShiftOptions=_reqMyShifts.length
     ?_reqMyShifts.map(s=>s.on_leave?`<option value="${s.id}" disabled>${reqFmtDate(s.date)} ${s.start_time}–${s.end_time} (Not in)</option>`:`<option value="${s.id}">${reqFmtDate(s.date)} ${s.start_time}–${s.end_time}</option>`).join('')
     :'<option value="">No upcoming shifts found</option>';
@@ -9091,9 +9095,7 @@ async function renderRequestForm(){
       <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. family commitment"></textarea></div>
       <button class="req-new-btn" onclick="reqSubmitSwap()">Submit Swap Request</button>`;
   } else if(_reqFormType==='pickup'){
-    const sixMonthsStr=rbDateKey(new Date(Date.now()+6*30.5*86400000));
-    const placeholderIds=new Set(_emps.filter(e=>e.is_placeholder&&e.role===emp.role).map(e=>e.id));
-    const coverShifts=allShifts.filter(s=>placeholderIds.has(s.employee_id)&&s.date>today&&s.date<=sixMonthsStr&&!s.is_day_off&&s.start_time&&s.end_time).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,14);
+    const coverShifts=_reqCoverShifts;
     if(!coverShifts.length){
       formBody=`<div class="req-empty" style="padding:2rem 0.5rem;text-align:center;color:var(--muted);">No cover shifts available for your role right now.</div>`;
     } else {
