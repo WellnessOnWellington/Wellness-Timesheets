@@ -1015,7 +1015,7 @@
   .req-pin-divider::before,.req-pin-divider::after { content:''; position:absolute; top:50%; width:28%; height:1px; background:var(--border-dk); }
   .req-pin-divider::before { left:0; }
   .req-pin-divider::after { right:0; }
-  .req-type-tabs { display:flex; gap:0.35rem; margin-bottom:1.25rem; }
+  .req-type-tabs { display:grid; grid-template-columns:1fr 1fr; gap:0.35rem; margin-bottom:1.25rem; }
   .req-type-tab { flex:1; padding:0.55rem 0.4rem; border-radius:var(--radius-sm); font-family:'Nunito',sans-serif; font-size:0.75rem; font-weight:700; border:1.5px solid var(--border); background:var(--white); color:var(--muted); cursor:pointer; transition:all 0.15s; text-align:center; }
   .req-type-tab.active { background:var(--burgundy); color:#fff; border-color:var(--burgundy); }
   .req-giveaway-notice { background:#fff8e1; border:1.5px solid #f9c825; border-radius:var(--radius-sm); padding:0.6rem 0.85rem; font-size:0.78rem; font-weight:600; color:#7a5c00; margin-bottom:0.85rem; }
@@ -1713,6 +1713,28 @@
   </div>
 </div>
 
+<!-- Pick up shift confirmation modal -->
+<div class="modal-bg" id="pickup-confirm-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="max-width:360px;text-align:center;">
+    <div class="modal-title">Pick up this shift?</div>
+    <div id="pickup-confirm-detail" style="font-size:0.88rem;color:var(--charcoal);margin-bottom:1.5rem;line-height:1.6;"></div>
+    <div style="font-size:0.75rem;color:var(--muted);margin-bottom:1.25rem;">Your request will be sent to the manager for approval.</div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="document.getElementById('pickup-confirm-modal').classList.remove('show')">Cancel</button>
+      <button class="btn-primary" onclick="reqSubmitPickup()">Yes, request it</button>
+    </div>
+  </div>
+</div>
+
+<!-- Who's On cover shift info modal -->
+<div class="modal-bg" id="whos-on-pickup-info-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="max-width:340px;text-align:center;">
+    <div class="modal-title">Interested in this shift?</div>
+    <div style="font-size:0.84rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.6;">You can request to work this shift through the <strong>Staff Portal</strong>.</div>
+    <button class="btn-primary" style="width:100%;" onclick="document.getElementById('whos-on-pickup-info-modal').classList.remove('show')">Got it</button>
+  </div>
+</div>
+
 <!-- STAFF ROSTER (public read-only) -->
 <div id="view-staff-roster" class="view">
   <div class="sr-header">
@@ -2197,6 +2219,7 @@
               <option value="leave">Leave</option>
               <option value="swap">Swap</option>
               <option value="giveaway">Give Away</option>
+              <option value="pickup">Pick Up</option>
             </select>
           </div>
           <div id="req-audit-content">
@@ -3365,6 +3388,7 @@ let _reqFormType = 'leave';
 let _reqDetailId = null;
 let _reqMyShifts = [];
 let _reqColleagueShifts = [];
+let _pickupPending = {shiftId:null,date:null,start:null,end:null,placeholderId:null,placeholderName:null};
 let SWAP_EXPIRY_DAYS = 7;
 let SHOW_DECLINE_REASON = true;
 let GIVEAWAY_ENABLED = {Receptionist: true, Nurse: true, Manager: true};
@@ -7227,12 +7251,13 @@ function srCoverShiftsList(emp, today){
     const dateLabel=`${d.getDate()} ${SR_MONTHS[d.getMonth()].slice(0,3)}`;
     const start=s.start_time.slice(0,5);
     const end=s.end_time.slice(0,5);
-    return`<div class="sr-person-day${isToday?' today-row':''}">
+    return`<div class="sr-person-day${isToday?' today-row':''}" onclick="document.getElementById('whos-on-pickup-info-modal').classList.add('show')" style="cursor:pointer;">
       <div class="sr-person-day-label">
         <div class="sr-person-day-name" style="color:#e67e22;">${dayName}${isToday?' ·':''}</div>
         <div class="sr-person-day-date">${dateLabel}</div>
       </div>
       <span class="sr-person-day-time" style="color:#e67e22;">${start} – ${end}</span>
+      <span style="font-size:0.65rem;font-weight:700;color:#c0622a;margin-left:auto;opacity:0.65;">Interested? →</span>
     </div>`;
   }).join('');
   return`<div class="sr-person-list"><div class="sr-person-card" style="border-color:#e67e22;">${header}<div class="sr-person-days">${rows}</div></div></div>`;
@@ -8840,6 +8865,7 @@ function reqTitle(r,isInitiator){
   if(r.type==='leave') return `${formatLeaveType(r.leaveType)} — ${reqFmtDate(r.leaveStartDate)} to ${reqFmtDate(r.leaveEndDate)}`;
   if(r.type==='swap') return isInitiator?`Swap: your ${reqFmtDate(r.initiatorShiftDate)} shift ↔ ${r.colleagueName}`:`Swap request from ${r.initiatorName}`;
   if(r.type==='giveaway') return isInitiator?`Give away: your ${reqFmtDate(r.initiatorShiftDate)} shift → ${r.colleagueName}`:`Shift offer from ${r.initiatorName}`;
+  if(r.type==='pickup') return isInitiator?`Pick up cover shift: ${reqFmtDate(r.initiatorShiftDate)} ${r.initiatorShiftStart}–${r.initiatorShiftEnd}`:`${r.initiatorName} wants to pick up a cover shift`;
   return r.type;
 }
 
@@ -8853,7 +8879,7 @@ function reqStatusLabel(status){
 }
 
 function reqStatusSub(r,isInitiator){
-  if(r.type==='leave') return `Submitted ${reqFmtDate(r.createdAt)}`;
+  if(r.type==='leave'||r.type==='pickup') return `Submitted ${reqFmtDate(r.createdAt)}`;
   if(r.status==='pending_peer') return isInitiator?`Waiting for ${r.colleagueName} to respond`:`${r.initiatorName} is requesting this`;
   if(r.status==='pending_manager') return 'Peer approved · Waiting for manager';
   if(r.status==='approved') return `Approved by ${r.managerName||'manager'} on ${reqFmtDate(r.managerDecidedAt)}`;
@@ -8911,6 +8937,12 @@ function reqShowDetail(requestId){
         ${r.reason?`<div style="font-size:0.78rem;color:var(--muted);margin-top:0.6rem;"><strong>Reason:</strong> ${escHtml(r.reason)}</div>`:''}
       </div>`;
     }
+  } else if(r.type==='pickup'){
+    html+=`<div class="req-admin-shifts">
+      <strong>Shift to pick up:</strong> ${reqFmtDate(r.initiatorShiftDate)} ${r.initiatorShiftStart}–${r.initiatorShiftEnd}<br>
+      <strong>Cover slot:</strong> ${escHtml(r.colleagueName||'Cover')}
+      ${r.reason?`<br><strong>Reason:</strong> ${escHtml(r.reason)}`:''}
+    </div>`;
   } else {
     html+=`<div class="req-admin-shifts">
       <strong>${escHtml(r.initiatorName)}:</strong> ${reqFmtDate(r.initiatorShiftDate)} ${r.initiatorShiftStart}–${r.initiatorShiftEnd}<br>
@@ -9058,6 +9090,37 @@ async function renderRequestForm(){
       <div class="form-group" id="req-colleague-shift-group" style="display:none;"><label class="form-label">Their shift to swap</label><select class="form-input" id="req-colleague-shift"><option value="">Loading…</option></select></div>
       <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. family commitment"></textarea></div>
       <button class="req-new-btn" onclick="reqSubmitSwap()">Submit Swap Request</button>`;
+  } else if(_reqFormType==='pickup'){
+    const sixMonthsStr=rbDateKey(new Date(Date.now()+6*30.5*86400000));
+    const placeholderIds=new Set(_emps.filter(e=>e.is_placeholder&&e.role===emp.role).map(e=>e.id));
+    const coverShifts=allShifts.filter(s=>placeholderIds.has(s.employee_id)&&s.date>today&&s.date<=sixMonthsStr&&!s.is_day_off&&s.start_time&&s.end_time).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,14);
+    if(!coverShifts.length){
+      formBody=`<div class="req-empty" style="padding:2rem 0.5rem;text-align:center;color:var(--muted);">No cover shifts available for your role right now.</div>`;
+    } else {
+      const coverRows=coverShifts.map(s=>{
+        const ph=_emps.find(e=>e.id===s.employee_id);
+        const d=new Date(s.date+'T12:00:00');
+        const dayName=SR_DAYS[d.getDay()].slice(0,3);
+        const dateLabel=`${d.getDate()} ${SR_MONTHS[d.getMonth()].slice(0,3)}`;
+        const start=s.start_time.slice(0,5);const end=s.end_time.slice(0,5);
+        const safeName=(ph?.name||'Cover').replace(/'/g,"\\'");
+        return`<div class="sr-person-day" onclick="reqPickupConfirm('${s.id}','${s.date}','${start}','${end}','${s.employee_id}','${safeName}',event)" style="cursor:pointer;">
+          <div class="sr-person-day-label">
+            <div class="sr-person-day-name" style="color:#e67e22;">${dayName}</div>
+            <div class="sr-person-day-date">${dateLabel}</div>
+          </div>
+          <span class="sr-person-day-time" style="color:#e67e22;">${start} – ${end}</span>
+          <span style="font-size:0.65rem;font-weight:700;color:#c0622a;margin-left:auto;opacity:0.7;">Pick up →</span>
+        </div>`;
+      }).join('');
+      formBody=`<div class="sr-person-card" style="border-color:#e67e22;margin-bottom:0;">
+        <div class="sr-person-header" style="border-bottom-color:rgba(230,126,34,0.3);">
+          <div class="sr-person-avatar" style="background:#fdebd0;color:#e67e22;font-size:1.1rem;">📋</div>
+          <div><div class="sr-person-name">Available Cover Shifts</div><div class="sr-person-role">${emp.role} · ${coverShifts.length} shift${coverShifts.length!==1?'s':''} available</div></div>
+        </div>
+        <div class="sr-person-days">${coverRows}</div>
+      </div>`;
+    }
   } else {
     formBody=`<div class="req-giveaway-notice">⚠ You are giving away your shift. The selected colleague will receive it — you will not receive anything in return.</div>
       <div class="form-group"><label class="form-label">Your shift to give away</label><select class="form-input" id="req-my-shift">${myShiftOptions}</select></div>
@@ -9065,12 +9128,13 @@ async function renderRequestForm(){
       <div class="form-group"><label class="form-label">Reason (optional)</label><textarea class="reason-input" id="req-reason" rows="2" placeholder="e.g. personal commitment"></textarea></div>
       <button class="req-new-btn" onclick="reqSubmitGiveaway()">Submit Give Away Request</button>`;
   }
-  const typeTitle=_reqFormType==='leave'?'Leave Request':_reqFormType==='swap'?'Shift Swap Request':'Give Away Shift';
+  const typeTitle=_reqFormType==='leave'?'Leave Request':_reqFormType==='swap'?'Shift Swap Request':_reqFormType==='pickup'?'Pick Up Cover Shift':'Give Away Shift';
   document.getElementById('req-form-content').innerHTML=`
     <div class="req-type-tabs">
       <button class="req-type-tab${_reqFormType==='leave'?' active':''}" onclick="reqSetFormType('leave')">Leave</button>
       <button class="req-type-tab${_reqFormType==='swap'?' active':''}" onclick="reqSetFormType('swap')">Shift Swap</button>
       <button class="req-type-tab${_reqFormType==='giveaway'?' active':''}" ${giveawayAllowed?`onclick="reqSetFormType('giveaway')"`:` disabled title="Give Away is not enabled for your role" style="opacity:0.38;cursor:not-allowed;"`}>Give Away</button>
+      <button class="req-type-tab${_reqFormType==='pickup'?' active':''}" onclick="reqSetFormType('pickup')">Pick Up</button>
     </div>
     <div style="font-family:'Lora',serif;font-size:1rem;font-weight:600;color:var(--charcoal);margin-bottom:1rem;">${typeTitle}</div>
     ${formBody}`;
@@ -9197,6 +9261,30 @@ async function reqSubmitGiveaway(){
   }catch(e){ showToast('Error submitting request'); console.error(e); }
 }
 
+function reqPickupConfirm(shiftId,date,start,end,placeholderId,placeholderName,event){
+  event?.stopPropagation?.();
+  _pickupPending={shiftId,date,start,end,placeholderId,placeholderName};
+  const d=new Date(date+'T12:00:00');
+  const dateLabel=`${SR_DAYS[d.getDay()]}, ${d.getDate()} ${SR_MONTHS[d.getMonth()]}`;
+  document.getElementById('pickup-confirm-detail').innerHTML=`<strong>${dateLabel}</strong><br>${start} – ${end}`;
+  document.getElementById('pickup-confirm-modal').classList.add('show');
+}
+
+async function reqSubmitPickup(){
+  const emp=_reqEmployee;
+  if(!emp||!_pickupPending.shiftId){showToast('Something went wrong — please try again');return;}
+  const id='REQ'+Date.now();
+  const now=new Date().toISOString();
+  try{
+    const row={id,type:'pickup',status:'pending_manager',initiator_id:emp.id,initiator_name:emp.name,initiator_role:emp.role,initiator_shift_id:_pickupPending.shiftId,initiator_shift_date:_pickupPending.date,initiator_shift_start:_pickupPending.start,initiator_shift_end:_pickupPending.end,colleague_id:_pickupPending.placeholderId,colleague_name:_pickupPending.placeholderName,created_at:now};
+    await db.insert('requests',row);
+    _requests.push(normaliseRequest(row));
+    document.getElementById('pickup-confirm-modal').classList.remove('show');
+    showToast('Request submitted ✓');
+    await reqShowList();
+  }catch(e){showToast('Could not submit — please try again');console.error(e);}
+}
+
 function reqLogout(){
   _reqEmployee=null;
   document.getElementById('req-panel-auth').style.display='';
@@ -9253,7 +9341,7 @@ function renderRequests(){
 }
 
 function buildReqAdminCard(r,isPending){
-  const typeLabel=r.type==='leave'?'Leave Request':r.type==='swap'?'Shift Swap':'Shift Give Away';
+  const typeLabel=r.type==='leave'?'Leave Request':r.type==='swap'?'Shift Swap':r.type==='pickup'?'Cover Pick Up':'Shift Give Away';
   let shiftsHtml='';
   if(r.type==='leave'){
     shiftsHtml=`<strong>Employee:</strong> ${escHtml(r.initiatorName)} (${r.initiatorRole})<br>
@@ -9276,6 +9364,10 @@ function buildReqAdminCard(r,isPending){
       </div>
       ${r.reason?`<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.35rem;"><strong>Reason:</strong> ${escHtml(r.reason)}</div>`:''}
       ${r.peerResponse==='accepted'?`<div style="font-size:0.78rem;color:var(--success);font-weight:600;">✓ Colleague approved</div>`:''}`;
+  } else if(r.type==='pickup'){
+    shiftsHtml=`<strong>${escHtml(r.initiatorName)}</strong> (${r.initiatorRole}) wants to pick up:<br>
+      📅 ${reqFmtDate(r.initiatorShiftDate)} &nbsp;·&nbsp; ${r.initiatorShiftStart}–${r.initiatorShiftEnd}<br>
+      <span style="font-size:0.78rem;color:var(--muted);">Cover slot: ${escHtml(r.colleagueName||'Cover')}</span>`;
   } else {
     shiftsHtml=`<strong>${escHtml(r.initiatorName)}</strong> (${r.initiatorRole}) gives away ${reqFmtDate(r.initiatorShiftDate)} ${r.initiatorShiftStart}–${r.initiatorShiftEnd}<br>
       <strong>Receiving:</strong> ${escHtml(r.colleagueName)}
@@ -9300,8 +9392,7 @@ function buildReqAdminCard(r,isPending){
   return `<div class="req-admin-card">
     <div class="req-admin-header">
       <div>
-        <div class="req-admin-names">${escHtml(r.initiatorName)}${r.type!=='leave'?` ↔ ${escHtml(r.colleagueName||'')}`:''}
-        </div>
+        <div class="req-admin-names">${escHtml(r.initiatorName)}${r.type!=='leave'&&r.type!=='pickup'?` ↔ ${escHtml(r.colleagueName||'')}`:''}</div>
         <div class="req-admin-meta">Submitted ${reqFmtDate(r.createdAt)}</div>
       </div>
       <span class="req-admin-type-pill">${typeLabel}</span>
@@ -9391,6 +9482,8 @@ async function managerApproveRequest(id){
     r.status='approved'; r.managerName=mgr; r.managerDecision='approved'; r.managerDecidedAt=now;
     if(r.type==='leave'){
       await reqCreateNotification(r.initiatorId,id,`Your leave request (${formatLeaveType(r.leaveType)}, ${reqFmtDate(r.leaveStartDate)}–${reqFmtDate(r.leaveEndDate)}) was approved by ${mgr}`,'manager_approved');
+    } else if(r.type==='pickup'){
+      await reqCreateNotification(r.initiatorId,id,`Your request to pick up the cover shift on ${reqFmtDate(r.initiatorShiftDate)} (${r.initiatorShiftStart}–${r.initiatorShiftEnd}) was approved by ${mgr} — roster has been updated`,'manager_approved');
     } else {
       await reqCreateNotification(r.initiatorId,id,`Your ${r.type} request was approved by ${mgr} — roster has been updated`,'manager_approved');
       if(r.colleagueId) await reqCreateNotification(r.colleagueId,id,`${r.type==='swap'?'Shift swap':'Shift give away'} with ${r.initiatorName} was approved by ${mgr} — roster has been updated`,'manager_approved');
@@ -9467,6 +9560,15 @@ async function applyRosterWriteback(req){
     await db.insert('roster_shifts',newRow);
     await db.delete('roster_shifts',initShift.id);
     _rosterShifts=freshShifts.filter(s=>s.id!==initShift.id);
+    _rosterShifts.push(newRow);
+  } else if(req.type==='pickup'){
+    const freshShifts=await db.get('roster_shifts');
+    const coverShift=freshShifts.find(s=>s.id===req.initiatorShiftId);
+    if(!coverShift) throw new Error('Cover shift no longer exists — it may have already been filled or removed. Please check the roster.');
+    const newRow={id:'SH'+Date.now(),employee_id:req.initiatorId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false};
+    await db.insert('roster_shifts',newRow);
+    await db.delete('roster_shifts',coverShift.id);
+    _rosterShifts=freshShifts.filter(s=>s.id!==coverShift.id);
     _rosterShifts.push(newRow);
   }
 }
@@ -9591,9 +9693,9 @@ function renderReqAudit(resetPage=false){
   _raqPage=Math.min(_raqPage,totalPages-1);
   const page=rows.slice(_raqPage*CA_PAGE_SIZE,(_raqPage+1)*CA_PAGE_SIZE);
   tbody.innerHTML=page.map(r=>{
-    const typeLabel=r.type==='leave'?'Leave':r.type==='swap'?'Swap':'Give Away';
-    const parties=r.type==='leave'?escHtml(r.initiatorName):`${escHtml(r.initiatorName)} ↔ ${escHtml(r.colleagueName||'—')}`;
-    const detail=r.type==='leave'?`${formatLeaveType(r.leaveType)} ${reqFmtDate(r.leaveStartDate)}–${reqFmtDate(r.leaveEndDate)}`:`${reqFmtDate(r.initiatorShiftDate||'')} shift`;
+    const typeLabel=r.type==='leave'?'Leave':r.type==='swap'?'Swap':r.type==='pickup'?'Pick Up':'Give Away';
+    const parties=r.type==='leave'||r.type==='pickup'?escHtml(r.initiatorName):`${escHtml(r.initiatorName)} ↔ ${escHtml(r.colleagueName||'—')}`;
+    const detail=r.type==='leave'?`${formatLeaveType(r.leaveType)} ${reqFmtDate(r.leaveStartDate)}–${reqFmtDate(r.leaveEndDate)}`:r.type==='pickup'?`Cover shift ${reqFmtDate(r.initiatorShiftDate||'')} ${r.initiatorShiftStart||''}–${r.initiatorShiftEnd||''}`:`${reqFmtDate(r.initiatorShiftDate||'')} shift`;
     const rosterChange=r.status==='approved'?'Roster updated':'—';
     return`<tr>
       <td>${reqFmtDate(r.createdAt)}</td>
