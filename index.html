@@ -2119,7 +2119,7 @@
           <div class="settings-section-chevron" id="ss-chevron-clockaudit">&#9658;</div>
           <div style="flex:1;">
             <div class="settings-section-title">Clock Audit</div>
-            <div class="settings-section-hint">Every clock-in and clock-out event across all staff. Entries marked * were auto-generated from approved leave — not a physical clock. Entries marked † were removed from the timesheet export by a manager — clock record preserved.</div>
+            <div class="settings-section-hint">Every clock-in and clock-out event across all staff. Times marked * were auto-generated from approved leave or manually entered by a manager — not a physical RFID clock. Entries marked † were removed from the timesheet export by a manager — clock record preserved. Use the checkboxes to show or hide these rows.</div>
           </div>
         </div>
         <div class="settings-section-body" id="ss-body-clockaudit" style="display:none;">
@@ -2132,6 +2132,8 @@
             <input class="form-input" type="date" id="ca-filter-from" onchange="renderClockAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
             <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">to</span>
             <input class="form-input" type="date" id="ca-filter-to" onchange="renderClockAudit(true)" style="width:auto;font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--warm-white);" />
+            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.78rem;font-weight:600;color:var(--muted);cursor:pointer;user-select:none;"><input type="checkbox" id="ca-include-manual" onchange="renderClockAudit(true)" style="accent-color:var(--burgundy);width:14px;height:14px;cursor:pointer;">Include manual entries</label>
+            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.78rem;font-weight:600;color:var(--muted);cursor:pointer;user-select:none;"><input type="checkbox" id="ca-include-deleted" onchange="renderClockAudit(true)" style="accent-color:var(--burgundy);width:14px;height:14px;cursor:pointer;">Include deleted</label>
           </div>
           <div class="table-wrap">
             <table class="timesheet-table">
@@ -3268,6 +3270,8 @@ function normaliseEntry(r) {
     breakNote: r.break_note || null,
     deleted: r.deleted || false,
     travelKm: r.travel_km ?? null,
+    leaveTypeGap: r.leave_type_gap || null,
+    leaveGapHours: r.leave_gap_hours ?? null,
   };
 }
 
@@ -4763,6 +4767,35 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
         </div>
       </div>
       ${breakRowHtml}
+      ${(()=>{
+        if(splitSegment||!entry||entry.leaveType||!(entry.clockIn||entry.finalStart)||!rostStart||!rostEnd) return '';
+        const grace=GRACE_BY_ROLE[emp.role]??10;
+        const effIn=entry.finalStart||entry.clockIn;
+        const effOut=entry.finalEnd||entry.clockOut;
+        let autoGapMins=0,gapDir='';
+        if(effOut){const g=timeToMin(rostEnd)-timeToMin(effOut);if(g>grace){autoGapMins=g;gapDir='early departure';}}
+        if(!autoGapMins&&effIn){const g=timeToMin(effIn)-timeToMin(rostStart);if(g>grace){autoGapMins=g;gapDir='late arrival';}}
+        const existingGapType=entry.leaveTypeGap||'';
+        const existingGapHours=entry.leaveGapHours!=null?entry.leaveGapHours:(autoGapMins>0?autoGapMins/60:null);
+        if(!autoGapMins&&!existingGapType) return '';
+        const gapEditable=!locked&&!(effectiveAutoApproved&&!autoOverridden);
+        const hrsDisplay=existingGapHours!==null?(+existingGapHours).toFixed(2):'';
+        return`<div class="ts-sub-row">
+          <span class="ts-sub-label">Gap leave</span>
+          <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+            ${gapEditable
+              ?`<input class="ts-break-input ts-gap-hrs-input" type="number" min="0" max="24" step="0.25" value="${hrsDisplay}" onclick="event.stopPropagation()" onchange="tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)" style="width:4.2rem;">
+                <span style="font-size:0.72rem;color:var(--muted);">h</span>
+                <select class="ts-gap-type-select" onclick="event.stopPropagation()" onchange="tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)" style="font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:white;">
+                  <option value="">No leave</option>
+                  ${Object.entries(LEAVE_TYPES).filter(([k])=>k!=='public_holiday').map(([k,v])=>`<option value="${k}"${existingGapType===k?' selected':''}>${v}</option>`).join('')}
+                </select>`
+              :`<span style="font-weight:700;font-size:0.82rem;">${hrsDisplay?hrsDisplay+'h':'—'}</span>
+                <span style="font-size:0.75rem;color:var(--muted);margin-left:0.2rem;">${existingGapType?formatLeaveType(existingGapType):'No leave assigned'}</span>`}
+            ${autoGapMins>0?`<span style="font-size:0.7rem;color:var(--muted);margin-left:0.1rem;">(${gapDir})</span>`:''}
+          </div>
+        </div>`;
+      })()}
       ${emp.can_travel&&entry&&!entry.leaveType?`<div class="ts-sub-row">
         <span class="ts-sub-label">Travel</span>
         <div style="display:flex;align-items:center;gap:0.45rem;">
@@ -4799,6 +4832,24 @@ async function tsSaveBreak(entryId,empId,empName,role,date,value,e){
     renderTimesheets();
     _tsExpandEntryId=null;
   }catch(err){showToast('Could not save break');console.error(err);}
+}
+
+async function tsSaveGapLeave(entryId,empId,empName,role,date,event){
+  event?.stopPropagation?.();
+  if(!entryId){showToast('Save final times first before editing gap leave');return;}
+  const row=event?.target?.closest('.ts-shift-row');
+  const typeEl=row?.querySelector('.ts-gap-type-select');
+  const hrsEl=row?.querySelector('.ts-gap-hrs-input');
+  const leaveType=typeEl?.value||null;
+  const hours=hrsEl?.value?parseFloat(hrsEl.value):null;
+  try{
+    await db.update('entries',entryId,{leave_type_gap:leaveType||null,leave_gap_hours:leaveType&&hours?hours:null});
+    const entry=_entries.find(e=>e.id===entryId);
+    if(entry){entry.leaveTypeGap=leaveType||null;entry.leaveGapHours=leaveType&&hours?hours:null;}
+    _tsExpandEntryId=String(entryId);
+    renderTimesheets();
+    _tsExpandEntryId=null;
+  }catch(err){showToast('Could not save gap leave');console.error(err);}
 }
 
 async function tsSaveTravel(entryId,value,e){
@@ -5454,6 +5505,15 @@ const MYOB_CATS={
 };
 
 function calcMYOBRows(entry, emp, isPH=false, shift=null){
+  const rows=_calcMYOBRowsBase(entry, emp, isPH, shift);
+  if(!rows.length||!entry.leaveTypeGap||!(entry.leaveGapHours>0)) return rows;
+  const cats=emp?.classification?MYOB_CATS[emp.classification]:null;
+  const gapCatMap={annual_leave:cats?.annualLeave||'Annual Leave',personal_leave:cats?.personalLeave||'Personal Leave',compassionate_leave:cats?.compassionateLeave||'Compassionate Leave',long_service_leave:cats?.longServiceLeave||'Long Service Leave',unpaid_leave:cats?.unpaidLeave||'personal leave without pay'};
+  const gapCat=gapCatMap[entry.leaveTypeGap];
+  if(gapCat) rows.push({cat:gapCat,hours:entry.leaveGapHours});
+  return rows;
+}
+function _calcMYOBRowsBase(entry, emp, isPH=false, shift=null){
   const _snap=!entry.finalStart&&!entry.finalEnd&&tsIsAutoApproved(entry,shift);
   const start=entry.finalStart||(_snap&&shift?.start_time?shift.start_time:entry.clockIn);
   const end=entry.finalEnd||(_snap&&shift?.end_time?shift.end_time:entry.clockOut);
@@ -5554,7 +5614,7 @@ function exportMYOB(){
   // Prevents double rows when the same shift has multiple entries in the DB.
   const dedupMap={};
   ready.forEach(e=>{
-    const key=`${e.employeeId}|${e.date}|${e.shiftId||''}`;
+    const key=`${e.employeeId}|${e.date}`;
     if(!dedupMap[key]){dedupMap[key]=e;return;}
     const cur=dedupMap[key];
     if(!cur.locked&&e.locked){dedupMap[key]=e;return;}
@@ -5976,6 +6036,24 @@ function renderApprovals(){
     const rostEl=rostVal
       ?`<div class="approval-time-val">${rostVal}</div>`
       :`<div class="approval-time-val not-rostered">⚠ Not rostered</div>`;
+    // Gap leave — shown for early departures and late arrivals
+    const isDeparture=a.type==='Departure note';
+    const isArrival=a.type==='Arrival note';
+    let gapAutoMins=0;
+    if(isDeparture&&rostEnd&&clockEnd){const g=timeToMin(rostEnd)-timeToMin(clockEnd);if(g>(GRACE_BY_ROLE[a.role]??10))gapAutoMins=g;}
+    if(isArrival&&rostStart&&clockStart){const g=timeToMin(clockStart)-timeToMin(rostStart);if(g>(GRACE_BY_ROLE[a.role]??10))gapAutoMins=g;}
+    const existingGapType=entry?.leaveTypeGap||'';
+    const existingGapHours=entry?.leaveGapHours!=null?entry.leaveGapHours:(gapAutoMins>0?gapAutoMins/60:null);
+    const showGap=gapAutoMins>0||!!existingGapType;
+    const gapHtml=showGap?`<div style="margin-top:0.5rem;padding:0.45rem 0.65rem;background:rgba(0,0,0,0.04);border-radius:6px;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+      <span style="font-size:0.74rem;font-weight:700;color:var(--muted);">Unworked gap — assign to leave:</span>
+      <input id="gap-hrs-${a.id}" type="number" class="ts-break-input" min="0" max="24" step="0.25" value="${existingGapHours!==null?(+existingGapHours).toFixed(2):''}" onclick="event.stopPropagation()" style="width:4.2rem;">
+      <span style="font-size:0.74rem;color:var(--muted);">h</span>
+      <select id="gap-type-${a.id}" onclick="event.stopPropagation()" style="font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:white;cursor:pointer;">
+        <option value="">No leave</option>
+        ${Object.entries(LEAVE_TYPES).filter(([k])=>k!=='public_holiday').map(([k,v])=>`<option value="${k}"${existingGapType===k?' selected':''}>${v}</option>`).join('')}
+      </select>
+    </div>`:'';
     return`<div class="approval-card${isUnrostered?' unrostered':''}" data-id="${a.id}">
       <div class="approval-meta">
         <div class="approval-header">
@@ -6000,6 +6078,7 @@ function renderApprovals(){
           </div>
         </div>
         <div class="approval-reason">${a.reason}</div>
+        ${gapHtml}
       </div>
       <div class="approval-actions">
         <button class="acknowledge-btn" onclick="resolveNote('${a.id}','approved')">✓ Acknowledge</button>
@@ -6040,7 +6119,11 @@ function renderClockAudit(resetPage=false){
   const rf=document.getElementById('ca-filter-role')?.value;
   const df=document.getElementById('ca-filter-from')?.value;
   const dt=document.getElementById('ca-filter-to')?.value;
+  const inclManual=document.getElementById('ca-include-manual')?.checked;
+  const inclDeleted=document.getElementById('ca-include-deleted')?.checked;
   let rows=[..._entries].filter(r=>r.clockIn);
+  if(!inclManual) rows=rows.filter(r=>!String(r.id).startsWith('L')&&!String(r.id).startsWith('M'));
+  if(!inclDeleted) rows=rows.filter(r=>!r.deleted);
   if(ef) rows=rows.filter(r=>r.employeeId===ef);
   if(rf) rows=rows.filter(r=>r.role===rf);
   if(df) rows=rows.filter(r=>r.date>=df);
@@ -6056,17 +6139,19 @@ function renderClockAudit(resetPage=false){
   const page=rows.slice(_caPage*CA_PAGE_SIZE,(_caPage+1)*CA_PAGE_SIZE);
   tbody.innerHTML=page.map(r=>{
     const dateF=new Date(r.date+'T12:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
-    const out=r.clockOut?`<span class="mono">${r.clockOut}</span>`:`<span style="color:var(--dusty)">Still in</span>`;
+    const isAuto=String(r.id).startsWith('L')||String(r.id).startsWith('M');
+    const isDeleted=r.deleted;
+    const star=isAuto?'<span style="color:var(--muted);font-size:0.72rem;margin-left:0.2rem;font-weight:700;vertical-align:super;">*</span>':'';
+    const inCell=`<span class="mono">${r.clockIn}</span>${star}`;
+    const outCell=r.clockOut?`<span class="mono">${r.clockOut}</span>${star}`:`<span style="color:var(--dusty)">Still in</span>`;
     const hrs=r.hours?`<span class="mono">${r.hours}h</span>`:'—';
     const badge=r.status==='pending'?'<span class="badge badge-pending">Pending</span>':r.status==='approved'?'<span class="badge badge-approved">✓ Acknowledged</span>':r.status==='flagged'?'<span class="badge badge-flagged">Flagged</span>':'<span class="badge badge-normal">✓ Normal</span>';
-    const isAuto=String(r.id).startsWith('L');
-    const isDeleted=r.deleted;
     return`<tr${isDeleted?' style="opacity:0.5;"':''}>
       <td>${dateF}</td>
-      <td><strong>${r.employeeName}</strong>${isAuto?'<span style="color:var(--muted);font-size:0.75rem;margin-left:0.3rem;">*</span>':''}${isDeleted?'<span style="color:var(--muted);font-size:0.75rem;margin-left:0.3rem;">†</span>':''}</td>
+      <td><strong>${r.employeeName}</strong>${isDeleted?'<span style="color:var(--muted);font-size:0.75rem;margin-left:0.3rem;">†</span>':''}</td>
       <td style="color:var(--muted)">${r.role}</td>
-      <td><span class="mono">${r.clockIn}</span></td>
-      <td>${out}</td>
+      <td>${inCell}</td>
+      <td>${outCell}</td>
       <td>${hrs}</td>
       <td>${badge}</td>
     </tr>`;
@@ -6239,6 +6324,10 @@ async function resolveNote(id,status){
     const resolvedBy=currentManager?.name||null;
     const entry=_entries.find(e=>e.id===note.entryId);
     const entryPatch={status};
+    const gapTypeEl=document.getElementById('gap-type-'+id);
+    const gapHrsEl=document.getElementById('gap-hrs-'+id);
+    const gapLeaveType=gapTypeEl?.value||null;
+    const gapLeaveHours=gapHrsEl?.value?parseFloat(gapHrsEl.value):null;
     if(status==='approved'&&entry){
       const now=new Date().toISOString();
       entryPatch.final_start=entry.clockIn||null;
@@ -6249,6 +6338,8 @@ async function resolveNote(id,status){
       entryPatch.manually_adjusted=true;
       entryPatch.adjusted_by=resolvedBy;
       entryPatch.adjusted_at=now;
+      entryPatch.leave_type_gap=gapLeaveType||null;
+      entryPatch.leave_gap_hours=gapLeaveType&&gapLeaveHours?gapLeaveHours:null;
     }
     await Promise.all([
       db.update('notes',id,{status, resolved_by:resolvedBy}),
@@ -6262,6 +6353,8 @@ async function resolveNote(id,status){
         entry.finalEnd=entry.clockOut||null;
         entry.locked=true; entry.lockedBy=resolvedBy;
         entry.manuallyAdjusted=true; entry.adjustedBy=resolvedBy;
+        entry.leaveTypeGap=gapLeaveType||null;
+        entry.leaveGapHours=gapLeaveType&&gapLeaveHours?gapLeaveHours:null;
       }
     }
     // Animate: flash colour → collapse → re-render
