@@ -2029,7 +2029,7 @@
       <button class="tab active" onclick="switchTab('team',this)">Team</button>
       <button class="tab"        onclick="switchTab('roster',this)">Roster</button>
       <button class="tab"        onclick="switchTab('notes',this)">Notes<span class="notif-badge" id="notif-badge" style="display:none"></span></button>
-      <button class="tab"        onclick="switchTab('requests',this)">Staff Portal<span class="notif-badge" id="req-admin-badge" style="display:none"></span></button>
+      <button class="tab"        onclick="switchTab('requests',this)">Requests<span class="notif-badge" id="req-admin-badge" style="display:none"></span></button>
       <button class="tab"        onclick="switchTab('timesheets',this)">Timesheets</button>
       <button class="tab"        onclick="switchTab('analytics',this)">Analytics</button>
       <button class="tab"        onclick="switchTab('settings',this)">Settings</button>
@@ -2290,7 +2290,7 @@
     <div id="tab-requests" class="tab-panel">
       <div class="page-ribbon">
         <div>
-          <div class="page-ribbon-title">Staff Portal</div>
+          <div class="page-ribbon-title">Requests</div>
           <div class="page-ribbon-hint">Pending leave requests and peer-approved shift swaps awaiting your decision</div>
         </div>
       </div>
@@ -6730,7 +6730,7 @@ function adminToggleTabPicker(e){
 
 function adminMobileSwitchTab(name){
   document.getElementById('admin-mob-popover')?.classList.remove('open');
-  const LABELS={team:'Team',roster:'Roster',notes:'Notes',requests:'Staff Portal',timesheets:'Timesheets',analytics:'Analytics',settings:'Settings'};
+  const LABELS={team:'Team',roster:'Roster',notes:'Notes',requests:'Requests',timesheets:'Timesheets',analytics:'Analytics',settings:'Settings'};
   const pill=document.getElementById('admin-mob-pill-label');
   if(pill) pill.textContent=LABELS[name]||name;
   document.querySelectorAll('#admin-mob-popover .sr-lp-radio').forEach(r=>r.classList.remove('active'));
