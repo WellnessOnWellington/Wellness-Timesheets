@@ -5550,9 +5550,23 @@ function exportMYOB(){
   const headers=['Employee Co./Last Name','Employee First Name','Payroll Category','Job','Customer Co./Last Name','Customer First Name','Notes','Date','Units','Employee Card ID','Employee Record ID','Start/Stop Time','Customer Card ID','Customer Record ID'];
   lines.push(headers.join('\t'));
 
-  ready.forEach(entry=>{
+  // Deduplicate: for each (employee, date, shiftId) keep only the best entry.
+  // Prevents double rows when the same shift has multiple entries in the DB.
+  const dedupMap={};
+  ready.forEach(e=>{
+    const key=`${e.employeeId}|${e.date}|${e.shiftId||''}`;
+    if(!dedupMap[key]){dedupMap[key]=e;return;}
+    const cur=dedupMap[key];
+    if(!cur.locked&&e.locked){dedupMap[key]=e;return;}
+    if(cur.locked&&!e.locked)return;
+    if(parseFloat(e.hours||0)>parseFloat(cur.hours||0))dedupMap[key]=e;
+  });
+  const deduped=Object.values(dedupMap);
+
+  deduped.forEach(entry=>{
     const emp=_emps.find(em=>em.id===entry.employeeId);
-    const nameParts=(entry.employeeName||'').trim().split(' ');
+    // Always use current emp.name (actual legal name, not preferred name or stale entry value)
+    const nameParts=((emp?.name)||entry.employeeName||'').trim().split(' ');
     const firstName=nameParts[0]||'';
     const lastName=nameParts.slice(1).join(' ')||'';
     const dateF=entry.date.split('-').reverse().join('/');
