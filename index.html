@@ -996,6 +996,11 @@
   .req-notif-label { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; color:var(--wine); margin-bottom:0.2rem; }
   .req-notif-msg { font-size:0.88rem; font-weight:700; color:var(--charcoal); }
   .req-notif-time { font-size:0.72rem; color:var(--muted); margin-top:0.15rem; }
+  .req-portal-tabs { display:flex; gap:0; margin-bottom:1rem; border-radius:10px; overflow:hidden; border:1.5px solid var(--border-dk); }
+  .req-portal-tab { flex:1; background:var(--warm-white); color:var(--muted); border:none; padding:0.62rem 0; font-family:'Nunito',sans-serif; font-size:0.83rem; font-weight:700; cursor:pointer; transition:all 0.15s; }
+  .req-portal-tab.rpt-active { background:var(--burgundy); color:#fff; }
+  .req-tab-badge { display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.25); color:#fff; border-radius:999px; font-size:0.65rem; font-weight:800; min-width:1.15rem; height:1.15rem; padding:0 0.25rem; margin-left:0.35rem; vertical-align:middle; }
+  .req-portal-tab:not(.rpt-active) .req-tab-badge { background:var(--burgundy); color:#fff; }
   .req-status-card { background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:0.85rem 1rem; margin-bottom:0.6rem; cursor:pointer; transition:border-color 0.15s; }
   .req-status-card:hover { border-color:var(--dusty); }
   .req-status-pill { display:inline-block; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:0.15rem 0.5rem; border-radius:20px; margin-bottom:0.3rem; }
@@ -3308,7 +3313,8 @@ function normaliseNote(r) {
     employeeName: r.employee_name, role: r.role, type: r.type,
     time: r.time, date: r.date, reason: r.reason, status: r.status,
     resolvedBy: r.resolved_by || null,
-    staffAcknowledged: r.staff_acknowledged || false
+    staffAcknowledged: r.staff_acknowledged || false,
+    staffAcknowledgedAt: r.staff_acknowledged_at || null
   };
 }
 
@@ -3388,6 +3394,7 @@ let _notifications = [];
 const _staffLoginAttempts = {}; // { [empId]: { count, lockedUntil } }
 let _lockoutInterval = null;
 let _reqEmployee = null;
+let _reqListTab = 'active';
 let _reqFormType = 'leave';
 let _reqDetailId = null;
 let _reqMyShifts = [];
@@ -3725,9 +3732,7 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
         await db.update('entries',leaveEntry.id,{leave_type:null,clock_in:sheetTimeStr,clock_in_iso:isoNow,clock_out:null,clock_out_iso:null,hours:null,status:'pending',reason_in:`Clocked in — was marked as ${leaveName}`});
         Object.assign(leaveEntry,{leaveType:null,clockIn:sheetTimeStr,clockInISO:isoNow,clockOut:null,hours:null,status:'pending',reasonIn:`Clocked in — was marked as ${leaveName}`});
         await addNote(emp,'Leave conflict',timeStr,`Clocked in but was marked as ${leaveName} for today — please review`,leaveEntry.id,todayKey);
-        const unseenLv=_requests.filter(r=>(r.status==='pending_manager'||r.status==='pending_peer')&&(r.initiatorId===emp.id||(r.colleagueId===emp.id&&r.status==='pending_peer'))).length;
-        const pendingMsgLv=unseenLv===1?'📋 You have 1 pending request':unseenLv>1?`📋 You have ${unseenLv} pending requests`:'';
-        showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,pendingMsgLv,emp);
+        showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,_kioskFlashMsg(emp),emp);
         return;
       }
       const stub=_entries.find(en=>en.employeeId===emp.id&&en.date===todayKey&&!en.clockIn&&!en.clockOut);
@@ -3741,9 +3746,7 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
         entryId=row.id;
       }
       if(reason) await addNote(emp,noteType||'Arrival note',timeStr,reason,entryId,todayKey);
-      const unseenIn=_requests.filter(r=>(r.status==='pending_manager'||r.status==='pending_peer')&&(r.initiatorId===emp.id||(r.colleagueId===emp.id&&r.status==='pending_peer'))).length;
-      const pendingMsgIn=unseenIn===1?'📋 You have 1 pending request':unseenIn>1?`📋 You have ${unseenIn} pending requests`:'';
-      showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,pendingMsgIn,emp);
+      showFlash('arrive','👋',greet(new Date()),emp.name.split(' ')[0],'Checked in · '+timeStr,_kioskFlashMsg(emp),emp);
     } else {
       const[ih,im]=open.clockIn.split(':').map(Number);
       const[oh,om]=sheetTimeStr.split(':').map(Number);
@@ -3765,9 +3768,7 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
       if(cached) Object.assign(cached,{clockOut:sheetTimeStr,hours:hoursStr,unpaidBreakMins,paidBreakMins,breakNote:breakNote||null,travelKm:travelKm||null});
       if(reason) await addNote(emp,noteType||'Departure note',timeStr,reason,open.id,todayKey);
       if(breakFlagged) await addNote(emp,'Break note',timeStr,`Break shorter than expected — unpaid: ${unpaidBreakMins} min (expected ${unpaidExpected} min)${breakNote?' · '+breakNote:''}`,open.id,todayKey);
-      const unseenOut=_requests.filter(r=>(r.status==='pending_manager'||r.status==='pending_peer')&&(r.initiatorId===emp.id||(r.colleagueId===emp.id&&r.status==='pending_peer'))).length;
-      const pendingMsgOut=unseenOut===1?'📋 You have 1 pending request':unseenOut>1?`📋 You have ${unseenOut} pending requests`:'';
-      showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],'Checked out · '+timeStr+' · '+hoursStr+'h',pendingMsgOut,emp);
+      showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],'Checked out · '+timeStr+' · '+hoursStr+'h',_kioskFlashMsg(emp),emp);
     }
   } catch(e) {
     let detail='Please try again';
@@ -3778,6 +3779,14 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
 }
 
 function greet(d){const h=d.getHours();return h<12?'Good morning,':h<17?'Good afternoon,':'Good evening,';}
+function _kioskFlashMsg(emp){
+  const unseenReqs=_requests.filter(r=>(r.status==='pending_manager'||r.status==='pending_peer')&&(r.initiatorId===emp.id||(r.colleagueId===emp.id&&r.status==='pending_peer'))).length;
+  const unreadNotes=_notes.filter(n=>n.employeeId===emp.id&&(n.status==='approved'||n.status==='flagged')&&!n.staffAcknowledged).length;
+  const parts=[];
+  if(unseenReqs>0) parts.push(unseenReqs===1?'1 pending request':`${unseenReqs} pending requests`);
+  if(unreadNotes>0) parts.push(unreadNotes===1?'1 update in Staff Portal':`${unreadNotes} updates in Staff Portal`);
+  return parts.length?'📋 '+parts.join(' · '):'';
+}
 
 async function addNote(emp,type,time,reason,entryId,date){
   await db.insert('notes',{
@@ -8748,7 +8757,7 @@ async function printRoster(){
 ═══════════════════════════════════════════ */
 
 async function openRequestsView(){
-  _reqEmployee=null;
+  _reqEmployee=null; _reqListTab='active';
   document.getElementById('req-panel-auth').style.display='';
   document.getElementById('req-panel-list').style.display='none';
   document.getElementById('req-panel-form').style.display='none';
@@ -8885,57 +8894,99 @@ async function reqShowList(){
   setTimeout(focusRFID,80);
 }
 
+function reqSetTab(tab){ _reqListTab=tab; renderRequestsList(); }
+
 function renderRequestsList(){
   if(!_reqEmployee) return;
   const emp=_reqEmployee;
   const now=Date.now();
-  const sevenDays=7*86400000;
-  const empReqs=_requests
+  const FOURTEEN=14*86400000;
+  // ── Active ──
+  const activeNotes=_notes.filter(n=>n.employeeId===emp.id&&(n.status==='approved'||n.status==='flagged')&&!n.staffAcknowledged);
+  const activeNotifs=_notifications.filter(n=>n.employeeId===emp.id&&!n.seenAt).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const pendingReqs=_requests
     .filter(r=>r.initiatorId===emp.id||r.colleagueId===emp.id)
-    .filter(r=>!['approved','declined','expired'].includes(r.status)||(r.managerDecidedAt&&now-new Date(r.managerDecidedAt).getTime()<sevenDays))
+    .filter(r=>!['approved','declined','expired'].includes(r.status))
     .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-  const empNotifs=_notifications.filter(n=>n.employeeId===emp.id&&!n.seenAt).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-  const mgmtNotes=_notes.filter(n=>n.employeeId===emp.id&&(n.status==='approved'||n.status==='flagged')&&!n.staffAcknowledged);
-  // Merge management notes and swap notifications into one updates list, sorted by date
-  const allUpdates=[
-    ...mgmtNotes.map(n=>({_type:'note',_date:n.date,n})),
-    ...empNotifs.map(n=>({_type:'notif',_date:n.createdAt,n}))
-  ].sort((a,b)=>new Date(b._date)-new Date(a._date));
-  let html=`<div class="req-emp-greeting">Hi, ${escHtml(emp.name.split(' ')[0])}!</div><div class="req-role-badge">${emp.role}</div>`;
-  if(allUpdates.length){
-    html+=`<div class="req-section-label">Updates (${allUpdates.length})</div>`;
-    allUpdates.forEach(({_type,n})=>{
-      if(_type==='note'){
-        const ok=n.status==='approved';
-        const borderColor=ok?'var(--success)':'#e67e22';
-        html+=`<div style="background:var(--white);border:1.5px solid ${borderColor};border-left:4px solid ${borderColor};border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.6rem;">
-          <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:${borderColor};margin-bottom:0.3rem;">${ok?'✓ Approved':'⚠ Action required'}</div>
-          <div style="font-size:0.86rem;font-weight:600;color:var(--charcoal);line-height:1.5;margin-bottom:0.65rem;">${escHtml(staffNoteMessage(n))}</div>
-          <button onclick="acknowledgeStaffNotifInline('${n.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.45rem 1rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;min-height:40px;">Got it</button>
-        </div>`;
-      } else {
-        html+=`<div class="req-notif-card" onclick="reqShowDetail('${n.requestId}')">
-          <div class="req-notif-label">Shift update</div>
-          <div class="req-notif-msg">${escHtml(n.message)}</div>
-          <div class="req-notif-time">${reqFmtDate(n.createdAt)}</div>
-        </div>`;
-      }
-    });
-  }
-  // Requests
-  if(empReqs.length){
-    html+=`<div class="req-section-label">Your Requests</div>`;
-    empReqs.forEach(r=>{
-      const isInitiator=r.initiatorId===emp.id;
-      html+=`<div class="req-status-card" onclick="reqShowDetail('${r.id}')">
-        <span class="req-status-pill ${r.status}">${reqStatusLabel(r.status)}</span>
-        <div class="req-status-title">${escHtml(reqTitle(r,isInitiator))}</div>
-        <div class="req-status-sub">${escHtml(reqStatusSub(r,isInitiator))}</div>
-      </div>`;
-    });
-  }
-  if(!allUpdates.length&&!empReqs.length){
-    html+=`<div class="req-empty">✓ You're all caught up</div>`;
+  // ── History ──
+  const histNotes=_notes.filter(n=>n.employeeId===emp.id&&(n.status==='approved'||n.status==='flagged')&&n.staffAcknowledged&&n.staffAcknowledgedAt&&now-new Date(n.staffAcknowledgedAt).getTime()<FOURTEEN);
+  const histNotifs=_notifications.filter(n=>n.employeeId===emp.id&&n.seenAt&&now-new Date(n.seenAt).getTime()<FOURTEEN).sort((a,b)=>new Date(b.seenAt)-new Date(a.seenAt));
+  const histReqs=_requests
+    .filter(r=>r.initiatorId===emp.id||r.colleagueId===emp.id)
+    .filter(r=>['approved','declined','expired'].includes(r.status)&&r.managerDecidedAt&&now-new Date(r.managerDecidedAt).getTime()<FOURTEEN)
+    .sort((a,b)=>new Date(b.managerDecidedAt)-new Date(a.managerDecidedAt));
+
+  const activeCount=activeNotes.length+activeNotifs.length+pendingReqs.length;
+  const isHistory=_reqListTab==='history';
+
+  const _noteCard=(n,isHist=false)=>{
+    const ok=n.status==='approved';
+    const borderColor=isHist?'var(--border-dk)':ok?'var(--success)':'#e67e22';
+    const labelColor=isHist?'var(--muted)':ok?'var(--success)':'#e67e22';
+    const label=isHist?(ok?'✓ Approved':'⚠ Flagged'):ok?'✓ Approved':'⚠ Action required';
+    return`<div style="background:var(--white);border:1.5px solid ${borderColor};border-left:4px solid ${borderColor};border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.6rem;${isHist?'opacity:0.82;':''}">
+      <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:${labelColor};margin-bottom:0.3rem;">${label}</div>
+      <div style="font-size:0.86rem;font-weight:600;color:var(--charcoal);line-height:1.5;${isHist?'':'margin-bottom:0.65rem;'}">${escHtml(staffNoteMessage(n))}</div>
+      ${isHist?`<div style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;">Acknowledged ${reqFmtDate(n.staffAcknowledgedAt||n.date)}</div>`
+              :`<button onclick="acknowledgeStaffNotifInline('${n.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.45rem 1rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;min-height:40px;margin-top:0.5rem;">Got it</button>`}
+    </div>`;
+  };
+
+  const _notifCard=(n,isHist=false)=>`<div class="req-notif-card${isHist?' req-notif-card-hist':''}" onclick="reqShowDetail('${n.requestId}')">
+    <div class="req-notif-label">Shift update</div>
+    <div class="req-notif-msg">${escHtml(n.message)}</div>
+    <div class="req-notif-time">${reqFmtDate(isHist?n.seenAt:n.createdAt)}</div>
+  </div>`;
+
+  const _reqCard=(r,isHist=false)=>{
+    const isInitiator=r.initiatorId===emp.id;
+    return`<div class="req-status-card${isHist?' req-status-card-hist':''}" onclick="reqShowDetail('${r.id}')">
+      <span class="req-status-pill ${r.status}">${reqStatusLabel(r.status)}</span>
+      <div class="req-status-title">${escHtml(reqTitle(r,isInitiator))}</div>
+      <div class="req-status-sub">${escHtml(reqStatusSub(r,isInitiator))}</div>
+    </div>`;
+  };
+
+  let html=`<div class="req-emp-greeting">Hi, ${escHtml(emp.name.split(' ')[0])}!</div>
+    <div class="req-role-badge">${emp.role}</div>
+    <div class="req-portal-tabs">
+      <button class="req-portal-tab${!isHistory?' rpt-active':''}" onclick="reqSetTab('active')">Active${activeCount>0?`<span class="req-tab-badge">${activeCount}</span>`:''}
+      </button>
+      <button class="req-portal-tab${isHistory?' rpt-active':''}" onclick="reqSetTab('history')">History</button>
+    </div>`;
+
+  if(!isHistory){
+    const allUpdates=[
+      ...activeNotes.map(n=>({_type:'note',_date:n.date,n})),
+      ...activeNotifs.map(n=>({_type:'notif',_date:n.createdAt,n}))
+    ].sort((a,b)=>new Date(b._date)-new Date(a._date));
+    if(allUpdates.length){
+      html+=`<div class="req-section-label">Updates (${allUpdates.length})</div>`;
+      allUpdates.forEach(({_type,n})=>{ html+=_type==='note'?_noteCard(n):_notifCard(n); });
+    }
+    if(pendingReqs.length){
+      html+=`<div class="req-section-label">Your Requests</div>`;
+      pendingReqs.forEach(r=>{ html+=_reqCard(r); });
+    }
+    if(!allUpdates.length&&!pendingReqs.length){
+      html+=`<div class="req-empty">✓ All caught up — nothing needs your attention</div>`;
+    }
+  } else {
+    const histUpdates=[
+      ...histNotes.map(n=>({_type:'note',_date:n.staffAcknowledgedAt||n.date,n})),
+      ...histNotifs.map(n=>({_type:'notif',_date:n.seenAt,n}))
+    ].sort((a,b)=>new Date(b._date)-new Date(a._date));
+    if(histUpdates.length){
+      html+=`<div class="req-section-label">Recent updates</div>`;
+      histUpdates.forEach(({_type,n})=>{ html+=_type==='note'?_noteCard(n,true):_notifCard(n,true); });
+    }
+    if(histReqs.length){
+      html+=`<div class="req-section-label">Completed requests</div>`;
+      histReqs.forEach(r=>{ html+=_reqCard(r,true); });
+    }
+    if(!histUpdates.length&&!histReqs.length){
+      html+=`<div class="req-empty">No history in the last 14 days</div>`;
+    }
   }
   document.getElementById('req-list-content').innerHTML=html;
 }
@@ -8943,7 +8994,8 @@ function renderRequestsList(){
 async function acknowledgeStaffNotifInline(noteId){
   const note=_notes.find(n=>n.id===noteId);
   if(!note) return;
-  try{await db.update('notes',noteId,{staff_acknowledged:true});note.staffAcknowledged=true;}catch(e){}
+  const ackAt=new Date().toISOString();
+  try{await db.update('notes',noteId,{staff_acknowledged:true,staff_acknowledged_at:ackAt});note.staffAcknowledged=true;note.staffAcknowledgedAt=ackAt;}catch(e){}
   renderRequestsList();
 }
 
@@ -9373,7 +9425,7 @@ async function reqSubmitPickup(){
 }
 
 function reqLogout(){
-  _reqEmployee=null;
+  _reqEmployee=null; _reqListTab='active';
   document.getElementById('req-panel-auth').style.display='';
   document.getElementById('req-panel-list').style.display='none';
   document.getElementById('req-panel-form').style.display='none';
