@@ -632,6 +632,7 @@
 
   .acknowledge-btn { background: var(--success-lt); color: var(--success); border: 1px solid rgba(58,107,79,0.18); border-radius: 8px; padding: 0.42rem 1rem; font-family: 'Nunito',sans-serif; font-size: 0.76rem; font-weight: 800; cursor: pointer; transition: all 0.18s; white-space: nowrap; }
   .acknowledge-btn:hover { background: var(--success); color: #fff; }
+  .acknowledge-btn:disabled { opacity: 0.38; cursor: not-allowed; background: var(--success-lt); color: var(--success); }
 
   .flag-btn { background: var(--blush); color: var(--burgundy); border: 1px solid var(--border); border-radius: 8px; padding: 0.42rem 1rem; font-family: 'Nunito',sans-serif; font-size: 0.76rem; font-weight: 800; cursor: pointer; transition: all 0.18s; white-space: nowrap; }
   .flag-btn:hover { background: var(--burgundy); color: #fff; }
@@ -3296,6 +3297,8 @@ function normaliseEntry(r) {
     travelKm: r.travel_km ?? null,
     leaveTypeGap: r.leave_type_gap || null,
     leaveGapHours: r.leave_gap_hours ?? null,
+    leaveTypeGapStart: r.leave_type_gap_start || null,
+    leaveGapHoursStart: r.leave_gap_hours_start ?? null,
   };
 }
 
@@ -3398,6 +3401,12 @@ let reqRole = 'Receptionist';
 const ROUND_WINDOW = 5; // minutes — clock times within this window of rostered time are rounded to roster time on timesheets
 const LEAVE_TYPES = { annual_leave:'Annual Leave', personal_leave:'Personal Leave', public_holiday:'Public Holiday', unpaid_leave:'Unpaid Leave', compassionate_leave:'Compassionate Leave', long_service_leave:'Long Service Leave' };
 function formatLeaveType(lt){ return LEAVE_TYPES[lt]||'Worked'; }
+function formatGapLeaveType(gt){
+  if(gt==='pay_to_roster') return 'Paid to roster end';
+  if(gt==='pay_to_roster_start') return 'Paid to roster start';
+  if(gt==='unpaid') return 'Unpaid';
+  return LEAVE_TYPES[gt]||gt||'';
+}
 
 function roundToRoster(actualTimeStr, scheduledMin){
   if(scheduledMin===null) return actualTimeStr;
@@ -4798,29 +4807,44 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
         const grace=GRACE_BY_ROLE[emp.role]??10;
         const effIn=entry.finalStart||entry.clockIn;
         const effOut=entry.finalEnd||entry.clockOut;
-        let autoGapMins=0,gapDir='';
-        if(effOut){const g=timeToMin(rostEnd)-timeToMin(effOut);if(g>grace){autoGapMins=g;gapDir='early departure';}}
-        if(!autoGapMins&&effIn){const g=timeToMin(effIn)-timeToMin(rostStart);if(g>grace){autoGapMins=g;gapDir='late arrival';}}
-        const existingGapType=entry.leaveTypeGap||'';
-        const existingGapHours=entry.leaveGapHours!=null?entry.leaveGapHours:(autoGapMins>0?autoGapMins/60:null);
-        if(!autoGapMins&&!existingGapType) return '';
-        const gapEditable=!locked&&!(effectiveAutoApproved&&!autoOverridden);
-        const hrsDisplay=existingGapHours!==null?(+existingGapHours).toFixed(2):'';
-        return`<div class="ts-sub-row">
-          <span class="ts-sub-label">Gap leave</span>
-          <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
-            ${gapEditable
-              ?`<input class="ts-break-input ts-gap-hrs-input" type="number" min="0" max="24" step="0.25" value="${hrsDisplay}" onclick="event.stopPropagation()" onchange="tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)" style="width:4.2rem;">
-                <span style="font-size:0.72rem;color:var(--muted);">h</span>
-                <select class="ts-gap-type-select" onclick="event.stopPropagation()" onchange="tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)" style="font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:white;">
-                  <option value="">No leave</option>
-                  ${Object.entries(LEAVE_TYPES).filter(([k])=>k!=='public_holiday').map(([k,v])=>`<option value="${k}"${existingGapType===k?' selected':''}>${v}</option>`).join('')}
-                </select>`
-              :`<span style="font-weight:700;font-size:0.82rem;">${hrsDisplay?hrsDisplay+'h':'—'}</span>
-                <span style="font-size:0.75rem;color:var(--muted);margin-left:0.2rem;">${existingGapType?formatLeaveType(existingGapType):'No leave assigned'}</span>`}
-            ${autoGapMins>0?`<span style="font-size:0.7rem;color:var(--muted);margin-left:0.1rem;">(${gapDir})</span>`:''}
-          </div>
-        </div>`;
+        const isReadOnly=locked||(effectiveAutoApproved&&!autoOverridden);
+        // Departure gap (early clock-out)
+        let deptGapMins=0;
+        if(effOut&&rostEnd){const g=timeToMin(rostEnd)-timeToMin(effOut);if(g>grace)deptGapMins=g;}
+        const deptGapType=entry.leaveTypeGap||'';
+        const deptGapHours=entry.leaveGapHours!=null?entry.leaveGapHours:(deptGapMins>0?deptGapMins/60:null);
+        const showDeptGap=deptGapMins>0||!!deptGapType;
+        // Arrival gap (late clock-in)
+        let arrvGapMins=0;
+        if(effIn&&rostStart){const g=timeToMin(effIn)-timeToMin(rostStart);if(g>grace)arrvGapMins=g;}
+        const arrvGapType=entry.leaveTypeGapStart||'';
+        const arrvGapHours=entry.leaveGapHoursStart!=null?entry.leaveGapHoursStart:(arrvGapMins>0?arrvGapMins/60:null);
+        const showArrvGap=arrvGapMins>0||!!arrvGapType;
+        if(!showDeptGap&&!showArrvGap) return '';
+        const GAP_LEAVE_OPTS=['unpaid','annual_leave','personal_leave'];
+        const renderGapRow=(label,gapType,gapHours,gapMins,saveFn)=>{
+          const hrsDisplay=gapHours!=null?(+gapHours).toFixed(2):'';
+          const isPaidToRoster=gapType==='pay_to_roster'||gapType==='pay_to_roster_start';
+          return`<div class="ts-sub-row">
+            <span class="ts-sub-label">${label}</span>
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+              ${isPaidToRoster||isReadOnly
+                ?`<span style="font-weight:700;font-size:0.82rem;">${hrsDisplay?hrsDisplay+'h':'—'}</span>
+                  <span style="font-size:0.75rem;color:var(--muted);margin-left:0.2rem;">${gapType?formatGapLeaveType(gapType):'No leave assigned'}</span>`
+                :`<input class="ts-break-input" type="number" min="0" max="24" step="0.25" value="${hrsDisplay}" onclick="event.stopPropagation()" onchange="${saveFn}" style="width:4.2rem;">
+                  <span style="font-size:0.72rem;color:var(--muted);">h</span>
+                  <select onclick="event.stopPropagation()" onchange="${saveFn}" style="font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:white;">
+                    <option value="">No leave</option>
+                    ${GAP_LEAVE_OPTS.map(k=>`<option value="${k}"${gapType===k?' selected':''}>${formatGapLeaveType(k)}</option>`).join('')}
+                  </select>`}
+              ${gapMins>0&&!isPaidToRoster?`<span style="font-size:0.7rem;color:var(--muted);margin-left:0.1rem;">(${gapMins} min)</span>`:''}
+            </div>
+          </div>`;
+        };
+        return[
+          showArrvGap?renderGapRow('Late arrival',arrvGapType,arrvGapHours,arrvGapMins,`tsSaveGapLeaveStart('${entryId}','${safeEmpId}','${date}',event)`):'',
+          showDeptGap?renderGapRow('Early departure',deptGapType,deptGapHours,deptGapMins,`tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)`):'',
+        ].join('');
       })()}
       ${emp.can_travel&&entry&&!entry.leaveType?`<div class="ts-sub-row">
         <span class="ts-sub-label">Travel</span>
@@ -4863,15 +4887,33 @@ async function tsSaveBreak(entryId,empId,empName,role,date,value,e){
 async function tsSaveGapLeave(entryId,empId,empName,role,date,event){
   event?.stopPropagation?.();
   if(!entryId){showToast('Save final times first before editing gap leave');return;}
-  const row=event?.target?.closest('.ts-shift-row');
-  const typeEl=row?.querySelector('.ts-gap-type-select');
-  const hrsEl=row?.querySelector('.ts-gap-hrs-input');
+  const subRow=event?.target?.closest('.ts-sub-row');
+  const typeEl=subRow?.querySelector('select');
+  const hrsEl=subRow?.querySelector('input[type="number"]');
   const leaveType=typeEl?.value||null;
   const hours=hrsEl?.value?parseFloat(hrsEl.value):null;
   try{
     await db.update('entries',entryId,{leave_type_gap:leaveType||null,leave_gap_hours:leaveType&&hours?hours:null});
     const entry=_entries.find(e=>e.id===entryId);
     if(entry){entry.leaveTypeGap=leaveType||null;entry.leaveGapHours=leaveType&&hours?hours:null;}
+    _tsExpandEntryId=String(entryId);
+    renderTimesheets();
+    _tsExpandEntryId=null;
+  }catch(err){showToast('Could not save gap leave');console.error(err);}
+}
+
+async function tsSaveGapLeaveStart(entryId,empId,date,event){
+  event?.stopPropagation?.();
+  if(!entryId){showToast('Save final times first before editing gap leave');return;}
+  const subRow=event?.target?.closest('.ts-sub-row');
+  const typeEl=subRow?.querySelector('select');
+  const hrsEl=subRow?.querySelector('input[type="number"]');
+  const leaveType=typeEl?.value||null;
+  const hours=hrsEl?.value?parseFloat(hrsEl.value):null;
+  try{
+    await db.update('entries',entryId,{leave_type_gap_start:leaveType||null,leave_gap_hours_start:leaveType&&hours?hours:null});
+    const entry=_entries.find(e=>e.id===entryId);
+    if(entry){entry.leaveTypeGapStart=leaveType||null;entry.leaveGapHoursStart=leaveType&&hours?hours:null;}
     _tsExpandEntryId=String(entryId);
     renderTimesheets();
     _tsExpandEntryId=null;
@@ -5532,11 +5574,12 @@ const MYOB_CATS={
 
 function calcMYOBRows(entry, emp, isPH=false, shift=null){
   const rows=_calcMYOBRowsBase(entry, emp, isPH, shift);
-  if(!rows.length||!entry.leaveTypeGap||!(entry.leaveGapHours>0)) return rows;
+  if(!rows.length) return rows;
   const cats=emp?.classification?MYOB_CATS[emp.classification]:null;
-  const gapCatMap={annual_leave:cats?.annualLeave||'Annual Leave',personal_leave:cats?.personalLeave||'Personal Leave',compassionate_leave:cats?.compassionateLeave||'Compassionate Leave',long_service_leave:cats?.longServiceLeave||'Long Service Leave',unpaid_leave:cats?.unpaidLeave||'personal leave without pay'};
-  const gapCat=gapCatMap[entry.leaveTypeGap];
-  if(gapCat) rows.push({cat:gapCat,hours:entry.leaveGapHours});
+  // Only leave types that generate MYOB rows — 'unpaid', 'pay_to_roster', 'pay_to_roster_start' intentionally omitted
+  const gapCatMap={annual_leave:cats?.annualLeave||'Annual Leave',personal_leave:cats?.personalLeave||'Personal Leave',compassionate_leave:cats?.compassionateLeave||'Compassionate Leave',long_service_leave:cats?.longServiceLeave||'Long Service Leave'};
+  if(entry.leaveTypeGap&&entry.leaveGapHours>0){const c=gapCatMap[entry.leaveTypeGap];if(c)rows.push({cat:c,hours:entry.leaveGapHours});}
+  if(entry.leaveTypeGapStart&&entry.leaveGapHoursStart>0){const c=gapCatMap[entry.leaveTypeGapStart];if(c)rows.push({cat:c,hours:entry.leaveGapHoursStart});}
   return rows;
 }
 function _calcMYOBRowsBase(entry, emp, isPH=false, shift=null){
@@ -6062,22 +6105,31 @@ function renderApprovals(){
     const rostEl=rostVal
       ?`<div class="approval-time-val">${rostVal}</div>`
       :`<div class="approval-time-val not-rostered">⚠ Not rostered</div>`;
-    // Gap leave — shown for early departures and late arrivals
+    // Gap — mandatory selection for Departure/Arrival notes before approving
     const isDeparture=a.type==='Departure note';
     const isArrival=a.type==='Arrival note';
+    const _grace=GRACE_BY_ROLE[a.role]??10;
     let gapAutoMins=0;
-    if(isDeparture&&rostEnd&&clockEnd){const g=timeToMin(rostEnd)-timeToMin(clockEnd);if(g>(GRACE_BY_ROLE[a.role]??10))gapAutoMins=g;}
-    if(isArrival&&rostStart&&clockStart){const g=timeToMin(clockStart)-timeToMin(rostStart);if(g>(GRACE_BY_ROLE[a.role]??10))gapAutoMins=g;}
-    const existingGapType=entry?.leaveTypeGap||'';
-    const existingGapHours=entry?.leaveGapHours!=null?entry.leaveGapHours:(gapAutoMins>0?gapAutoMins/60:null);
-    const showGap=gapAutoMins>0||!!existingGapType;
-    const gapHtml=showGap?`<div style="margin-top:0.5rem;padding:0.45rem 0.65rem;background:rgba(0,0,0,0.04);border-radius:6px;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-      <span style="font-size:0.74rem;font-weight:700;color:var(--muted);">Unworked gap — assign to leave:</span>
-      <input id="gap-hrs-${a.id}" type="number" class="ts-break-input" min="0" max="24" step="0.25" value="${existingGapHours!==null?(+existingGapHours).toFixed(2):''}" onclick="event.stopPropagation()" style="width:4.2rem;">
-      <span style="font-size:0.74rem;color:var(--muted);">h</span>
-      <select id="gap-type-${a.id}" onclick="event.stopPropagation()" style="font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:white;cursor:pointer;">
-        <option value="">No leave</option>
-        ${Object.entries(LEAVE_TYPES).filter(([k])=>k!=='public_holiday').map(([k,v])=>`<option value="${k}"${existingGapType===k?' selected':''}>${v}</option>`).join('')}
+    if(isDeparture&&rostEnd&&clockEnd){const g=timeToMin(rostEnd)-timeToMin(clockEnd);if(g>_grace)gapAutoMins=g;}
+    if(isArrival&&rostStart&&clockStart){const g=timeToMin(clockStart)-timeToMin(rostStart);if(g>_grace)gapAutoMins=g;}
+    const existingGapType=isDeparture?(entry?.leaveTypeGap||''):(entry?.leaveTypeGapStart||'');
+    const hasGap=gapAutoMins>0;
+    const gapFromTime=isDeparture?(clockEnd||'?'):(rostStart||'?');
+    const gapToTime=isDeparture?(rostEnd||'?'):(clockStart||'?');
+    const payToRosterOpt=isDeparture
+      ?`<option value="pay_to_roster"${existingGapType==='pay_to_roster'?' selected':''}>Pay to roster end (${rostEnd||'?'})</option>`
+      :`<option value="pay_to_roster_start"${existingGapType==='pay_to_roster_start'?' selected':''}>Pay to roster start (${rostStart||'?'})</option>`;
+    const approveDisabled=hasGap&&!existingGapType;
+    const gapHtml=hasGap?`<div style="margin-top:0.6rem;padding:0.5rem 0.7rem;background:rgba(180,28,28,0.05);border-radius:6px;border-left:3px solid var(--burgundy);">
+      <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);margin-bottom:0.38rem;letter-spacing:0.01em;">Gap: ${gapFromTime}–${gapToTime} (${gapAutoMins} min) — select before approving</div>
+      <select id="gap-sel-${a.id}" onclick="event.stopPropagation()"
+        onchange="const b=document.getElementById('approve-btn-${a.id}');if(b)b.disabled=!this.value;"
+        style="font-size:0.79rem;padding:0.28rem 0.45rem;border-radius:4px;border:1.5px solid var(--border-dk);background:white;cursor:pointer;width:100%;">
+        <option value="">— What to do with this gap? —</option>
+        <option value="unpaid"${existingGapType==='unpaid'?' selected':''}>Unpaid</option>
+        <option value="annual_leave"${existingGapType==='annual_leave'?' selected':''}>Annual Leave</option>
+        <option value="personal_leave"${existingGapType==='personal_leave'?' selected':''}>Personal Leave</option>
+        ${payToRosterOpt}
       </select>
     </div>`:'';
     return`<div class="approval-card${isUnrostered?' unrostered':''}" data-id="${a.id}">
@@ -6107,7 +6159,7 @@ function renderApprovals(){
         ${gapHtml}
       </div>
       <div class="approval-actions">
-        <button class="acknowledge-btn" onclick="resolveNote('${a.id}','approved')">✓ Acknowledge</button>
+        <button id="approve-btn-${a.id}" class="acknowledge-btn"${approveDisabled?' disabled':''} onclick="resolveNote('${a.id}','approved')">✓ Acknowledge</button>
         <button class="flag-btn" onclick="resolveNote('${a.id}','flagged')">Flag for follow-up</button>
       </div>
     </div>`;
@@ -6350,12 +6402,20 @@ async function resolveNote(id,status){
     const resolvedBy=currentManager?.name||null;
     const entry=_entries.find(e=>e.id===note.entryId);
     const entryPatch={status};
-    const gapTypeEl=document.getElementById('gap-type-'+id);
-    const gapHrsEl=document.getElementById('gap-hrs-'+id);
-    const gapLeaveType=gapTypeEl?.value||null;
-    const gapLeaveHours=gapHrsEl?.value?parseFloat(gapHrsEl.value):null;
+    const isDepartureNote=note.type==='Departure note';
+    const isArrivalNote=note.type==='Arrival note';
+    const gapSel=document.getElementById('gap-sel-'+id)?.value||null;
     if(status==='approved'&&entry){
       const now=new Date().toISOString();
+      const shift=_rosterShifts.find(s=>s.employee_id===note.employeeId&&s.date===note.date)||null;
+      const rostStart=shift?.start_time||null;
+      const rostEnd=shift?.end_time||null;
+      const _grace=GRACE_BY_ROLE[note.role]??10;
+      // Calculate gap mins for auto-hours
+      let gapAutoMins=0;
+      if(isDepartureNote&&rostEnd&&entry.clockOut){const g=timeToMin(rostEnd)-timeToMin(entry.clockOut);if(g>_grace)gapAutoMins=g;}
+      if(isArrivalNote&&rostStart&&entry.clockIn){const g=timeToMin(entry.clockIn)-timeToMin(rostStart);if(g>_grace)gapAutoMins=g;}
+      const gapAutoHours=gapAutoMins>0?(gapAutoMins/60):null;
       entryPatch.final_start=entry.clockIn||null;
       entryPatch.final_end=entry.clockOut||null;
       entryPatch.locked=true;
@@ -6364,8 +6424,32 @@ async function resolveNote(id,status){
       entryPatch.manually_adjusted=true;
       entryPatch.adjusted_by=resolvedBy;
       entryPatch.adjusted_at=now;
-      entryPatch.leave_type_gap=gapLeaveType||null;
-      entryPatch.leave_gap_hours=gapLeaveType&&gapLeaveHours?gapLeaveHours:null;
+      // Apply gap selection
+      if(isDepartureNote){
+        if(gapSel==='pay_to_roster'&&rostEnd){
+          entryPatch.final_end=rostEnd;
+          entryPatch.leave_type_gap='pay_to_roster';
+          entryPatch.leave_gap_hours=null;
+        } else if(gapSel==='annual_leave'||gapSel==='personal_leave'){
+          entryPatch.leave_type_gap=gapSel;
+          entryPatch.leave_gap_hours=gapAutoHours;
+        } else {
+          entryPatch.leave_type_gap=gapSel||null; // 'unpaid' or null
+          entryPatch.leave_gap_hours=null;
+        }
+      } else if(isArrivalNote){
+        if(gapSel==='pay_to_roster_start'&&rostStart){
+          entryPatch.final_start=rostStart;
+          entryPatch.leave_type_gap_start='pay_to_roster_start';
+          entryPatch.leave_gap_hours_start=null;
+        } else if(gapSel==='annual_leave'||gapSel==='personal_leave'){
+          entryPatch.leave_type_gap_start=gapSel;
+          entryPatch.leave_gap_hours_start=gapAutoHours;
+        } else {
+          entryPatch.leave_type_gap_start=gapSel||null;
+          entryPatch.leave_gap_hours_start=null;
+        }
+      }
     }
     await Promise.all([
       db.update('notes',id,{status, resolved_by:resolvedBy}),
@@ -6375,12 +6459,12 @@ async function resolveNote(id,status){
     if(entry){
       entry.status=status;
       if(status==='approved'){
-        entry.finalStart=entry.clockIn||null;
-        entry.finalEnd=entry.clockOut||null;
+        entry.finalStart=entryPatch.final_start??entry.finalStart;
+        entry.finalEnd=entryPatch.final_end??entry.finalEnd;
         entry.locked=true; entry.lockedBy=resolvedBy;
         entry.manuallyAdjusted=true; entry.adjustedBy=resolvedBy;
-        entry.leaveTypeGap=gapLeaveType||null;
-        entry.leaveGapHours=gapLeaveType&&gapLeaveHours?gapLeaveHours:null;
+        if('leave_type_gap' in entryPatch){ entry.leaveTypeGap=entryPatch.leave_type_gap??null; entry.leaveGapHours=entryPatch.leave_gap_hours??null; }
+        if('leave_type_gap_start' in entryPatch){ entry.leaveTypeGapStart=entryPatch.leave_type_gap_start??null; entry.leaveGapHoursStart=entryPatch.leave_gap_hours_start??null; }
       }
     }
     // Animate: flash colour → collapse → re-render
