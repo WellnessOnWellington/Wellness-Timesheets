@@ -1001,6 +1001,23 @@
   .req-portal-tab.rpt-active { background:var(--burgundy); color:#fff; }
   .req-tab-badge { display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.25); color:#fff; border-radius:999px; font-size:0.65rem; font-weight:800; min-width:1.15rem; height:1.15rem; padding:0 0.25rem; margin-left:0.35rem; vertical-align:middle; }
   .req-portal-tab:not(.rpt-active) .req-tab-badge { background:var(--burgundy); color:#fff; }
+  /* Portal notification cards */
+  .rpc { background:var(--white); border:1.5px solid var(--border); border-left:4px solid var(--border-dk); border-radius:var(--radius-sm); padding:0.85rem 1rem; margin-bottom:0.6rem; overflow:hidden; max-height:500px; transition:background 0.28s ease,border-color 0.28s ease,max-height 0.38s ease,opacity 0.32s ease,padding 0.38s ease,margin 0.38s ease,box-shadow 0.28s ease; }
+  .rpc.rpc-tap { cursor:pointer; }
+  .rpc.rpc-tap:active { opacity:0.85; }
+  .rpc.rpc-green { border-left-color:var(--success); }
+  .rpc.rpc-orange { border-left-color:#e67e22; }
+  .rpc.rpc-neutral { border-left-color:var(--burgundy); }
+  .rpc.rpc-hist { opacity:0.72; }
+  .rpc.rpc-flash-green { background:var(--success-lt) !important; border-left-color:var(--success) !important; border-color:rgba(58,107,79,0.3) !important; }
+  .rpc.rpc-flash-orange { background:#fef3e8 !important; border-left-color:#e67e22 !important; border-color:rgba(230,126,34,0.3) !important; }
+  .rpc.rpc-collapse { max-height:0 !important; opacity:0 !important; padding-top:0 !important; padding-bottom:0 !important; margin-bottom:0 !important; }
+  .rpc-label { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.22rem; }
+  .rpc-label-green { color:var(--success); }
+  .rpc-label-orange { color:#e67e22; }
+  .rpc-label-neutral { color:var(--wine); }
+  .rpc-msg { font-size:0.86rem; font-weight:600; color:var(--charcoal); line-height:1.5; }
+  .rpc-time { font-size:0.72rem; color:var(--muted); margin-top:0.22rem; }
   .req-status-card { background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:0.85rem 1rem; margin-bottom:0.6rem; cursor:pointer; transition:border-color 0.15s; }
   .req-status-card:hover { border-color:var(--dusty); }
   .req-status-pill { display:inline-block; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:0.15rem 0.5rem; border-radius:20px; margin-bottom:0.3rem; }
@@ -8896,6 +8913,19 @@ async function reqShowList(){
 
 function reqSetTab(tab){ _reqListTab=tab; renderRequestsList(); }
 
+function _notifMeta(type){
+  const m={
+    manager_approved:{label:'✓ Approved',color:'green'},
+    peer_accepted:   {label:'✓ Colleague accepted',color:'green'},
+    incoming_swap:   {label:'Swap request',color:'neutral'},
+    incoming_giveaway:{label:'Shift offer',color:'neutral'},
+    manager_declined:{label:'Declined',color:'orange'},
+    peer_declined:   {label:'Colleague declined',color:'orange'},
+    request_expired: {label:'Request expired',color:'orange'},
+  };
+  return m[type]||{label:'Update',color:'neutral'};
+}
+
 function renderRequestsList(){
   if(!_reqEmployee) return;
   const emp=_reqEmployee;
@@ -8921,22 +8951,25 @@ function renderRequestsList(){
 
   const _noteCard=(n,isHist=false)=>{
     const ok=n.status==='approved';
-    const borderColor=isHist?'var(--border-dk)':ok?'var(--success)':'#e67e22';
-    const labelColor=isHist?'var(--muted)':ok?'var(--success)':'#e67e22';
-    const label=isHist?(ok?'✓ Approved':'⚠ Flagged'):ok?'✓ Approved':'⚠ Action required';
-    return`<div style="background:var(--white);border:1.5px solid ${borderColor};border-left:4px solid ${borderColor};border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.6rem;${isHist?'opacity:0.82;':''}">
-      <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:${labelColor};margin-bottom:0.3rem;">${label}</div>
-      <div style="font-size:0.86rem;font-weight:600;color:var(--charcoal);line-height:1.5;${isHist?'':'margin-bottom:0.65rem;'}">${escHtml(staffNoteMessage(n))}</div>
-      ${isHist?`<div style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;">Acknowledged ${reqFmtDate(n.staffAcknowledgedAt||n.date)}</div>`
-              :`<button onclick="acknowledgeStaffNotifInline('${n.id}')" style="background:var(--warm-white);color:var(--charcoal);border:1px solid var(--border);border-radius:7px;padding:0.45rem 1rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;min-height:40px;margin-top:0.5rem;">Got it</button>`}
+    const color=ok?'green':'orange';
+    const label=ok?'✓ Approved':'⚠ Flagged — speak with your manager';
+    const tap=isHist?'':` onclick="acknowledgePortalItem('note','${n.id}','${n.status}',this)"`;
+    return`<div class="rpc rpc-${color}${isHist?' rpc-hist':' rpc-tap'}"${tap}>
+      <div class="rpc-label rpc-label-${color}">${label}</div>
+      <div class="rpc-msg">${escHtml(staffNoteMessage(n))}</div>
+      <div class="rpc-time">${isHist?`Acknowledged ${reqFmtDate(n.staffAcknowledgedAt||n.date)}`:reqFmtDate(n.date)}</div>
     </div>`;
   };
 
-  const _notifCard=(n,isHist=false)=>`<div class="req-notif-card${isHist?' req-notif-card-hist':''}" onclick="reqShowDetail('${n.requestId}')">
-    <div class="req-notif-label">Shift update</div>
-    <div class="req-notif-msg">${escHtml(n.message)}</div>
-    <div class="req-notif-time">${reqFmtDate(isHist?n.seenAt:n.createdAt)}</div>
-  </div>`;
+  const _notifCard=(n,isHist=false)=>{
+    const meta=_notifMeta(n.type);
+    const tap=isHist?'':` onclick="acknowledgePortalItem('notif','${n.id}','${n.type}',this)"`;
+    return`<div class="rpc rpc-${meta.color}${isHist?' rpc-hist':' rpc-tap'}"${tap}>
+      <div class="rpc-label rpc-label-${meta.color}">${meta.label}</div>
+      <div class="rpc-msg">${escHtml(n.message)}</div>
+      <div class="rpc-time">${reqFmtDate(isHist?n.seenAt:n.createdAt)}</div>
+    </div>`;
+  };
 
   const _reqCard=(r,isHist=false)=>{
     const isInitiator=r.initiatorId===emp.id;
@@ -8991,12 +9024,25 @@ function renderRequestsList(){
   document.getElementById('req-list-content').innerHTML=html;
 }
 
-async function acknowledgeStaffNotifInline(noteId){
-  const note=_notes.find(n=>n.id===noteId);
-  if(!note) return;
+async function acknowledgePortalItem(type,id,subtype,cardEl){
+  const orangeSubs=['flagged','manager_declined','peer_declined','request_expired'];
+  cardEl.classList.add(orangeSubs.includes(subtype)?'rpc-flash-orange':'rpc-flash-green');
+  setTimeout(()=>cardEl.classList.add('rpc-collapse'),320);
   const ackAt=new Date().toISOString();
-  try{await db.update('notes',noteId,{staff_acknowledged:true,staff_acknowledged_at:ackAt});note.staffAcknowledged=true;note.staffAcknowledgedAt=ackAt;}catch(e){}
-  renderRequestsList();
+  if(type==='note'){
+    try{
+      await db.update('notes',id,{staff_acknowledged:true,staff_acknowledged_at:ackAt});
+      const n=_notes.find(n=>n.id===id);
+      if(n){n.staffAcknowledged=true;n.staffAcknowledgedAt=ackAt;}
+    }catch(e){}
+  } else {
+    try{
+      await db.update('notifications',id,{seen_at:ackAt});
+      const n=_notifications.find(n=>n.id===id);
+      if(n) n.seenAt=ackAt;
+    }catch(e){}
+  }
+  setTimeout(()=>renderRequestsList(),700);
 }
 
 function reqTitle(r,isInitiator){
