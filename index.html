@@ -5944,9 +5944,8 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
 
   activePdfDates.forEach(date=>{
     const shift=empShifts.find(s=>s.date===date)||null;
-    const entry=empEntries.find(e=>e.shiftId===shift?.id)
-      ||empEntries.find(e=>e.date===date&&!e.shiftId)
-      ||null;
+    const dayEntries=empEntries.filter(e=>e.date===date);
+    const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
     const dateObj=new Date(date+'T12:00:00');
     const [_y,_m,_d]=date.split('-');
     const dateStr=`${_d}/${_m}/${_y.slice(2)} `+dateObj.toLocaleDateString('en-AU',{weekday:'short'});
