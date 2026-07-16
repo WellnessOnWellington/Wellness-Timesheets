@@ -4704,11 +4704,18 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const safeEmpId=emp.id;
   const safeEmpName=emp.name.replace(/'/g,"\\'");
   const needsMgrAutoLock=(noClockExpected||(!entry&&!!rostStart&&!!rostEnd))&&!(entry?.finalStart&&entry?.finalEnd);
+  // Detect unset gap: gap exists (beyond grace) but no type assigned — must be set before locking
+  const _gapGrace=GRACE_BY_ROLE[emp.role]??10;
+  const _deptGapMins=(!isLeaveShift&&finalEnd&&rostEnd)?Math.max(0,timeToMin(rostEnd)-timeToMin(finalEnd)):0;
+  const _arrvGapMins=(!isLeaveShift&&finalStart&&rostStart)?Math.max(0,timeToMin(finalStart)-timeToMin(rostStart)):0;
+  const hasUnsetGap=!locked&&((_deptGapMins>_gapGrace&&!entry?.leaveTypeGap)||(_arrvGapMins>_gapGrace&&!entry?.leaveTypeGapStart));
   const lockBtn=locked
     ?`<button class="ts-lock-btn locked" onclick="tsUnlockRow('${entryId}',event)" title="Locked by ${lockedBy||'manager'}">🔒 Locked</button>`
     :needsMgrAutoLock
       ?`<button class="ts-lock-btn" onclick="tsMgrAutoLock('${safeEmpId}','${safeEmpName}','${emp.role}','${date}','${rostStart}','${rostEnd}','${entryId||''}',event)">🔓 Lock</button>`
-      :`<button class="ts-lock-btn" onclick="tsLockRow('${entryId}','${safeEmpId}','${date}',event)">🔓 Lock</button>`;
+      :hasUnsetGap
+        ?`<button class="ts-lock-btn" disabled title="Set gap type before locking" style="opacity:0.45;cursor:not-allowed;">🔓 Lock</button>`
+        :`<button class="ts-lock-btn" onclick="tsLockRow('${entryId}','${safeEmpId}','${date}',event)">🔓 Lock</button>`;
   const shiftId=shift?.id||null;
   const deleteBtn=`<button class="ts-delete-btn" onclick="tsDeleteRow('${entryId||''}','${shiftId||''}','${safeEmpId}','${safeEmpName}','${date}',event)" title="Delete entry">✕</button>`;
 
@@ -4861,7 +4868,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
                 :`<input class="ts-break-input" type="number" min="0" max="24" step="0.25" value="${hrsDisplay}" onclick="event.stopPropagation()" onchange="${saveFn}" style="width:4.2rem;">
                   <span style="font-size:0.72rem;color:var(--muted);">h</span>
                   <select onclick="event.stopPropagation()" onchange="${saveFn}" style="font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:white;">
-                    <option value="">No leave</option>
+                    <option value="">NOT SET</option>
                     ${GAP_LEAVE_OPTS.map(k=>`<option value="${k}"${gapType===k?' selected':''}>${formatGapLeaveType(k)}</option>`).join('')}
                   </select>`}
               ${gapMins>0&&!isPaidToRoster?`<span style="font-size:0.7rem;color:var(--muted);margin-left:0.1rem;">(${gapMins} min)</span>`:''}
@@ -5265,6 +5272,19 @@ async function tsLockRow(entryId, empId, date, e){
   if(!entryId){showToast('No entry to lock');return;}
   if(!rwDbGuard())return;
   const mgr=currentManager?.name||'Manager';
+  // Guard: block lock if a gap exists but type is NOT SET
+  const _lockEntry=_entries.find(en=>en.id===entryId);
+  const _lockShift=_rosterShifts.find(s=>s.employee_id===empId&&s.date===date)||null;
+  if(_lockEntry&&_lockShift&&!_lockEntry.leaveType){
+    const _gr=GRACE_BY_ROLE[_lockEntry.role]??10;
+    const _fe=_lockEntry.finalEnd||_lockEntry.clockOut;
+    const _fs=_lockEntry.finalStart||_lockEntry.clockIn;
+    const _dg=(_fe&&_lockShift.end_time)?Math.max(0,timeToMin(_lockShift.end_time)-timeToMin(_fe)):0;
+    const _ag=(_fs&&_lockShift.start_time)?Math.max(0,timeToMin(_fs)-timeToMin(_lockShift.start_time)):0;
+    if((_dg>_gr&&!_lockEntry.leaveTypeGap)||(_ag>_gr&&!_lockEntry.leaveTypeGapStart)){
+      showToast('Set the gap type before locking');return;
+    }
+  }
   try{
     const entry=_entries.find(en=>en.id===entryId);
     // Find any sibling entries for the same employee+date (e.g. second shift same day)
