@@ -5107,7 +5107,9 @@ function renderTimesheets(){
       const s=entry.finalStart||entry.clockIn;
       const e2=entry.finalEnd||entry.clockOut;
       if(!s||!e2) return acc;
-      return acc+Math.max(0,timeToMin(e2)-timeToMin(s));
+      const rawMins=Math.max(0,timeToMin(e2)-timeToMin(s));
+      const unpaidMins=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:expectedUnpaidBreakMins(rawMins/60)*60;
+      return acc+Math.max(0,rawMins-unpaidMins);
     },0);
 
     const allLocked=activeDays.length>0&&activeDays.every(date=>{
