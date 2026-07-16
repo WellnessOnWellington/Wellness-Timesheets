@@ -5964,10 +5964,18 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     const finalIn=(entry.finalStart||entry.clockIn||'').slice(0,5);
     const finalOut=(entry.finalEnd||entry.clockOut||'').slice(0,5);
     let hrs=null;
-    if(finalIn&&finalOut){const rawM=Math.max(0,timeToMin(finalOut)-timeToMin(finalIn));const unpaidM=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:0;hrs=Math.max(0,rawM-unpaidM)/60;}
+    let expBreakMins=0;
+    if(finalIn&&finalOut){
+      const rawM=Math.max(0,timeToMin(finalOut)-timeToMin(finalIn));
+      expBreakMins=expectedUnpaidBreakMins(rawM/60);
+      const unpaidM=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:expBreakMins;
+      hrs=Math.max(0,rawM-unpaidM)/60;
+    }
     if(hrs!=null&&hrs>0) totalWorked+=hrs;
-    const hasBreak=entry.unpaidBreakMins!=null||entry.paidBreakMins!=null;
-    const breakStr=hasBreak?`Paid: ${entry.paidBreakMins??0}m\nUnpaid: ${entry.unpaidBreakMins??0}m`:'';
+    const displayUnpaid=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:expBreakMins;
+    const displayPaid=entry.paidBreakMins??0;
+    const isEstBreak=entry.unpaidBreakMins==null&&expBreakMins>0;
+    const breakStr=(displayUnpaid||displayPaid)?`Paid: ${displayPaid}m  Unpaid: ${displayUnpaid}m${isEstBreak?' (est)':''}` :'';
     const noteParts=[];
     if(entry.reasonIn) noteParts.push('In: '+entry.reasonIn);
     if(entry.reasonOut) noteParts.push('Out: '+entry.reasonOut);
@@ -5977,6 +5985,18 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     const approvedBy=resolvedNotes.length?(resolvedNotes[0].resolvedBy||'').split(' ').map(w=>w[0]||'').join(''):'';
     const shiftLabel=shift?'Worked':'Worked (unrostered)';
     tableRows.push({cells:[dateStr,shiftLabel,finalIn,finalOut,breakStr,hrs!=null?hrs.toFixed(2):'',noteParts.join(' · '),approvedBy],type:'worked'});
+    // Gap leave rows — only for types that don't fold into worked hours (pay_to_roster already included)
+    const paidGapTypes={annual_leave:'Annual Leave',personal_leave:'Personal Leave',compassionate_leave:'Compassionate Leave',long_service_leave:'Long Service Leave'};
+    if(entry.leaveTypeGap&&entry.leaveTypeGap!=='pay_to_roster'&&entry.leaveGapHours>0){
+      const gapLabel=(paidGapTypes[entry.leaveTypeGap]||formatGapLeaveType(entry.leaveTypeGap))+' gap';
+      tableRows.push({cells:[dateStr,gapLabel,'','','',Number(entry.leaveGapHours).toFixed(2),'',''],type:'leave'});
+      if(paidGapTypes[entry.leaveTypeGap]) totalLeave+=Number(entry.leaveGapHours);
+    }
+    if(entry.leaveTypeGapStart&&entry.leaveTypeGapStart!=='pay_to_roster_start'&&entry.leaveGapHoursStart>0){
+      const gapLabel=(paidGapTypes[entry.leaveTypeGapStart]||formatGapLeaveType(entry.leaveTypeGapStart))+' gap';
+      tableRows.push({cells:[dateStr,gapLabel,'','','',Number(entry.leaveGapHoursStart).toFixed(2),'',''],type:'leave'});
+      if(paidGapTypes[entry.leaveTypeGapStart]) totalLeave+=Number(entry.leaveGapHoursStart);
+    }
   });
 
   // ── Table ──
