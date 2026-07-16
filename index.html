@@ -5964,8 +5964,9 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     // Worked
     const finalIn=(entry.finalStart||entry.clockIn||'').slice(0,5);
     const finalOut=(entry.finalEnd||entry.clockOut||'').slice(0,5);
-    const hrs=entry.hours!=null?parseFloat(entry.hours):null;
-    if(hrs!=null&&!isNaN(hrs)) totalWorked+=hrs;
+    let hrs=null;
+    if(finalIn&&finalOut){const rawM=Math.max(0,timeToMin(finalOut)-timeToMin(finalIn));const unpaidM=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:0;hrs=Math.max(0,rawM-unpaidM)/60;}
+    if(hrs!=null&&hrs>0) totalWorked+=hrs;
     const hasBreak=entry.unpaidBreakMins!=null||entry.paidBreakMins!=null;
     const breakStr=hasBreak?`Paid: ${entry.paidBreakMins??0}m\nUnpaid: ${entry.unpaidBreakMins??0}m`:'';
     const noteParts=[];
