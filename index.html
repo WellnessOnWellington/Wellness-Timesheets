@@ -5937,14 +5937,17 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
   const tableRows=[];
   let totalWorked=0, totalLeave=0;
 
-  empShifts.forEach(shift=>{
-    const entry=empEntries.find(e=>e.shiftId===shift.id)
-      ||empEntries.find(e=>e.date===shift.date&&!e.shiftId);
-    const dateObj=new Date(shift.date+'T12:00:00');
-    const [_y,_m,_d]=shift.date.split('-');
+  // Use union of shift dates + entry dates so unrostered worked entries are included
+  const activePdfDates=[...new Set([...empShifts.map(s=>s.date),...empEntries.filter(e=>e.clockIn||e.finalStart||e.leaveType).map(e=>e.date)])].sort();
+
+  activePdfDates.forEach(date=>{
+    const shift=empShifts.find(s=>s.date===date)||null;
+    const entry=empEntries.find(e=>e.shiftId===shift?.id)
+      ||empEntries.find(e=>e.date===date&&!e.shiftId)
+      ||null;
+    const dateObj=new Date(date+'T12:00:00');
+    const [_y,_m,_d]=date.split('-');
     const dateStr=`${_d}/${_m}/${_y.slice(2)} `+dateObj.toLocaleDateString('en-AU',{weekday:'short'});
-    const rostIn=(shift.start_time||'').slice(0,5);
-    const rostOut=(shift.end_time||'').slice(0,5);
 
     if(!entry){
       tableRows.push({cells:[dateStr,'Not yet finalised','','','','','',''],type:'pending'});
@@ -5970,7 +5973,8 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     if(entry.travelKm) noteParts.push('Car: '+entry.travelKm+'km');
     const resolvedNotes=empNotes.filter(n=>n.entryId===entry.id&&n.status!=='pending'&&n.resolvedBy);
     const approvedBy=resolvedNotes.length?(resolvedNotes[0].resolvedBy||'').split(' ').map(w=>w[0]||'').join(''):'';
-    tableRows.push({cells:[dateStr,'Worked',finalIn,finalOut,breakStr,hrs!=null?hrs.toFixed(2):'',noteParts.join(' · '),approvedBy],type:'worked'});
+    const shiftLabel=shift?'Worked':'Worked (unrostered)';
+    tableRows.push({cells:[dateStr,shiftLabel,finalIn,finalOut,breakStr,hrs!=null?hrs.toFixed(2):'',noteParts.join(' · '),approvedBy],type:'worked'});
   });
 
   // ── Table ──
