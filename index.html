@@ -6194,8 +6194,8 @@ function renderApprovals(){
             ${rostEl}
           </div>
           <div class="approval-time-col">
-            <div class="approval-time-label">${a.type==='Departure note'?'Clocked out':'Clocked in'}</div>
-            <div class="approval-time-val">${a.type==='Departure note'?(clockEnd||'—'):(clockStart||'—')}</div>
+            <div class="approval-time-label">${a.type==='Departure note'?'Clocked out':isUnrostered?'Clocked':'Clocked in'}</div>
+            <div class="approval-time-val">${a.type==='Departure note'?(clockEnd||'—'):isUnrostered?(clockStart&&clockEnd?clockStart+'–'+clockEnd:clockStart?clockStart+(` <span style="font-size:0.72rem;color:var(--muted);font-weight:500;">still in</span>`):'—'):(clockStart||'—')}</div>
           </div>
           <div class="approval-time-col">
             <div class="approval-time-label">Difference</div>
