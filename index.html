@@ -6245,7 +6245,8 @@ function renderApprovals(){
     </div>`;
   };
 
-  const rolePend=pend.filter(a=>a.role===notesRole);
+  const rolePend=pend.filter(a=>a.role===notesRole)
+    .sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time));
   container.innerHTML=rolePend.length
     ?`<div class="approvals-list">${rolePend.map(cardHtml).join('')}</div>`
     :`<div class="req-empty" style="padding:3rem 1rem;">✓ No pending notes</div>`;
