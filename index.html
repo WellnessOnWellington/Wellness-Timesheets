@@ -3436,6 +3436,7 @@ function formatLeaveType(lt){ return LEAVE_TYPES[lt]||'Worked'; }
 function formatGapLeaveType(gt){
   if(gt==='pay_to_roster') return 'Paid to roster end';
   if(gt==='pay_to_roster_start') return 'Paid to roster start';
+  if(gt==='pay_to_clockout') return 'Paid to clock out';
   if(gt==='unpaid') return 'Unpaid';
   return LEAVE_TYPES[gt]||gt||'';
 }
@@ -4714,8 +4715,9 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   // Detect unset gap: gap exists (beyond grace) but no type assigned — must be set before locking
   const _gapGrace=GRACE_BY_ROLE[emp.role]??10;
   const _deptGapMins=(!isLeaveShift&&finalEnd&&rostEnd)?Math.max(0,timeToMin(rostEnd)-timeToMin(finalEnd)):0;
+  const _deptOverrunMins=(!isLeaveShift&&finalEnd&&rostEnd)?Math.max(0,timeToMin(finalEnd)-timeToMin(rostEnd)):0;
   const _arrvGapMins=(!isLeaveShift&&finalStart&&rostStart)?Math.max(0,timeToMin(finalStart)-timeToMin(rostStart)):0;
-  const hasUnsetGap=!locked&&((_deptGapMins>_gapGrace&&!entry?.leaveTypeGap)||(_arrvGapMins>_gapGrace&&!entry?.leaveTypeGapStart));
+  const hasUnsetGap=!locked&&((_deptGapMins>_gapGrace&&!entry?.leaveTypeGap)||(_deptOverrunMins>_gapGrace&&!entry?.leaveTypeGap)||(_arrvGapMins>_gapGrace&&!entry?.leaveTypeGapStart));
   const lockBtn=locked
     ?`<button class="ts-lock-btn locked" onclick="tsUnlockRow('${entryId}',event)" title="Locked by ${lockedBy||'manager'}">🔒 Locked</button>`
     :needsMgrAutoLock
@@ -4849,13 +4851,20 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
         const effIn=entry.finalStart||entry.clockIn;
         const effOut=entry.finalEnd||entry.clockOut;
         const isReadOnly=locked||(effectiveAutoApproved&&!autoOverridden);
-        // Departure gap (early clock-out)
-        let deptGapMins=0;
-        if(effOut&&rostEnd){const g=timeToMin(rostEnd)-timeToMin(effOut);if(g>grace)deptGapMins=g;}
+        // Departure gap — early clock-out (shortfall, editable here) or late clock-out
+        // (overrun — decided only via the Notes tab, same as pay-to-roster; shown read-only here).
+        let deptGapMins=0, deptGapIsOverrun=false;
+        if(effOut&&rostEnd){
+          const g=timeToMin(rostEnd)-timeToMin(effOut);
+          if(g>grace){deptGapMins=g;}
+          else if(-g>grace){deptGapMins=-g;deptGapIsOverrun=true;}
+        }
         const deptGapType=entry.leaveTypeGap||'';
         const deptGapHours=entry.leaveGapHours!=null?entry.leaveGapHours:(deptGapMins>0?deptGapMins/60:null);
         const showDeptGap=deptGapMins>0||!!deptGapType;
-        // Arrival gap (late clock-in)
+        const deptGapLabel=deptGapIsOverrun?'Late departure':'Early departure';
+        // Arrival gap (late clock-in) — early arrival is intentionally not tracked; it always
+        // auto-snaps to roster start (see tsIsAutoApproved), so no manager decision is needed.
         let arrvGapMins=0;
         if(effIn&&rostStart){const g=timeToMin(effIn)-timeToMin(rostStart);if(g>grace)arrvGapMins=g;}
         const arrvGapType=entry.leaveTypeGapStart||'';
@@ -4863,28 +4872,28 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
         const showArrvGap=arrvGapMins>0||!!arrvGapType;
         if(!showDeptGap&&!showArrvGap) return '';
         const GAP_LEAVE_OPTS=['unpaid','annual_leave','personal_leave'];
-        const renderGapRow=(label,gapType,gapHours,gapMins,saveFn)=>{
+        const renderGapRow=(label,gapType,gapHours,gapMins,saveFn,forceReadOnly)=>{
           const hrsDisplay=gapHours!=null?(+gapHours).toFixed(2):'';
-          const isPaidToRoster=gapType==='pay_to_roster'||gapType==='pay_to_roster_start';
+          const isFixedDecision=gapType==='pay_to_roster'||gapType==='pay_to_roster_start'||gapType==='pay_to_clockout';
           return`<div class="ts-sub-row">
             <span class="ts-sub-label">${label}</span>
             <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
-              ${isPaidToRoster||isReadOnly
+              ${isFixedDecision||isReadOnly||forceReadOnly
                 ?`<span style="font-weight:700;font-size:0.82rem;">${hrsDisplay?hrsDisplay+'h':'—'}</span>
-                  <span style="font-size:0.75rem;color:var(--muted);margin-left:0.2rem;">${gapType?formatGapLeaveType(gapType):'No leave assigned'}</span>`
+                  <span style="font-size:0.75rem;color:var(--muted);margin-left:0.2rem;">${gapType?formatGapLeaveType(gapType):'Decide in Notes tab'}</span>`
                 :`<input class="ts-break-input" type="number" min="0" max="24" step="0.25" value="${hrsDisplay}" onclick="event.stopPropagation()" onchange="${saveFn}" style="width:4.2rem;">
                   <span style="font-size:0.72rem;color:var(--muted);">h</span>
                   <select onclick="event.stopPropagation()" onchange="${saveFn}" style="font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:white;">
                     <option value="">NOT SET</option>
                     ${GAP_LEAVE_OPTS.map(k=>`<option value="${k}"${gapType===k?' selected':''}>${formatGapLeaveType(k)}</option>`).join('')}
                   </select>`}
-              ${gapMins>0&&!isPaidToRoster?`<span style="font-size:0.7rem;color:var(--muted);margin-left:0.1rem;">(${gapMins} min)</span>`:''}
+              ${gapMins>0&&!isFixedDecision?`<span style="font-size:0.7rem;color:var(--muted);margin-left:0.1rem;">(${gapMins} min)</span>`:''}
             </div>
           </div>`;
         };
         return[
-          showArrvGap?renderGapRow('Late arrival',arrvGapType,arrvGapHours,arrvGapMins,`tsSaveGapLeaveStart('${entryId}','${safeEmpId}','${date}',event)`):'',
-          showDeptGap?renderGapRow('Early departure',deptGapType,deptGapHours,deptGapMins,`tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)`):'',
+          showArrvGap?renderGapRow('Late arrival',arrvGapType,arrvGapHours,arrvGapMins,`tsSaveGapLeaveStart('${entryId}','${safeEmpId}','${date}',event)`,false):'',
+          showDeptGap?renderGapRow(deptGapLabel,deptGapType,deptGapHours,deptGapMins,`tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)`,deptGapIsOverrun):'',
         ].join('');
       })()}
       ${emp.can_travel&&entry&&!entry.leaveType?`<div class="ts-sub-row">
@@ -5289,8 +5298,9 @@ async function tsLockRow(entryId, empId, date, e){
     const _fe=_lockEntry.finalEnd||_lockEntry.clockOut;
     const _fs=_lockEntry.finalStart||_lockEntry.clockIn;
     const _dg=(_fe&&_lockShift.end_time)?Math.max(0,timeToMin(_lockShift.end_time)-timeToMin(_fe)):0;
+    const _do=(_fe&&_lockShift.end_time)?Math.max(0,timeToMin(_fe)-timeToMin(_lockShift.end_time)):0;
     const _ag=(_fs&&_lockShift.start_time)?Math.max(0,timeToMin(_fs)-timeToMin(_lockShift.start_time)):0;
-    if((_dg>_gr&&!_lockEntry.leaveTypeGap)||(_ag>_gr&&!_lockEntry.leaveTypeGapStart)){
+    if((_dg>_gr&&!_lockEntry.leaveTypeGap)||(_do>_gr&&!_lockEntry.leaveTypeGap)||(_ag>_gr&&!_lockEntry.leaveTypeGapStart)){
       showToast('Set the gap type before locking');return;
     }
   }
@@ -6185,31 +6195,43 @@ function renderApprovals(){
     const rostEl=rostVal
       ?`<div class="approval-time-val">${rostVal}</div>`
       :`<div class="approval-time-val not-rostered">⚠ Not rostered</div>`;
-    // Gap — mandatory selection for Departure/Arrival notes before approving
+    // Gap — mandatory selection for Departure/Arrival notes before approving.
+    // Departure notes can go either direction: clocked out EARLY (shortfall — missing paid time,
+    // covered by unpaid/leave/pay-to-roster) or clocked out LATE (overrun — extra clocked time that
+    // needs a pay-to-roster-end-vs-pay-to-clockout decision, not a leave category).
     const isDeparture=a.type==='Departure note';
     const isArrival=a.type==='Arrival note';
     const _grace=GRACE_BY_ROLE[a.role]??10;
-    let gapAutoMins=0;
-    if(isDeparture&&rostEnd&&clockEnd){const g=timeToMin(rostEnd)-timeToMin(clockEnd);if(g>_grace)gapAutoMins=g;}
-    if(isArrival&&rostStart&&clockStart){const g=timeToMin(clockStart)-timeToMin(rostStart);if(g>_grace)gapAutoMins=g;}
+    let gapAutoMins=0, gapMode=null; // gapMode: 'shortfall' | 'overrun' | null
+    if(isDeparture&&rostEnd&&clockEnd){
+      const g=timeToMin(rostEnd)-timeToMin(clockEnd);
+      if(g>_grace){gapAutoMins=g;gapMode='shortfall';}
+      else if(-g>_grace){gapAutoMins=-g;gapMode='overrun';}
+    }
+    if(isArrival&&rostStart&&clockStart){const g=timeToMin(clockStart)-timeToMin(rostStart);if(g>_grace){gapAutoMins=g;gapMode='shortfall';}}
     const existingGapType=isDeparture?(entry?.leaveTypeGap||''):(entry?.leaveTypeGapStart||'');
-    const hasGap=gapAutoMins>0;
-    const gapFromTime=isDeparture?(clockEnd||'?'):(rostStart||'?');
-    const gapToTime=isDeparture?(rostEnd||'?'):(clockStart||'?');
-    const payToRosterOpt=isDeparture
-      ?`<option value="pay_to_roster"${existingGapType==='pay_to_roster'?' selected':''}>Pay to roster end (${rostEnd||'?'})</option>`
-      :`<option value="pay_to_roster_start"${existingGapType==='pay_to_roster_start'?' selected':''}>Pay to roster start (${rostStart||'?'})</option>`;
-    const approveDisabled=hasGap&&!existingGapType;
-    const gapHtml=hasGap?`<div style="margin-top:0.6rem;padding:0.5rem 0.7rem;background:rgba(180,28,28,0.05);border-radius:6px;border-left:3px solid var(--burgundy);">
-      <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);margin-bottom:0.38rem;letter-spacing:0.01em;">Gap: ${gapFromTime}–${gapToTime} (${gapAutoMins} min) — select before approving</div>
-      <select id="gap-sel-${a.id}" onclick="event.stopPropagation()"
-        onchange="const b=document.getElementById('approve-btn-${a.id}');if(b)b.disabled=!this.value;"
-        style="font-size:0.79rem;padding:0.28rem 0.45rem;border-radius:4px;border:1.5px solid var(--border-dk);background:white;cursor:pointer;width:100%;">
-        <option value="">— What to do with this gap? —</option>
+    const hasGap=!!gapMode;
+    const isOverrun=gapMode==='overrun';
+    const gapFromTime=isOverrun?(rostEnd||'?'):isDeparture?(clockEnd||'?'):(rostStart||'?');
+    const gapToTime=isOverrun?(clockEnd||'?'):isDeparture?(rostEnd||'?'):(clockStart||'?');
+    const gapOptsHtml=isOverrun
+      ?`<option value="">— What to do with this time? —</option>
+        <option value="pay_to_roster"${existingGapType==='pay_to_roster'?' selected':''}>Pay to roster end (${rostEnd||'?'})</option>
+        <option value="pay_to_clockout"${existingGapType==='pay_to_clockout'?' selected':''}>Pay to clock out (${clockEnd||'?'})</option>`
+      :`<option value="">— What to do with this gap? —</option>
         <option value="unpaid"${existingGapType==='unpaid'?' selected':''}>Unpaid</option>
         <option value="annual_leave"${existingGapType==='annual_leave'?' selected':''}>Annual Leave</option>
         <option value="personal_leave"${existingGapType==='personal_leave'?' selected':''}>Personal Leave</option>
-        ${payToRosterOpt}
+        ${isDeparture
+          ?`<option value="pay_to_roster"${existingGapType==='pay_to_roster'?' selected':''}>Pay to roster end (${rostEnd||'?'})</option>`
+          :`<option value="pay_to_roster_start"${existingGapType==='pay_to_roster_start'?' selected':''}>Pay to roster start (${rostStart||'?'})</option>`}`;
+    const approveDisabled=hasGap&&!existingGapType;
+    const gapHtml=hasGap?`<div style="margin-top:0.6rem;padding:0.5rem 0.7rem;background:rgba(180,28,28,0.05);border-radius:6px;border-left:3px solid var(--burgundy);">
+      <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);margin-bottom:0.38rem;letter-spacing:0.01em;">${isOverrun?'Late departure':'Gap'}: ${gapFromTime}–${gapToTime} (${gapAutoMins} min) — select before approving</div>
+      <select id="gap-sel-${a.id}" onclick="event.stopPropagation()"
+        onchange="const b=document.getElementById('approve-btn-${a.id}');if(b)b.disabled=!this.value;"
+        style="font-size:0.79rem;padding:0.28rem 0.45rem;border-radius:4px;border:1.5px solid var(--border-dk);background:white;cursor:pointer;width:100%;">
+        ${gapOptsHtml}
       </select>
     </div>`:'';
     return`<div class="approval-card${isUnrostered?' unrostered':''}" data-id="${a.id}">
@@ -6511,6 +6533,12 @@ async function resolveNote(id,status){
           entryPatch.final_end=rostEnd;
           entryPatch.leave_type_gap='pay_to_roster';
           entryPatch.leave_gap_hours=null;
+        } else if(gapSel==='pay_to_clockout'){
+          // Late departure, paid in full — final_end already defaults to clockOut above;
+          // set explicitly so the decision is recorded rather than just left as the default.
+          entryPatch.final_end=entry.clockOut||null;
+          entryPatch.leave_type_gap='pay_to_clockout';
+          entryPatch.leave_gap_hours=null;
         } else if(gapSel==='annual_leave'||gapSel==='personal_leave'){
           entryPatch.leave_type_gap=gapSel;
           entryPatch.leave_gap_hours=gapAutoHours;
@@ -6569,12 +6597,29 @@ let _staffNotifCallback=null;
 function staffNoteMessage(note){
   const d=new Date(note.date+'T12:00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'});
   const ok=note.status==='approved';
-  if(note.type==='Departure note')
-    return ok?`Your late departure on ${d} was approved — overtime will be included in your pay.`
-             :`Your late departure on ${d} has been noted for discussion. Please speak with your manager.`;
-  if(note.type==='Arrival note')
-    return ok?`Your late arrival on ${d} has been noted and approved.`
-             :`Your late arrival on ${d} has been noted for discussion. Please speak with your manager.`;
+  if(note.type==='Departure note'){
+    // Departure notes fire for BOTH early and late clock-outs, so this can't assume "late".
+    if(!ok) return `Your departure on ${d} has been noted for discussion. Please speak with your manager.`;
+    const entry=_entries.find(e=>e.id===note.entryId);
+    const gt=entry?.leaveTypeGap;
+    if(gt==='pay_to_roster') return `Your departure on ${d} was approved, paid to your rostered end time.`;
+    if(gt==='pay_to_clockout') return `Your late departure on ${d} was approved — overtime will be included in your pay.`;
+    if(gt==='unpaid') return `Your early departure on ${d} was approved as unpaid time.`;
+    if(gt==='annual_leave') return `Your early departure on ${d} was approved, covered by Annual Leave.`;
+    if(gt==='personal_leave') return `Your early departure on ${d} was approved, covered by Personal Leave.`;
+    return `Your departure on ${d} was approved.`;
+  }
+  if(note.type==='Arrival note'){
+    // Arrival notes only ever fire for LATE arrival, so "late" is always accurate here.
+    if(!ok) return `Your late arrival on ${d} has been noted for discussion. Please speak with your manager.`;
+    const entry=_entries.find(e=>e.id===note.entryId);
+    const gt=entry?.leaveTypeGapStart;
+    if(gt==='pay_to_roster_start') return `Your late arrival on ${d} was approved, paid from your rostered start time.`;
+    if(gt==='unpaid') return `Your late arrival on ${d} was approved — the missed time is unpaid.`;
+    if(gt==='annual_leave') return `Your late arrival on ${d} was approved, covered by Annual Leave.`;
+    if(gt==='personal_leave') return `Your late arrival on ${d} was approved, covered by Personal Leave.`;
+    return `Your late arrival on ${d} has been noted and approved.`;
+  }
   if(note.type==='Unrostered arrival')
     return ok?`Your unrostered shift on ${d} was approved.`
              :`Your unrostered shift on ${d} has been flagged for discussion. Please speak with your manager.`;
