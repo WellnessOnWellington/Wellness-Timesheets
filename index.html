@@ -983,7 +983,7 @@
   /* ══════════════════════════════
      REQUESTS — kiosk view
   ══════════════════════════════ */
-  #view-requests { flex-direction:column; align-items:center; justify-content:flex-start; height:100vh; overflow:hidden; padding:1.5rem 1.5rem 0; gap:0; }
+  #view-requests { flex-direction:column; align-items:center; justify-content:flex-start; height:100vh; overflow:hidden; padding:1.5rem 1.5rem 0; padding-top:max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem)); gap:0; }
   #view-requests .req-panel { flex:1; overflow-y:auto; padding-bottom:2rem; }
   #req-panel-list { display:flex; flex-direction:column; overflow:hidden; padding-bottom:0; }
   #req-list-content { flex:1; overflow-y:auto; padding-bottom:0.5rem; }
@@ -1460,7 +1460,7 @@
     .nav-btn { padding: 0.85rem 0.75rem; font-size: 0.95rem; min-height: 44px; }
 
     /* ── Staff requests view ── */
-    #view-requests { padding: 1.25rem 0.75rem 0; height: 100dvh; }
+    #view-requests { padding: 1.25rem 0.75rem 0; padding-top: max(1.25rem, calc(env(safe-area-inset-top) + 0.65rem)); height: 100dvh; }
     #view-requests .req-panel { padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); }
     .req-kiosk-header { margin-bottom: 0.85rem; }
     .req-scan-card { display: none; }
