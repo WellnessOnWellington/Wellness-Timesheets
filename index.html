@@ -3332,6 +3332,7 @@ function normaliseEntry(r) {
     leaveGapHours: r.leave_gap_hours ?? null,
     leaveTypeGapStart: r.leave_type_gap_start || null,
     leaveGapHoursStart: r.leave_gap_hours_start ?? null,
+    breakGapDecision: r.break_gap_decision || null,
   };
 }
 
@@ -3372,6 +3373,19 @@ function normaliseNotif(r) {
 ═══════════════════════════════════════════ */
 function expectedUnpaidBreakMins(shiftHours){ return shiftHours>=6?30:0; }
 function expectedPaidBreakMins(shiftHours){ return shiftHours>=4?10:0; }
+// Single source of truth for what unpaid break minutes actually get deducted from pay.
+// The raw reported value (entry.unpaidBreakMins) is preserved untouched for audit/analytics —
+// only the PAID figure changes, and only when a manager has explicitly chosen 'standard'.
+function effectiveUnpaidBreakMins(entry, shiftHours){
+  const expected=expectedUnpaidBreakMins(shiftHours);
+  const reported=entry?.unpaidBreakMins!=null?entry.unpaidBreakMins:expected;
+  return entry?.breakGapDecision==='standard'?expected:reported;
+}
+function isBreakGapUnresolved(entry, shiftHours){
+  if(!entry||entry.unpaidBreakMins==null) return false;
+  const expected=expectedUnpaidBreakMins(shiftHours);
+  return expected>0&&entry.unpaidBreakMins<expected&&!entry.breakGapDecision;
+}
 
 let _breakCommitArgs=null;
 let _breakTimerInterval=null;
@@ -3442,6 +3456,11 @@ function formatGapLeaveType(gt){
   if(gt==='pay_to_clockout') return 'Paid to clock out';
   if(gt==='unpaid') return 'Unpaid';
   return LEAVE_TYPES[gt]||gt||'';
+}
+function formatBreakGapDecision(d){
+  if(d==='reported') return 'Paid as reported';
+  if(d==='standard') return 'Paid to standard break';
+  return 'Not yet decided';
 }
 
 function roundToRoster(actualTimeStr, scheduledMin){
@@ -3796,7 +3815,9 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
       const cached=_entries.find(e=>e.id===open.id);
       if(cached) Object.assign(cached,{clockOut:sheetTimeStr,hours:hoursStr,unpaidBreakMins,paidBreakMins,breakNote:breakNote||null,travelKm:travelKm||null});
       if(reason) await addNote(emp,noteType||'Departure note',timeStr,reason,open.id,todayKey);
-      if(breakFlagged) await addNote(emp,'Break note',timeStr,`Break shorter than expected — unpaid: ${unpaidBreakMins} min (expected ${unpaidExpected} min)${breakNote?' · '+breakNote:''}`,open.id,todayKey);
+      // Reason kept to the employee's own words only — expected/actual break figures are
+      // shown structurally on the approval card, recomputed live rather than parsed from text.
+      if(breakFlagged) await addNote(emp,'Break note',timeStr,breakNote||'No reason given',open.id,todayKey);
       showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],'Checked out · '+timeStr+' · '+hoursStr+'h',_kioskFlashMsg(emp),emp);
     }
   } catch(e) {
@@ -4648,7 +4669,12 @@ function tsIsAutoApproved(entry, shift){
   // Early clock-in never blocks auto-approval — payroll always snaps to roster start
   const inMin=timeToMin(fs)-timeToMin(rs);
   const inOk=inMin<=0||inMin<_yt;
-  return inOk && Math.abs(timeToMin(fe)-timeToMin(re))<_yt;
+  if(!inOk||Math.abs(timeToMin(fe)-timeToMin(re))>=_yt) return false;
+  // An unresolved short break must never silently ride through auto-approval —
+  // it's the one condition a manager must actively decide on before this can go green.
+  const shiftHours=Math.max(0,timeToMin(fe)-timeToMin(fs))/60;
+  if(isBreakGapUnresolved(entry,shiftHours)) return false;
+  return true;
 }
 
 function tsGetFlag(locked, noEntry, finalStart, finalEnd, autoApproved, entryStatus, missedClockOut){
@@ -4681,7 +4707,13 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const isSplitWorked=splitSegment&&!isLeaveShift;
   // Compute autoApproved first so we can snap finalStart/finalEnd to roster times for display & MYOB
   const autoApproved=isSplitWorked
-    ?(entry?.clockIn&&rostStart?(()=>{const m=timeToMin(entry.clockIn)-timeToMin(rostStart);return m<=0||m<(YELLOW_BY_ROLE[emp.role]??10);})():false)
+    ?(entry?.clockIn&&rostStart?(()=>{
+        const m=timeToMin(entry.clockIn)-timeToMin(rostStart);
+        if(!(m<=0||m<(YELLOW_BY_ROLE[emp.role]??10))) return false;
+        const _segFe=entry.finalEnd||entry.clockOut;
+        if(_segFe){const _segHrs=Math.max(0,timeToMin(_segFe)-timeToMin(entry.clockIn))/60;if(isBreakGapUnresolved(entry,_segHrs)) return false;}
+        return true;
+      })():false)
     :tsIsAutoApproved(entry,shift);
   // Auto-approved: snap to roster times; manager-set finalStart/finalEnd always take priority
   const finalStart=entry?.finalStart||(autoApproved&&rostStart?rostStart:clockStart);
@@ -4720,13 +4752,15 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const _deptGapMins=(!isLeaveShift&&finalEnd&&rostEnd)?Math.max(0,timeToMin(rostEnd)-timeToMin(finalEnd)):0;
   const _deptOverrunMins=(!isLeaveShift&&finalEnd&&rostEnd)?Math.max(0,timeToMin(finalEnd)-timeToMin(rostEnd)):0;
   const _arrvGapMins=(!isLeaveShift&&finalStart&&rostStart)?Math.max(0,timeToMin(finalStart)-timeToMin(rostStart)):0;
-  const hasUnsetGap=!locked&&((_deptGapMins>_gapGrace&&!entry?.leaveTypeGap)||(_deptOverrunMins>_gapGrace&&!entry?.leaveTypeGap)||(_arrvGapMins>_gapGrace&&!entry?.leaveTypeGapStart));
+  const _breakShiftHoursForGap=(effectiveFinalStart&&effectiveFinalEnd)?Math.max(0,timeToMin(effectiveFinalEnd)-timeToMin(effectiveFinalStart))/60:0;
+  const breakGapUnresolved=!isLeaveShift&&isBreakGapUnresolved(entry,_breakShiftHoursForGap);
+  const hasUnsetGap=!locked&&((_deptGapMins>_gapGrace&&!entry?.leaveTypeGap)||(_deptOverrunMins>_gapGrace&&!entry?.leaveTypeGap)||(_arrvGapMins>_gapGrace&&!entry?.leaveTypeGapStart)||breakGapUnresolved);
   const lockBtn=locked
     ?`<button class="ts-lock-btn locked" onclick="tsUnlockRow('${entryId}',event)" title="Locked by ${lockedBy||'manager'}">🔒 Locked</button>`
     :needsMgrAutoLock
       ?`<button class="ts-lock-btn" onclick="tsMgrAutoLock('${safeEmpId}','${safeEmpName}','${emp.role}','${date}','${rostStart}','${rostEnd}','${entryId||''}',event)">🔓 Lock</button>`
       :hasUnsetGap
-        ?`<button class="ts-lock-btn" disabled title="Set gap type before locking" style="opacity:0.45;cursor:not-allowed;">🔓 Lock</button>`
+        ?`<button class="ts-lock-btn" disabled title="Resolve outstanding gap or break before locking" style="opacity:0.45;cursor:not-allowed;">🔓 Lock</button>`
         :`<button class="ts-lock-btn" onclick="tsLockRow('${entryId}','${safeEmpId}','${date}',event)">🔓 Lock</button>`;
   const shiftId=shift?.id||null;
   const deleteBtn=`<button class="ts-delete-btn" onclick="tsDeleteRow('${entryId||''}','${shiftId||''}','${safeEmpId}','${safeEmpName}','${date}',event)" title="Delete entry">✕</button>`;
@@ -4738,7 +4772,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const autoOverridden=effectiveAutoApproved&&_tsAutoOverride.has(overrideKey);
 
   const finalMins=(effectiveFinalStart&&effectiveFinalEnd)?timeToMin(effectiveFinalEnd)-timeToMin(effectiveFinalStart):0;
-  const billableMins=Math.max(0,finalMins-(entry?.unpaidBreakMins!=null?entry.unpaidBreakMins:expectedUnpaidBreakMins(finalMins/60)));
+  const billableMins=Math.max(0,finalMins-effectiveUnpaidBreakMins(entry,finalMins/60));
   const hoursText=billableMins>0?`${(billableMins/60).toFixed(1)}h`:''; // paid hours after unpaid break deduction
 
   const PAYROLL_TYPES=[['','Worked'],['annual_leave','Annual Leave'],['personal_leave','Personal Leave'],['public_holiday','Public Holiday'],['compassionate_leave','Compassionate Leave'],['long_service_leave','Long Service Leave'],['unpaid_leave','Unpaid Leave']];
@@ -4790,6 +4824,14 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const showBreakRow=!!entry&&(unpaidExpected>0||paidExpected>0||entry.unpaidBreakMins!=null||entry.paidBreakMins!=null);
   const breakUnderExpected=unpaidExpected>0&&unpaidActual<unpaidExpected;
   const breakEditable=!locked&&!(effectiveAutoApproved&&!autoOverridden);
+  const breakGapDecisionHtml=!breakUnderExpected?'':
+    (breakEditable
+      ?`<select onclick="event.stopPropagation()" onchange="tsSaveBreakGapDecision('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',this.value,event)" style="font-size:0.72rem;padding:0.15rem 0.35rem;border-radius:4px;border:1px solid var(--border);background:white;cursor:pointer;">
+          <option value="">— What to do? —</option>
+          <option value="reported"${entry?.breakGapDecision==='reported'?' selected':''}>Pay reported break (+${unpaidExpected-unpaidActual}m)</option>
+          <option value="standard"${entry?.breakGapDecision==='standard'?' selected':''}>Pay standard break (${unpaidExpected}m)</option>
+        </select>`
+      :`<span style="font-size:0.75rem;color:var(--muted);">${formatBreakGapDecision(entry?.breakGapDecision)}</span>`);
   const breakRowHtml=!showBreakRow?'':
     `<div class="ts-sub-row" style="align-items:flex-start;">
       <span class="ts-sub-label">Breaks</span>
@@ -4802,6 +4844,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
           ${breakUnderExpected?`<span class="ts-break-warn">⚠ ${unpaidExpected} min expected</span>`:''}
           ${paidActual!=null?`<span style="font-size:0.75rem;color:var(--muted);margin-left:0.25rem;">· ☕ Paid: ${paidActual} min ✓</span>`:''}
         </div>
+        ${breakGapDecisionHtml?`<div>${breakGapDecisionHtml}</div>`:''}
         ${entry?.breakNote?`<div style="font-size:0.72rem;color:var(--muted);font-style:italic;">${entry.breakNote}</div>`:''}
       </div>
     </div>`;
@@ -4928,13 +4971,27 @@ async function tsSaveBreak(entryId,empId,empName,role,date,value,e){
   if(!entryId){showToast('Save final times first before editing break');return;}
   const mins=Math.max(0,parseInt(value)||0);
   try{
-    await db.update('entries',entryId,{unpaid_break_mins:mins});
+    // Changing the reported minutes invalidates any prior break decision — it must be re-decided
+    await db.update('entries',entryId,{unpaid_break_mins:mins,break_gap_decision:null});
     const entry=_entries.find(en=>en.id===entryId);
-    if(entry) entry.unpaidBreakMins=mins;
+    if(entry){entry.unpaidBreakMins=mins;entry.breakGapDecision=null;}
     _tsExpandEntryId=String(entryId);
     renderTimesheets();
     _tsExpandEntryId=null;
   }catch(err){showToast('Could not save break');console.error(err);}
+}
+
+async function tsSaveBreakGapDecision(entryId,empId,empName,role,date,value,e){
+  e?.stopPropagation?.();
+  if(!entryId){showToast('Save final times first before editing break');return;}
+  try{
+    await db.update('entries',entryId,{break_gap_decision:value||null});
+    const entry=_entries.find(en=>en.id===entryId);
+    if(entry) entry.breakGapDecision=value||null;
+    _tsExpandEntryId=String(entryId);
+    renderTimesheets();
+    _tsExpandEntryId=null;
+  }catch(err){showToast('Could not save decision');console.error(err);}
 }
 
 async function tsSaveGapLeave(entryId,empId,empName,role,date,event){
@@ -5307,6 +5364,16 @@ async function tsLockRow(entryId, empId, date, e){
       showToast('Set the gap type before locking');return;
     }
   }
+  // Guard: block lock if the break was reported shorter than expected and no decision has been made —
+  // independent of whether a roster shift exists, since this is purely about clocked hours
+  if(_lockEntry&&!_lockEntry.leaveType){
+    const _bfs=_lockEntry.finalStart||_lockEntry.clockIn;
+    const _bfe=_lockEntry.finalEnd||_lockEntry.clockOut;
+    const _bHours=(_bfs&&_bfe)?Math.max(0,timeToMin(_bfe)-timeToMin(_bfs))/60:0;
+    if(isBreakGapUnresolved(_lockEntry,_bHours)){
+      showToast('Decide what to do with the short break before locking');return;
+    }
+  }
   try{
     const entry=_entries.find(en=>en.id===entryId);
     // Find any sibling entries for the same employee+date (e.g. second shift same day)
@@ -5660,7 +5727,7 @@ function _calcMYOBRowsBase(entry, emp, isPH=false, shift=null){
   const endMins=timeToMin(end);
   if(endMins<=startMins) return [];
   const rawHours=(endMins-startMins)/60;
-  const unpaidBreakMins=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:expectedUnpaidBreakMins(rawHours);
+  const unpaidBreakMins=effectiveUnpaidBreakMins(entry,rawHours);
   const totalHours=Math.max(0,rawHours-unpaidBreakMins/60);
   if(totalHours<=0) return [];
   const payrollType=entry.payrollType||entry.leaveType||'';
@@ -5985,17 +6052,19 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     const finalOut=(entry.finalEnd||entry.clockOut||'').slice(0,5);
     let hrs=null;
     let expBreakMins=0;
+    let displayUnpaid=0;
     if(finalIn&&finalOut){
       const rawM=Math.max(0,timeToMin(finalOut)-timeToMin(finalIn));
       expBreakMins=expectedUnpaidBreakMins(rawM/60);
-      const unpaidM=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:expBreakMins;
-      hrs=Math.max(0,rawM-unpaidM)/60;
+      displayUnpaid=effectiveUnpaidBreakMins(entry,rawM/60);
+      hrs=Math.max(0,rawM-displayUnpaid)/60;
     }
     if(hrs!=null&&hrs>0) totalWorked+=hrs;
-    const displayUnpaid=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:expBreakMins;
+    const reportedUnpaid=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:expBreakMins;
     const displayPaid=entry.paidBreakMins??0;
     const isEstBreak=entry.unpaidBreakMins==null&&expBreakMins>0;
-    const breakStr=(displayUnpaid||displayPaid)?`Paid: ${displayPaid}m  Unpaid: ${displayUnpaid}m${isEstBreak?' (est)':''}` :'';
+    const breakOverridden=entry.breakGapDecision==='standard'&&reportedUnpaid<expBreakMins;
+    const breakStr=(displayUnpaid||displayPaid)?`Paid: ${displayPaid}m  Unpaid: ${displayUnpaid}m${isEstBreak?' (est)':''}${breakOverridden?' (reported '+reportedUnpaid+'m)':''}` :'';
     const noteParts=[];
     if(entry.reasonIn) noteParts.push('In: '+entry.reasonIn);
     if(entry.reasonOut) noteParts.push('Out: '+entry.reasonOut);
@@ -6198,12 +6267,13 @@ function renderApprovals(){
     const rostEl=rostVal
       ?`<div class="approval-time-val">${rostVal}</div>`
       :`<div class="approval-time-val not-rostered">⚠ Not rostered</div>`;
-    // Gap — mandatory selection for Departure/Arrival notes before approving.
+    // Gap — mandatory selection for Departure/Arrival/Break notes before approving.
     // Departure notes can go either direction: clocked out EARLY (shortfall — missing paid time,
     // covered by unpaid/leave/pay-to-roster) or clocked out LATE (overrun — extra clocked time that
     // needs a pay-to-roster-end-vs-pay-to-clockout decision, not a leave category).
     const isDeparture=a.type==='Departure note';
     const isArrival=a.type==='Arrival note';
+    const isBreakNote=a.type==='Break note';
     const _grace=GRACE_BY_ROLE[a.role]??10;
     let gapAutoMins=0, gapMode=null; // gapMode: 'shortfall' | 'overrun' | null
     if(isDeparture&&rostEnd&&clockEnd){
@@ -6212,16 +6282,28 @@ function renderApprovals(){
       else if(-g>_grace){gapAutoMins=-g;gapMode='overrun';}
     }
     if(isArrival&&rostStart&&clockStart){const g=timeToMin(clockStart)-timeToMin(rostStart);if(g>_grace){gapAutoMins=g;gapMode='shortfall';}}
-    const existingGapType=isDeparture?(entry?.leaveTypeGap||''):(entry?.leaveTypeGapStart||'');
-    const hasGap=!!gapMode;
+    // Break shortfall — recomputed live from the entry's CURRENT final times, never trusted from
+    // the frozen note text, since a manager may have adjusted times/break after the note was raised.
+    const bFs=entry?.finalStart||entry?.clockIn||null;
+    const bFe=entry?.finalEnd||entry?.clockOut||null;
+    const bHours=(bFs&&bFe)?Math.max(0,timeToMin(bFe)-timeToMin(bFs))/60:0;
+    const breakExpected=expectedUnpaidBreakMins(bHours);
+    const breakActual=entry?.unpaidBreakMins!=null?entry.unpaidBreakMins:breakExpected;
+    const breakShortfall=isBreakNote&&breakExpected>0&&breakActual<breakExpected;
+    const existingGapType=isDeparture?(entry?.leaveTypeGap||''):isArrival?(entry?.leaveTypeGapStart||''):(entry?.breakGapDecision||'');
+    const hasGap=isBreakNote?breakShortfall:!!gapMode;
     const isOverrun=gapMode==='overrun';
     const gapFromTime=isOverrun?(rostEnd||'?'):isDeparture?(clockEnd||'?'):(rostStart||'?');
     const gapToTime=isOverrun?(clockEnd||'?'):isDeparture?(rostEnd||'?'):(clockStart||'?');
-    const gapOptsHtml=isOverrun
-      ?`<option value="">— What to do with this time? —</option>
+    const gapOptsHtml=isBreakNote
+      ?`<option value="">— What to do with this break? —</option>
+        <option value="reported"${existingGapType==='reported'?' selected':''}>Pay reported break (+${breakExpected-breakActual} min)</option>
+        <option value="standard"${existingGapType==='standard'?' selected':''}>Pay standard break (${breakExpected} min)</option>`
+      :isOverrun
+        ?`<option value="">— What to do with this time? —</option>
         <option value="pay_to_roster"${existingGapType==='pay_to_roster'?' selected':''}>Pay to roster end (${rostEnd||'?'})</option>
         <option value="pay_to_clockout"${existingGapType==='pay_to_clockout'?' selected':''}>Pay to clock out (${clockEnd||'?'})</option>`
-      :`<option value="">— What to do with this gap? —</option>
+        :`<option value="">— What to do with this gap? —</option>
         <option value="unpaid"${existingGapType==='unpaid'?' selected':''}>Unpaid</option>
         <option value="annual_leave"${existingGapType==='annual_leave'?' selected':''}>Annual Leave</option>
         <option value="personal_leave"${existingGapType==='personal_leave'?' selected':''}>Personal Leave</option>
@@ -6229,24 +6311,33 @@ function renderApprovals(){
           ?`<option value="pay_to_roster"${existingGapType==='pay_to_roster'?' selected':''}>Pay to roster end (${rostEnd||'?'})</option>`
           :`<option value="pay_to_roster_start"${existingGapType==='pay_to_roster_start'?' selected':''}>Pay to roster start (${rostStart||'?'})</option>`}`;
     const approveDisabled=hasGap&&!existingGapType;
+    const gapLabelText=isBreakNote
+      ?`Break: reported ${breakActual} min vs expected ${breakExpected} min — select before approving`
+      :`${isOverrun?'Late departure':'Gap'}: ${gapFromTime}–${gapToTime} (${gapAutoMins} min) — select before approving`;
     const gapHtml=hasGap?`<div style="margin-top:0.6rem;padding:0.5rem 0.7rem;background:rgba(180,28,28,0.05);border-radius:6px;border-left:3px solid var(--burgundy);">
-      <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);margin-bottom:0.38rem;letter-spacing:0.01em;">${isOverrun?'Late departure':'Gap'}: ${gapFromTime}–${gapToTime} (${gapAutoMins} min) — select before approving</div>
+      <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);margin-bottom:0.38rem;letter-spacing:0.01em;">${gapLabelText}</div>
       <select id="gap-sel-${a.id}" onclick="event.stopPropagation()"
         onchange="const b=document.getElementById('approve-btn-${a.id}');if(b)b.disabled=!this.value;"
         style="font-size:0.79rem;padding:0.28rem 0.45rem;border-radius:4px;border:1.5px solid var(--border-dk);background:white;cursor:pointer;width:100%;">
         ${gapOptsHtml}
       </select>
     </div>`:'';
-    return`<div class="approval-card${isUnrostered?' unrostered':''}" data-id="${a.id}">
-      <div class="approval-meta">
-        <div class="approval-header">
-          <div class="approval-who">${a.employeeName}</div>
-          <div class="approval-role-badge">${a.role}</div>
-          <span class="approval-header-dot">●</span>
-          <div class="approval-type-badge${isUnrostered?' unrostered':''}">${a.type}</div>
-          <div class="approval-time-stamp" style="margin-left:auto">${dateF} · ${a.time}</div>
-        </div>
-        <div class="approval-times-row">
+    const topRowHtml=isBreakNote
+      ?`<div class="approval-times-row">
+          <div class="approval-time-col">
+            <div class="approval-time-label">Expected break</div>
+            <div class="approval-time-val">${breakExpected} min</div>
+          </div>
+          <div class="approval-time-col">
+            <div class="approval-time-label">Actual break</div>
+            <div class="approval-time-val ${breakShortfall?'diff-bad':''}">${breakActual} min</div>
+          </div>
+          <div class="approval-time-col">
+            <div class="approval-time-label">Shortfall</div>
+            <div class="approval-time-val ${breakShortfall?'diff-bad':''}">${breakShortfall?(breakExpected-breakActual)+' min':'—'}</div>
+          </div>
+        </div>`
+      :`<div class="approval-times-row">
           <div class="approval-time-col">
             <div class="approval-time-label">Rostered</div>
             ${rostEl}
@@ -6259,7 +6350,17 @@ function renderApprovals(){
             <div class="approval-time-label">Difference</div>
             <div class="approval-time-val ${diffClass}">${rostVal?diffVal:'N/A'}</div>
           </div>
+        </div>`;
+    return`<div class="approval-card${isUnrostered?' unrostered':''}" data-id="${a.id}">
+      <div class="approval-meta">
+        <div class="approval-header">
+          <div class="approval-who">${a.employeeName}</div>
+          <div class="approval-role-badge">${a.role}</div>
+          <span class="approval-header-dot">●</span>
+          <div class="approval-type-badge${isUnrostered?' unrostered':''}">${a.type}</div>
+          <div class="approval-time-stamp" style="margin-left:auto">${dateF} · ${a.time}</div>
         </div>
+        ${topRowHtml}
         <div class="approval-reason">${a.reason}</div>
         ${gapHtml}
       </div>
@@ -6510,8 +6611,13 @@ async function resolveNote(id,status){
     const entryPatch={status};
     const isDepartureNote=note.type==='Departure note';
     const isArrivalNote=note.type==='Arrival note';
+    const isBreakNote=note.type==='Break note';
     const gapSel=document.getElementById('gap-sel-'+id)?.value||null;
-    if(status==='approved'&&entry){
+    if(status==='approved'&&entry&&isBreakNote){
+      // Break notes only settle the break question — never force a lock or final-time change,
+      // since the entry may still have its own separate arrival/departure gap to resolve.
+      entryPatch.break_gap_decision=(gapSel==='reported'||gapSel==='standard')?gapSel:null;
+    } else if(status==='approved'&&entry){
       const now=new Date().toISOString();
       const shift=_rosterShifts.find(s=>s.employee_id===note.employeeId&&s.date===note.date)||null;
       const rostStart=shift?.start_time||null;
@@ -6570,7 +6676,9 @@ async function resolveNote(id,status){
     note.status=status; note.resolvedBy=resolvedBy;
     if(entry){
       entry.status=status;
-      if(status==='approved'){
+      if(status==='approved'&&isBreakNote){
+        entry.breakGapDecision=entryPatch.break_gap_decision??null;
+      } else if(status==='approved'){
         entry.finalStart=entryPatch.final_start??entry.finalStart;
         entry.finalEnd=entryPatch.final_end??entry.finalEnd;
         entry.locked=true; entry.lockedBy=resolvedBy;
