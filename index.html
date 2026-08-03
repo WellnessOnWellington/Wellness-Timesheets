@@ -4828,7 +4828,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     (breakEditable
       ?`<select onclick="event.stopPropagation()" onchange="tsSaveBreakGapDecision('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',this.value,event)" style="font-size:0.72rem;padding:0.15rem 0.35rem;border-radius:4px;border:1px solid var(--border);background:white;cursor:pointer;">
           <option value="">— What to do? —</option>
-          <option value="reported"${entry?.breakGapDecision==='reported'?' selected':''}>Pay reported break (+${unpaidExpected-unpaidActual}m)</option>
+          <option value="reported"${entry?.breakGapDecision==='reported'?' selected':''}>Pay reported break (${unpaidActual}m)</option>
           <option value="standard"${entry?.breakGapDecision==='standard'?' selected':''}>Pay standard break (${unpaidExpected}m)</option>
         </select>`
       :`<span style="font-size:0.75rem;color:var(--muted);">${formatBreakGapDecision(entry?.breakGapDecision)}</span>`);
@@ -6297,7 +6297,7 @@ function renderApprovals(){
     const gapToTime=isOverrun?(clockEnd||'?'):isDeparture?(rostEnd||'?'):(clockStart||'?');
     const gapOptsHtml=isBreakNote
       ?`<option value="">— What to do with this break? —</option>
-        <option value="reported"${existingGapType==='reported'?' selected':''}>Pay reported break (+${breakExpected-breakActual} min)</option>
+        <option value="reported"${existingGapType==='reported'?' selected':''}>Pay reported break (${breakActual} min)</option>
         <option value="standard"${existingGapType==='standard'?' selected':''}>Pay standard break (${breakExpected} min)</option>`
       :isOverrun
         ?`<option value="">— What to do with this time? —</option>
