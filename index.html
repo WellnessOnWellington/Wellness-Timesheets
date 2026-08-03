@@ -4726,9 +4726,21 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
         return true;
       })():false)
     :tsIsAutoApproved(entry,shift);
-  // Auto-approved: snap to roster times; manager-set finalStart/finalEnd always take priority
-  const finalStart=entry?.finalStart||(autoApproved&&rostStart?rostStart:clockStart);
-  const finalEnd=entry?.finalEnd||(autoApproved&&rostEnd?rostEnd:clockEnd);
+  // Start and end snap to roster independently of each other and of the overall
+  // autoApproved flag — an early/on-time arrival should always display snapped to
+  // roster start even when it's the DEPARTURE side (late clock-out, unresolved gap,
+  // unresolved break) that's the one blocking full auto-approval, and vice versa.
+  // (Split segments keep the combined check above — they don't have this coupling issue.)
+  const _ytSnap=YELLOW_BY_ROLE[emp.role]??10;
+  const startSnapsToRoster=!isSplitWorked&&!!clockStart&&!!rostStart&&(()=>{
+    const m=timeToMin(entry?.finalStart||clockStart)-timeToMin(rostStart);
+    return m<=0||m<_ytSnap;
+  })();
+  const endSnapsToRoster=!isSplitWorked&&!!clockEnd&&!!rostEnd
+    &&Math.abs(timeToMin(entry?.finalEnd||clockEnd)-timeToMin(rostEnd))<_ytSnap;
+  // Manager-set finalStart/finalEnd always take priority over any snap
+  const finalStart=entry?.finalStart||((autoApproved||startSnapsToRoster)&&rostStart?rostStart:clockStart);
+  const finalEnd=entry?.finalEnd||((autoApproved||endSnapsToRoster)&&rostEnd?rostEnd:clockEnd);
   const noClockExpected=!entry?.clockIn&&!!rostStart&&!!rostEnd&&(emp.role==='Manager'||isLeaveShift||(isSplitWorked&&!!entry));
   // For split worked segments: cap effectiveFinalEnd to segment boundary (clockOut is full-shift end)
   const effectiveFinalStart=finalStart||(noClockExpected?rostStart:null);
@@ -4739,8 +4751,9 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const flagColors={green:'var(--success)',yellow:'#e6a817',red:'var(--burgundy)',flagged:'#e67e22'};
   const flagColor=flagColors[flag]||flagColors.yellow;
 
-  // Early clock-in label — shown inline in times cell, only when not auto-approved/locked
-  const earlyMins=(clockStart&&rostStart&&!autoApproved&&!locked&&!isLeaveShift)
+  // Early clock-in label — shown inline in times cell, only while the displayed start
+  // time is still the raw clock-in (i.e. hasn't snapped to roster start yet)
+  const earlyMins=(clockStart&&rostStart&&!startSnapsToRoster&&!locked&&!isLeaveShift)
     ?Math.max(0,timeToMin(rostStart)-timeToMin(clockStart)):0;
   const earlyLabel=earlyMins>0
     ?`<span style="font-size:0.6rem;font-weight:700;color:${earlyMins>20?'#e6a817':'var(--muted)'};white-space:nowrap;flex-shrink:0;">↑ early</span>`:'';
