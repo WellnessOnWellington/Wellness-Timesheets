@@ -4980,7 +4980,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
           showDeptGap?renderGapRow(deptGapLabel,deptGapType,deptGapHours,deptGapMins,`tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)`,deptGapIsOverrun):'',
         ].join('');
       })()}
-      ${emp.can_travel&&entry&&!entry.leaveType?`<div class="ts-sub-row">
+      ${emp.can_travel&&entry&&!entry.leaveType&&shift?.lane==='75plus'?`<div class="ts-sub-row">
         <span class="ts-sub-label">Travel</span>
         <div style="display:flex;align-items:center;gap:0.45rem;">
           ${locked||(effectiveAutoApproved&&!autoOverridden)
