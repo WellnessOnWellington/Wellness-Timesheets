@@ -1610,7 +1610,7 @@
       <button class="nav-btn" onclick="showView('login')" style="flex:1;">⚙️ Manager Login</button>
     </div>
   </div>
-  <div id="kiosk-build-credit" class="kiosk-build-credit">Built by Dr Joel Jaya · v1.8</div>
+  <div id="kiosk-build-credit" class="kiosk-build-credit">Built by Dr Joel Jaya · v1.9</div>
 </div>
 
 <!-- REQUESTS VIEW -->
@@ -2680,19 +2680,23 @@
               <div class="hg-card">
                 <div class="hg-card-head"><span class="hg-card-icon">📝</span><span class="hg-card-title">Notes</span></div>
                 <ul class="hg-list">
-                  <li>Notes appear when staff clock in or out outside their rostered window</li>
+                  <li>Notes appear when staff clock in or out outside their rostered window (Arrival/Departure), clock in with no roster shift at all (Unrostered arrival), or report a break shorter than expected (Break note)</li>
                   <li>Each note shows the staff member, the time, and their reason</li>
-                  <li>Acknowledge a note once reviewed — it clears from the unread list</li>
+                  <li>Arrival, Departure, and Break notes need a pay decision first — e.g. Unpaid, Annual Leave, Personal Leave, pay to roster time, or pay standard break — before Acknowledge is enabled</li>
+                  <li><strong>Flag for follow-up</strong> is always available, even before a decision is made, if you need to escalate rather than resolve it on the spot</li>
+                  <li>Acknowledging an Arrival/Departure note locks the entry using the times or leave type you chose; acknowledging a Break note only settles the break question — the row may still need locking separately</li>
                 </ul>
               </div>
 
               <div class="hg-card">
                 <div class="hg-card-head"><span class="hg-card-icon">🕐</span><span class="hg-card-title">Timesheets</span></div>
                 <ul class="hg-list">
-                  <li>Review clocked hours against rostered hours at the end of each fortnight</li>
-                  <li>Yellow and red flag icons indicate discrepancies between clocked and rostered time</li>
-                  <li>Click a row to review, adjust if needed, and approve</li>
-                  <li>Lock the fortnight before exporting to MYOB</li>
+                  <li>Review clocked hours against rostered hours per employee, per day, at the end of each fortnight</li>
+                  <li>Flag colours: green = auto-approved or locked, yellow = needs review, red = missing clock-in or clock-out, orange = flagged for follow-up</li>
+                  <li>Shifts close enough to rostered time auto-approve; anything else needs the row's own Lock button</li>
+                  <li>Lock is blocked until any arrival/departure gap or short-break shortfall has a decision — resolve it right there on the row, or from the Notes tab</li>
+                  <li>Use the payroll type dropdown to mark a day as leave or public holiday instead of worked time</li>
+                  <li>Export to MYOB once entries are locked or auto-approved — each employee's header shows "Ready for MYOB" when every day is done</li>
                 </ul>
               </div>
 
@@ -2733,15 +2737,22 @@
           <div style="padding:0.5rem 0 1.25rem;">
             <div style="font-size:0.82rem;color:var(--charcoal);font-weight:700;margin-bottom:0.2rem;">Running Well</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.1rem;">Built by Dr Joel Jaya</div>
-            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 1.8 &middot; July 2026</div>
+            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 1.9 &middot; August 2026</div>
           </div>
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
-                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v1.8</div>
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v1.9</div>
                 <div>
-                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">16 July 2026 &mdash; PDF Timesheets, Gap Enforcement &amp; Android Fix</div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">3 August 2026 &mdash; Break Shortfall Decisions &amp; iOS Fixes</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">A break reported shorter than expected now needs a manager decision &mdash; pay as reported or pay to the standard break &mdash; before a shift can auto-approve or lock, shown with a clear Expected/Actual/Shortfall breakdown on both the Notes tab and the timesheet row. Added late-departure gap handling. Pending Notes tab sorted newest-first. Fixed iOS safe-area and status bar overlap issues on the Staff Portal and mobile views.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v1.8</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">16 July 2026 &mdash; PDF Timesheets, Gap Enforcement &amp; Android Fix</div>
                   <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">PDF timesheets now include unrostered shifts, correct hours calculated from final times, break info (estimated where not captured), and gap leave rows matching MYOB. Lock button blocked until gap type is set on flagged entries. Notes and notifications sorted newest-first. Unrostered arrival notes show full clock range. Android kiosk buttons no longer clipped by the navigation bar.</div>
                 </div>
               </div>
