@@ -8026,10 +8026,23 @@ function rbRemoveDuplicates(role){
   const toDeleteIds=toDelete.map(s=>s.id);
   _rbConfirmCallback=async()=>{
     try{
-      await Promise.all(toDeleteIds.map(id=>db.delete('roster_shifts',id)));
-      _rosterShifts=_rosterShifts.filter(s=>!toDeleteIds.includes(s.id));
+      // Each duplicate may own a linked leave entry — clean up what's safe, skip anything locked
+      let blockedCount=0, cleanedCount=0;
+      const deletableIds=[];
+      for(const id of toDeleteIds){
+        const cleanup=await rbCleanupLinkedEntryOnShiftDelete(id);
+        if(!cleanup.ok){blockedCount++;continue;}
+        if(cleanup.deletedEntry) cleanedCount++;
+        deletableIds.push(id);
+      }
+      await Promise.all(deletableIds.map(id=>db.delete('roster_shifts',id)));
+      _rosterShifts=_rosterShifts.filter(s=>!deletableIds.includes(s.id));
       renderRoster();
-      showToast(`${toDelete.length} duplicate shift${toDelete.length!==1?'s':''} removed`);
+      if(cleanedCount) renderTimesheets();
+      const parts=[`${deletableIds.length} duplicate shift${deletableIds.length!==1?'s':''} removed`];
+      if(cleanedCount) parts.push(`${cleanedCount} linked leave entr${cleanedCount===1?'y':'ies'} cleaned up`);
+      if(blockedCount) parts.push(`${blockedCount} skipped — locked leave entry, remove from Timesheets first`);
+      showToast(parts.join(' · '));
     }catch(e){showToast('Error removing duplicates: '+e.message.slice(0,80));console.error(e);}
   };
   document.getElementById('rb-confirm-overlay').classList.add('show');
@@ -8327,11 +8340,39 @@ async function rbSplitShift(shiftId,role){
   });
 }
 
+// Pure check, no side effects — use this to pre-check every shift involved in a
+// multi-shift operation (e.g. a swap) BEFORE mutating any of them, so a locked
+// entry on the second shift can never leave the first shift's entry already deleted.
+function rbShiftHasLockedLeaveEntry(shiftId){
+  const linked=_entries.find(e=>String(e.shiftId)===String(shiftId)&&e.leaveType&&!e.deleted);
+  return !!linked?.locked;
+}
+// Called before deleting a roster_shifts row. If that shift owns a linked, UNLOCKED
+// leave entry (matched strictly by shift_id — never the ambiguous employee+date
+// fallback used elsewhere, so a split day's other segment is never touched), deletes
+// the entry too, since it only exists as a byproduct of this shift and carries no
+// real clock data — mirrors what rbMarkLeave's own "clear leave" path already does.
+// A LOCKED linked entry is payroll data and is left untouched — the caller decides
+// how to surface that the deletion is blocked; it must be removed via the Timesheets
+// tab instead, which confirms and audits the change.
+// Returns {ok:true, deletedEntry:<snapshot>|null} or {ok:false} if a locked entry blocks it.
+async function rbCleanupLinkedEntryOnShiftDelete(shiftId){
+  const linked=_entries.find(e=>String(e.shiftId)===String(shiftId)&&e.leaveType&&!e.deleted);
+  if(!linked) return{ok:true,deletedEntry:null};
+  if(linked.locked) return{ok:false};
+  const snapshot={...linked};
+  await db.delete('entries',linked.id);
+  _entries=_entries.filter(e=>e.id!==linked.id);
+  return{ok:true,deletedEntry:snapshot};
+}
+
 async function rbDeleteShift(shiftId,role){
   const shift=_rosterShifts.find(s=>s.id==shiftId);
   const r=role||rbRoleForEmp(shift?.employee_id);
   const snapshot=shift?{...shift}:null;
   rbPastFortGuard(shift?.date, async()=>{
+    const cleanup=await rbCleanupLinkedEntryOnShiftDelete(shiftId);
+    if(!cleanup.ok){showToast('This shift has a locked leave entry — remove it from Timesheets first');return;}
     try{
       await db.delete('roster_shifts',shiftId);
       _rosterShifts=_rosterShifts.filter(s=>s.id!==shiftId);
@@ -8339,9 +8380,15 @@ async function rbDeleteShift(shiftId,role){
       if(snapshot) rbPushUndo('shift deleted',async()=>{
         await db.insert('roster_shifts',snapshot);
         _rosterShifts.push(snapshot);
+        if(cleanup.deletedEntry){
+          await db.insert('entries',cleanup.deletedEntry);
+          _entries.push(normaliseEntry(cleanup.deletedEntry));
+        }
         renderDayTimelineForRole(r);
+        renderTimesheets();
       });
-      showToast('Shift removed');
+      showToast(cleanup.deletedEntry?'Shift and linked leave entry removed':'Shift removed');
+      if(cleanup.deletedEntry) renderTimesheets();
     }catch(e){showToast('Could not remove');console.error(e);}
   });
 }
@@ -9949,6 +9996,14 @@ async function applyRosterWriteback(req){
     const initShift=freshShifts.find(s=>s.id===req.initiatorShiftId);
     const colShift=freshShifts.find(s=>s.id===req.colleagueShiftId);
     if(!initShift||!colShift) throw new Error('One or both shifts no longer exist in the roster — they may have been modified. Please check the roster and update manually.');
+    // Either shift may own a linked leave entry (e.g. the swap was requested, then the
+    // shift got marked as leave before the manager approved it) — refuse to silently
+    // swap that away. Check BOTH before mutating either, so a lock on one side can
+    // never leave the other side's entry already deleted while the swap still aborts.
+    if(rbShiftHasLockedLeaveEntry(initShift.id)) throw new Error(`${req.initiatorName}'s shift has a locked leave entry — remove it from Timesheets before approving this swap.`);
+    if(rbShiftHasLockedLeaveEntry(colShift.id)) throw new Error(`${req.colleagueName||'The colleague'}'s shift has a locked leave entry — remove it from Timesheets before approving this swap.`);
+    await rbCleanupLinkedEntryOnShiftDelete(initShift.id);
+    await rbCleanupLinkedEntryOnShiftDelete(colShift.id);
     // Insert new cross-swapped shifts before deleting originals
     const rowA={id:'SH'+Date.now(),employee_id:req.initiatorId,date:req.colleagueShiftDate,start_time:req.colleagueShiftStart,end_time:req.colleagueShiftEnd,is_day_off:false};
     await db.insert('roster_shifts',rowA);
@@ -9963,6 +10018,8 @@ async function applyRosterWriteback(req){
     const freshShifts=await db.get('roster_shifts');
     const initShift=freshShifts.find(s=>s.id===req.initiatorShiftId);
     if(!initShift) throw new Error('Shift no longer exists in the roster — it may have been modified. Please check the roster and update manually.');
+    const giveawayCleanup=await rbCleanupLinkedEntryOnShiftDelete(initShift.id);
+    if(!giveawayCleanup.ok) throw new Error(`${req.initiatorName}'s shift has a locked leave entry — remove it from Timesheets before approving this give-away.`);
     const newRow={id:'SH'+Date.now(),employee_id:req.colleagueId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false};
     await db.insert('roster_shifts',newRow);
     await db.delete('roster_shifts',initShift.id);
@@ -9972,6 +10029,8 @@ async function applyRosterWriteback(req){
     const freshShifts=await db.get('roster_shifts');
     const coverShift=freshShifts.find(s=>s.id===req.initiatorShiftId);
     if(!coverShift) throw new Error('Cover shift no longer exists — it may have already been filled or removed. Please check the roster.');
+    const pickupCleanup=await rbCleanupLinkedEntryOnShiftDelete(coverShift.id);
+    if(!pickupCleanup.ok) throw new Error('This cover shift has a locked leave entry — remove it from Timesheets before approving this pickup.');
     const newRow={id:'SH'+Date.now(),employee_id:req.initiatorId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false};
     await db.insert('roster_shifts',newRow);
     await db.delete('roster_shifts',coverShift.id);
