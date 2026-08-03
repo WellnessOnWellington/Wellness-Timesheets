@@ -2345,14 +2345,14 @@
         </div>
         <div class="settings-section-body" id="ss-body-rolethresholds" style="display:none;">
           <div class="roster-section" style="margin-bottom:1.5rem;">
-            <div class="roster-section-title">Clock-in Grace Period</div>
+            <div class="roster-section-title">Grace Period</div>
             <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
-              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Staff clocking in/out within this window of their rostered time will not be asked for a reason.</span>
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Within this window of rostered time, staff aren't asked for a reason and the shift auto-approves for payroll. Beyond it, a note is created and the shift needs a manager decision before it can be locked or exported.</span>
               <div style="display:flex;align-items:flex-end;gap:1rem;width:100%;">
                 <table class="thresh-table">
                   <thead><tr><th></th><th>Receptionist</th><th>Nurse</th><th>Manager</th></tr></thead>
                   <tbody>
-                    <tr><td>Minutes</td><td><input class="thresh-input" type="number" id="grace-Receptionist" min="0" max="60" step="1"></td><td><input class="thresh-input" type="number" id="grace-Nurse" min="0" max="60" step="1"></td><td><input class="thresh-input" type="number" id="grace-Manager" min="0" max="60" step="1"></td></tr>
+                    <tr><td>Minutes</td><td><input class="thresh-input" type="number" id="grace-Receptionist" min="0" max="120" step="1"></td><td><input class="thresh-input" type="number" id="grace-Nurse" min="0" max="120" step="1"></td><td><input class="thresh-input" type="number" id="grace-Manager" min="0" max="120" step="1"></td></tr>
                   </tbody>
                 </table>
                 <button class="add-emp-btn" style="margin-left:auto;" onclick="saveGraceByRole()">Save</button>
@@ -2360,14 +2360,13 @@
             </div>
           </div>
           <div class="roster-section" style="margin-bottom:1.5rem;">
-            <div class="roster-section-title">Discrepancy Flagging Thresholds</div>
+            <div class="roster-section-title">Red Flag Threshold</div>
             <div class="roster-anchor-bar" style="flex-direction:column;align-items:flex-start;gap:0.75rem;">
-              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Timesheet rows are flagged based on how far the clocked time differs from the rostered time.</span>
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">A row is flagged yellow once it's past the grace period above. Set how many minutes further off before it escalates to red.</span>
               <div style="display:flex;align-items:flex-end;gap:1rem;width:100%;">
                 <table class="thresh-table">
                   <thead><tr><th></th><th>Receptionist</th><th>Nurse</th><th>Manager</th></tr></thead>
                   <tbody>
-                    <tr><td><span class="thresh-dot" style="background:#e6a817;"></span>Yellow (min)</td><td><input class="thresh-input" type="number" id="yellow-Receptionist" min="1" max="120" step="1"></td><td><input class="thresh-input" type="number" id="yellow-Nurse" min="1" max="120" step="1"></td><td><input class="thresh-input" type="number" id="yellow-Manager" min="1" max="120" step="1"></td></tr>
                     <tr><td><span class="thresh-dot" style="background:var(--burgundy);"></span>Red (min)</td><td><input class="thresh-input" type="number" id="red-Receptionist" min="1" max="120" step="1"></td><td><input class="thresh-input" type="number" id="red-Nurse" min="1" max="120" step="1"></td><td><input class="thresh-input" type="number" id="red-Manager" min="1" max="120" step="1"></td></tr>
                   </tbody>
                 </table>
@@ -2711,8 +2710,8 @@
               <div class="hg-card hg-card-wide">
                 <div class="hg-card-head"><span class="hg-card-icon">⚙️</span><span class="hg-card-title">Settings</span></div>
                 <ul class="hg-list">
-                  <li><strong>Grace period</strong> — minutes either side of shift start/end before the app prompts staff for a reason</li>
-                  <li><strong>Discrepancy thresholds</strong> — how far off rostered time triggers a yellow or red flag on timesheets</li>
+                  <li><strong>Grace period</strong> — minutes either side of shift start/end before staff are prompted for a reason and the shift needs a manager decision instead of auto-approving</li>
+                  <li><strong>Red threshold</strong> — how many minutes further past the grace period escalates a timesheet row to a red flag</li>
                   <li><strong>Coverage thresholds</strong> — staffing levels that show red/yellow/green on the roster</li>
                   <li><strong>Who's On PIN</strong> — the PIN staff enter to access the Who's On roster view</li>
                   <li><strong>Fortnight cycle start date</strong> — only change this during initial setup</li>
@@ -3287,12 +3286,11 @@ async function loadAll() {
     _mgrs    = mgrs.map(normaliseMgr);
     _rosterConfig    = rosterCfg[0] || null;
     const _lgG=_rosterConfig?.grace_period??10;
-  const _lgY=_rosterConfig?.yellow_threshold??10;
   const _lgR=_rosterConfig?.red_threshold??20;
+  // Grace is now the single threshold for kiosk prompting, gap decisions, AND auto-approval —
+  // yellow_by_role/yellow_threshold are deliberately no longer read (see YELLOW_BY_ROLE removal below).
   if(_rosterConfig?.grace_by_role){try{Object.assign(GRACE_BY_ROLE,JSON.parse(_rosterConfig.grace_by_role));}catch(e){}}
   else _ROLES.forEach(r=>GRACE_BY_ROLE[r]=_lgG);
-  if(_rosterConfig?.yellow_by_role){try{Object.assign(YELLOW_BY_ROLE,JSON.parse(_rosterConfig.yellow_by_role));}catch(e){}}
-  else _ROLES.forEach(r=>YELLOW_BY_ROLE[r]=_lgY);
   if(_rosterConfig?.red_by_role){try{Object.assign(RED_BY_ROLE,JSON.parse(_rosterConfig.red_by_role));}catch(e){}}
   else _ROLES.forEach(r=>RED_BY_ROLE[r]=_lgR);
   if(_rosterConfig?.swap_expiry_days!=null) SWAP_EXPIRY_DAYS=_rosterConfig.swap_expiry_days;
@@ -3425,8 +3423,9 @@ function showLoading(on) {
 const APP_VERSION='1.6';
 const APP_VERSION_DATE='July 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
+// The single per-role threshold: within it, no prompt/flag and the shift auto-approves;
+// beyond it, a gap decision is required before the shift can be locked or exported.
 let GRACE_BY_ROLE={Receptionist:10,Nurse:10,Manager:10};
-let YELLOW_BY_ROLE={Receptionist:10,Nurse:10,Manager:10};
 let RED_BY_ROLE={Receptionist:20,Nurse:20,Manager:20};
 let COVERAGE_THRESHOLDS = {
   Receptionist: {yellow:2, green:3},
@@ -4690,7 +4689,7 @@ function tsIsAutoApproved(entry, shift){
   const rs=shift?.start_time||null;
   const re=shift?.end_time||null;
   if(!fs||!fe||!rs||!re) return false;
-  const _yt=YELLOW_BY_ROLE[entry.role]??10;
+  const _yt=GRACE_BY_ROLE[entry.role]??10;
   // Early clock-in never blocks auto-approval — payroll always snaps to roster start
   const inMin=timeToMin(fs)-timeToMin(rs);
   const inOk=inMin<=0||inMin<_yt;
@@ -4734,7 +4733,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const autoApproved=isSplitWorked
     ?(entry?.clockIn&&rostStart?(()=>{
         const m=timeToMin(entry.clockIn)-timeToMin(rostStart);
-        if(!(m<=0||m<(YELLOW_BY_ROLE[emp.role]??10))) return false;
+        if(!(m<=0||m<(GRACE_BY_ROLE[emp.role]??10))) return false;
         const _segFe=entry.finalEnd||entry.clockOut;
         if(_segFe){const _segHrs=Math.max(0,timeToMin(_segFe)-timeToMin(entry.clockIn))/60;if(isBreakGapUnresolved(entry,_segHrs)) return false;}
         return true;
@@ -4745,7 +4744,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   // roster start even when it's the DEPARTURE side (late clock-out, unresolved gap,
   // unresolved break) that's the one blocking full auto-approval, and vice versa.
   // (Split segments keep the combined check above — they don't have this coupling issue.)
-  const _ytSnap=YELLOW_BY_ROLE[emp.role]??10;
+  const _ytSnap=GRACE_BY_ROLE[emp.role]??10;
   const startSnapsToRoster=!isSplitWorked&&!!clockStart&&!!rostStart&&(()=>{
     const m=timeToMin(entry?.finalStart||clockStart)-timeToMin(rostStart);
     return m<=0||m<_ytSnap;
@@ -4777,7 +4776,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
     const ds=timeToMin(finalStart)-timeToMin(rostStart);
     const de=timeToMin(finalEnd)-timeToMin(rostEnd);
     const fmt=m=>(m>=0?'+':'')+m+'m';
-    const _empYt=YELLOW_BY_ROLE[emp.role]??10;const _empRt=RED_BY_ROLE[emp.role]??20;
+    const _empYt=GRACE_BY_ROLE[emp.role]??10;const _empRt=RED_BY_ROLE[emp.role]??20;
     const diffColor=Math.abs(ds)>=_empRt||Math.abs(de)>=_empRt?'var(--burgundy)':Math.abs(ds)>=_empYt||Math.abs(de)>=_empYt?'#e6a817':'var(--muted)';
     diffLabel=`<span class="ts-diff" style="color:${diffColor}">${fmt(ds)} / ${fmt(de)}</span>`;
   }
@@ -6300,7 +6299,7 @@ function renderApprovals(){
       const ds=timeToMin(clockStart)-timeToMin(rostStart);
       const sign=ds>=0?'+':'';
       diffVal=sign+ds+'m start';
-      diffClass=Math.abs(ds)>=(RED_BY_ROLE[a.role]??20)?'diff-bad':Math.abs(ds)>=(YELLOW_BY_ROLE[a.role]??10)?'diff-warn':'diff-ok';
+      diffClass=Math.abs(ds)>=(RED_BY_ROLE[a.role]??20)?'diff-bad':Math.abs(ds)>=(GRACE_BY_ROLE[a.role]??10)?'diff-warn':'diff-ok';
     }
     const rostEl=rostVal
       ?`<div class="approval-time-val">${rostVal}</div>`
@@ -8571,7 +8570,6 @@ function renderAnchorDate(){
   wosUpdatePinFeedback();
   _ROLES.forEach(r=>{
     const gEl=document.getElementById('grace-'+r); if(gEl) gEl.value=GRACE_BY_ROLE[r]??10;
-    const yEl=document.getElementById('yellow-'+r); if(yEl) yEl.value=YELLOW_BY_ROLE[r]??10;
     const rEl=document.getElementById('red-'+r); if(rEl) rEl.value=RED_BY_ROLE[r]??20;
     const cyEl=document.getElementById('cov-yellow-'+r); if(cyEl) cyEl.value=(COVERAGE_THRESHOLDS[r]||{yellow:2}).yellow;
     const cgEl=document.getElementById('cov-green-'+r); if(cgEl) cgEl.value=(COVERAGE_THRESHOLDS[r]||{green:3}).green;
@@ -8703,7 +8701,7 @@ async function saveGraceByRole(){
   const vals={};
   for(const r of _ROLES){
     const v=parseInt(document.getElementById('grace-'+r)?.value,10);
-    if(isNaN(v)||v<0||v>60){showToast(`Grace period for ${r} must be 0–60 minutes`);return;}
+    if(isNaN(v)||v<0||v>120){showToast(`Grace period for ${r} must be 0–120 minutes`);return;}
     vals[r]=v;
   }
   try{
@@ -8718,24 +8716,25 @@ async function saveGraceByRole(){
 }
 
 async function saveDiscrepancyByRole(){
-  const yellows={}, reds={};
+  const reds={};
   for(const r of _ROLES){
-    const y=parseInt(document.getElementById('yellow-'+r)?.value,10);
     const rd=parseInt(document.getElementById('red-'+r)?.value,10);
-    if(isNaN(y)||y<1||y>120){showToast(`Yellow threshold for ${r} must be 1–120 minutes`);return;}
     if(isNaN(rd)||rd<1||rd>120){showToast(`Red threshold for ${r} must be 1–120 minutes`);return;}
-    if(y>=rd){showToast(`Yellow must be less than red for ${r}`);return;}
-    yellows[r]=y; reds[r]=rd;
+    // Compare against the grace input as currently shown (even if not yet saved) so this
+    // catches an in-progress edit, not just the last-saved value.
+    const gInput=parseInt(document.getElementById('grace-'+r)?.value,10);
+    const graceVal=isNaN(gInput)?(GRACE_BY_ROLE[r]??10):gInput;
+    if(graceVal>=rd){showToast(`Red must be greater than the grace period for ${r}`);return;}
+    reds[r]=rd;
   }
   try{
-    const patch={yellow_by_role:JSON.stringify(yellows),red_by_role:JSON.stringify(reds)};
+    const patch={red_by_role:JSON.stringify(reds)};
     if(_rosterConfig) await db.update('roster_config','default',patch);
     else await db.insert('roster_config',{id:'default',...patch});
     if(!_rosterConfig) _rosterConfig={id:'default'};
     Object.assign(_rosterConfig,patch);
-    Object.assign(YELLOW_BY_ROLE,yellows);
     Object.assign(RED_BY_ROLE,reds);
-    showToast('Discrepancy thresholds saved ✓');
+    showToast('Red threshold saved ✓');
   }catch(e){showToast('Could not save — check connection');console.error(e);}
 }
 
