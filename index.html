@@ -3438,6 +3438,7 @@ let _tsExpandEntryId = null;
 const _tsCollapsed = new Set();
 const _tsRoleLoaded = new Set(); // roles seen at least once — used to default-collapse on first visit
 const _tsAutoOverride = new Set(); // entry IDs where manager clicked to override auto-approval
+const _tsGapReopen = new Set(); // `${entryId}_start`/`${entryId}_dept` — reopened after a fixed gap decision so it can be changed
 const _tsDeleteStack = []; // undo stack: [{entryId, auditId, entrySnapshot}] — session only
 let _tsAutoLockRunning = false;
 // Requests state
@@ -4934,8 +4935,8 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
         const effIn=entry.finalStart||entry.clockIn;
         const effOut=entry.finalEnd||entry.clockOut;
         const isReadOnly=locked||(effectiveAutoApproved&&!autoOverridden);
-        // Departure gap — early clock-out (shortfall, editable here) or late clock-out
-        // (overrun — decided only via the Notes tab, same as pay-to-roster; shown read-only here).
+        // Departure gap — early clock-out (shortfall) or late clock-out (overrun); both
+        // resolvable right here now, or via the Notes tab if a Departure note exists.
         let deptGapMins=0, deptGapIsOverrun=false;
         if(effOut&&rostEnd){
           const g=timeToMin(rostEnd)-timeToMin(effOut);
@@ -4955,28 +4956,62 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
         const showArrvGap=arrvGapMins>0||!!arrvGapType;
         if(!showDeptGap&&!showArrvGap) return '';
         const GAP_LEAVE_OPTS=['unpaid','annual_leave','personal_leave'];
-        const renderGapRow=(label,gapType,gapHours,gapMins,saveFn,forceReadOnly)=>{
+        const changeBtn=reopenKey=>`<button onclick="tsReopenGap('${reopenKey}',event)" style="font-size:0.68rem;padding:0.1rem 0.4rem;border-radius:3px;border:1px solid var(--border);background:white;color:var(--muted);cursor:pointer;">change</button>`;
+        const renderGapRow=(label,gapType,gapHours,gapMins,saveFn,reopenKey)=>{
           const hrsDisplay=gapHours!=null?(+gapHours).toFixed(2):'';
           const isFixedDecision=gapType==='pay_to_roster'||gapType==='pay_to_roster_start'||gapType==='pay_to_clockout';
+          // _tsAutoOverride is checked directly (not the derived autoOverridden, which is
+          // gated behind effectiveAutoApproved) so an explicit Unlock always reopens fixed
+          // decisions immediately too — even on a row that would never auto-approve anyway.
+          const showEditable=!isReadOnly&&(!isFixedDecision||_tsGapReopen.has(reopenKey)||_tsAutoOverride.has(overrideKey));
           return`<div class="ts-sub-row">
             <span class="ts-sub-label">${label}</span>
             <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
-              ${isFixedDecision||isReadOnly||forceReadOnly
-                ?`<span style="font-weight:700;font-size:0.82rem;">${hrsDisplay?hrsDisplay+'h':'—'}</span>
-                  <span style="font-size:0.75rem;color:var(--muted);margin-left:0.2rem;">${gapType?formatGapLeaveType(gapType):'Decide in Notes tab'}</span>`
-                :`<input class="ts-break-input" type="number" min="0" max="24" step="0.25" value="${hrsDisplay}" onclick="event.stopPropagation()" onchange="${saveFn}" style="width:4.2rem;">
+              ${showEditable
+                ?`<input class="ts-break-input" type="number" min="0" max="24" step="0.25" value="${hrsDisplay}" onclick="event.stopPropagation()" onchange="${saveFn}" style="width:4.2rem;">
                   <span style="font-size:0.72rem;color:var(--muted);">h</span>
                   <select onclick="event.stopPropagation()" onchange="${saveFn}" style="font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:white;">
                     <option value="">NOT SET</option>
                     ${GAP_LEAVE_OPTS.map(k=>`<option value="${k}"${gapType===k?' selected':''}>${formatGapLeaveType(k)}</option>`).join('')}
-                  </select>`}
+                  </select>`
+                :`<span style="font-weight:700;font-size:0.82rem;">${hrsDisplay?hrsDisplay+'h':'—'}</span>
+                  <span style="font-size:0.75rem;color:var(--muted);margin-left:0.2rem;">${gapType?formatGapLeaveType(gapType):'Decide in Notes tab'}</span>
+                  ${!isReadOnly?changeBtn(reopenKey):''}`}
+              ${gapMins>0&&!isFixedDecision?`<span style="font-size:0.7rem;color:var(--muted);margin-left:0.1rem;">(${gapMins} min)</span>`:''}
+            </div>
+          </div>`;
+        };
+        // Overrun has a different shape (pick a pay destination, not hours+leave-type) so it
+        // gets its own renderer — but is resolvable inline now instead of Notes-tab-only.
+        const renderOverrunRow=(label,gapType,gapMins,rostEndVal,clockOutVal,reopenKey)=>{
+          const isFixedDecision=gapType==='pay_to_roster'||gapType==='pay_to_clockout';
+          // _tsAutoOverride is checked directly (not the derived autoOverridden, which is
+          // gated behind effectiveAutoApproved) so an explicit Unlock always reopens fixed
+          // decisions immediately too — even on a row that would never auto-approve anyway.
+          const showEditable=!isReadOnly&&(!isFixedDecision||_tsGapReopen.has(reopenKey)||_tsAutoOverride.has(overrideKey));
+          const saveFn=`tsSaveDeptOverrun('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}','${rostEndVal}','${clockOutVal}',event)`;
+          return`<div class="ts-sub-row">
+            <span class="ts-sub-label">${label}</span>
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+              ${showEditable
+                ?`<select onclick="event.stopPropagation()" onchange="${saveFn}" style="font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:white;">
+                    <option value="">— What to do with this time? —</option>
+                    <option value="pay_to_roster"${gapType==='pay_to_roster'?' selected':''}>Pay to roster end (${rostEndVal})</option>
+                    <option value="pay_to_clockout"${gapType==='pay_to_clockout'?' selected':''}>Pay to clock out (${clockOutVal})</option>
+                  </select>`
+                :`<span style="font-size:0.75rem;color:var(--muted);">${gapType?formatGapLeaveType(gapType):'Not yet decided'}</span>
+                  ${!isReadOnly?changeBtn(reopenKey):''}`}
               ${gapMins>0&&!isFixedDecision?`<span style="font-size:0.7rem;color:var(--muted);margin-left:0.1rem;">(${gapMins} min)</span>`:''}
             </div>
           </div>`;
         };
         return[
-          showArrvGap?renderGapRow('Late arrival',arrvGapType,arrvGapHours,arrvGapMins,`tsSaveGapLeaveStart('${entryId}','${safeEmpId}','${date}',event)`,false):'',
-          showDeptGap?renderGapRow(deptGapLabel,deptGapType,deptGapHours,deptGapMins,`tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)`,deptGapIsOverrun):'',
+          showArrvGap?renderGapRow('Late arrival',arrvGapType,arrvGapHours,arrvGapMins,`tsSaveGapLeaveStart('${entryId}','${safeEmpId}','${date}',event)`,`${entryId}_start`):'',
+          showDeptGap
+            ?(deptGapIsOverrun
+                ?renderOverrunRow(deptGapLabel,deptGapType,deptGapMins,rostEnd,effOut,`${entryId}_dept`)
+                :renderGapRow(deptGapLabel,deptGapType,deptGapHours,deptGapMins,`tsSaveGapLeave('${entryId}','${safeEmpId}','${safeEmpName}','${emp.role}','${date}',event)`,`${entryId}_dept`))
+            :'',
         ].join('');
       })()}
       ${emp.can_travel&&entry&&!entry.leaveType&&shift?.lane==='75plus'?`<div class="ts-sub-row">
@@ -5018,6 +5053,18 @@ async function tsSaveBreak(entryId,empId,empName,role,date,value,e){
   }catch(err){showToast('Could not save break');console.error(err);}
 }
 
+// Keeps the Notes tab in sync when a decision is made directly on the timesheet row
+// instead of via Acknowledge — otherwise the note sits pending forever even though the
+// entry it's attached to has already been resolved, inflating the pending count.
+async function tsResolveLinkedNotes(entryId,noteType,mgr){
+  const pending=_notes.filter(n=>n.entryId===entryId&&n.status==='pending'&&n.type===noteType);
+  if(!pending.length) return;
+  try{
+    await Promise.all(pending.map(n=>db.update('notes',n.id,{status:'approved',resolved_by:mgr})));
+    pending.forEach(n=>{n.status='approved';n.resolvedBy=mgr;});
+  }catch(err){console.error('Could not sync linked note',err);}
+}
+
 async function tsSaveBreakGapDecision(entryId,empId,empName,role,date,value,e){
   e?.stopPropagation?.();
   if(!entryId){showToast('Save final times first before editing break');return;}
@@ -5025,8 +5072,10 @@ async function tsSaveBreakGapDecision(entryId,empId,empName,role,date,value,e){
     await db.update('entries',entryId,{break_gap_decision:value||null});
     const entry=_entries.find(en=>en.id===entryId);
     if(entry) entry.breakGapDecision=value||null;
+    if(value) await tsResolveLinkedNotes(entryId,'Break note',currentManager?.name||'Manager');
     _tsExpandEntryId=String(entryId);
     renderTimesheets();
+    renderApprovals();
     _tsExpandEntryId=null;
   }catch(err){showToast('Could not save decision');console.error(err);}
 }
@@ -5043,8 +5092,10 @@ async function tsSaveGapLeave(entryId,empId,empName,role,date,event){
     await db.update('entries',entryId,{leave_type_gap:leaveType||null,leave_gap_hours:leaveType&&hours?hours:null});
     const entry=_entries.find(e=>e.id===entryId);
     if(entry){entry.leaveTypeGap=leaveType||null;entry.leaveGapHours=leaveType&&hours?hours:null;}
+    if(leaveType) await tsResolveLinkedNotes(entryId,'Departure note',currentManager?.name||'Manager');
     _tsExpandEntryId=String(entryId);
     renderTimesheets();
+    renderApprovals();
     _tsExpandEntryId=null;
   }catch(err){showToast('Could not save gap leave');console.error(err);}
 }
@@ -5061,10 +5112,37 @@ async function tsSaveGapLeaveStart(entryId,empId,date,event){
     await db.update('entries',entryId,{leave_type_gap_start:leaveType||null,leave_gap_hours_start:leaveType&&hours?hours:null});
     const entry=_entries.find(e=>e.id===entryId);
     if(entry){entry.leaveTypeGapStart=leaveType||null;entry.leaveGapHoursStart=leaveType&&hours?hours:null;}
+    if(leaveType) await tsResolveLinkedNotes(entryId,'Arrival note',currentManager?.name||'Manager');
     _tsExpandEntryId=String(entryId);
     renderTimesheets();
+    renderApprovals();
     _tsExpandEntryId=null;
   }catch(err){showToast('Could not save gap leave');console.error(err);}
+}
+
+// Late-departure overrun — previously forced Notes-tab-only via forceReadOnly, which left
+// a dead end whenever no Departure note existed to attach the decision to (see Teresa
+// Schultz 4 Aug case: note never generated, row permanently stuck on "Decide in Notes tab").
+// Same two options as the Notes tab's overrun dropdown, now also resolvable right here.
+async function tsSaveDeptOverrun(entryId,empId,empName,role,date,rostEndVal,clockOutVal,event){
+  event?.stopPropagation?.();
+  if(!entryId){showToast('Save final times first before editing this');return;}
+  const value=event?.target?.value||'';
+  const patch=value==='pay_to_roster'
+    ?{final_end:rostEndVal,leave_type_gap:'pay_to_roster',leave_gap_hours:null}
+    :value==='pay_to_clockout'
+      ?{final_end:clockOutVal,leave_type_gap:'pay_to_clockout',leave_gap_hours:null}
+      :{final_end:null,leave_type_gap:null,leave_gap_hours:null};
+  try{
+    await db.update('entries',entryId,patch);
+    const entry=_entries.find(e=>e.id===entryId);
+    if(entry){entry.finalEnd=patch.final_end;entry.leaveTypeGap=patch.leave_type_gap;entry.leaveGapHours=patch.leave_gap_hours;}
+    if(value) await tsResolveLinkedNotes(entryId,'Departure note',currentManager?.name||'Manager');
+    _tsExpandEntryId=String(entryId);
+    renderTimesheets();
+    renderApprovals();
+    _tsExpandEntryId=null;
+  }catch(err){showToast('Could not save decision');console.error(err);}
 }
 
 async function tsSaveTravel(entryId,value,e){
@@ -5496,6 +5574,16 @@ function tsOverrideAutoApproved(overrideKey, e){
   _tsAutoOverride.add(overrideKey);
   // If key is a real entry ID (not empId_date), expand that row
   if(overrideKey&&!overrideKey.includes('_')) _tsExpandEntryId=overrideKey;
+  renderTimesheets();
+  _tsExpandEntryId=null;
+}
+
+// A "fixed decision" gap (pay to roster / pay to clock out) hides its own select once
+// chosen — this reopens it so the manager can pick something different.
+function tsReopenGap(reopenKey, e){
+  e?.stopPropagation?.();
+  _tsGapReopen.add(reopenKey);
+  _tsExpandEntryId=reopenKey.replace(/_start$|_dept$/,'');
   renderTimesheets();
   _tsExpandEntryId=null;
 }
