@@ -3509,7 +3509,7 @@ function showView(v){
   if(v==='login') populateManagerSelect();
   if(v==='admin'){
     setAdminAvatar();
-    loadAll().then(()=>{ renderTeam();renderTimesheets();renderApprovals();renderManagersTab();renderRoster();setDefaultDates();tsAutoLockSweep();reqExpirySweep(); adminMobUpdateFilter(); });
+    loadAll().then(()=>{ renderTeam();renderTimesheets();renderApprovals();renderRequests();renderManagersTab();renderRoster();setDefaultDates();tsAutoLockSweep();reqExpirySweep(); adminMobUpdateFilter(); });
   }
 }
 
