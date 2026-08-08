@@ -576,6 +576,8 @@
   .dl-ts-check-row input[type=checkbox] { accent-color: var(--success); width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
   .dl-ts-select-all-row { display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.75rem; margin-bottom: 0.75rem; border-bottom: 1.5px solid var(--border); font-size: 0.82rem; font-weight: 700; cursor: pointer; }
   .dl-ts-select-all-row input[type=checkbox] { accent-color: var(--success); width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+  .dl-ts-check-row.disabled { opacity: 0.4; cursor: not-allowed; }
+  .dl-ts-check-row.disabled input[type=checkbox] { cursor: not-allowed; }
 
   /* Table */
   .table-wrap { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
@@ -2133,7 +2135,7 @@
         <button class="ts-fn-btn ts-today-btn" onclick="tsGoToday()">Today</button>
         <div class="page-ribbon-spacer"></div>
         <button class="dl-ts-btn" onclick="showDownloadTimesheetsModal()">⎙ Download Timesheets</button>
-        <button class="export-btn" onclick="exportMYOB()">⬇ Export for MYOB</button>
+        <button class="export-btn" onclick="showMyobExportModal()">⬇ Export for MYOB</button>
       </div>
       <div class="ts-mob-notice">View only · approve & export on desktop</div>
       <div class="ts-role-tabs-bar">
@@ -3158,6 +3160,24 @@
     <div class="modal-actions">
       <button class="btn-ghost" onclick="document.getElementById('dl-ts-modal').classList.remove('show')">Cancel</button>
       <button class="btn-primary" onclick="downloadTimesheetsPDFs()">⬇ Download ZIP</button>
+    </div>
+  </div>
+</div>
+
+<!-- MYOB Export Modal -->
+<div class="modal-bg" id="myob-export-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="max-width:560px;width:95%;">
+    <div class="modal-title">⬇ Export for MYOB</div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.25rem;">Pay period: <strong id="myob-ex-period-label" style="color:var(--text);"></strong></div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem;">Greyed-out staff have no timesheet rows this fortnight and can't be selected.</div>
+    <label class="dl-ts-select-all-row">
+      <input type="checkbox" id="myob-ex-select-all" checked onchange="myobExToggleAll(this.checked)" />
+      Select all
+    </label>
+    <div class="dl-ts-staff-grid" id="myob-ex-staff-grid"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="document.getElementById('myob-export-modal').classList.remove('show')">Cancel</button>
+      <button class="btn-primary" onclick="exportMYOBSelected()">⬇ Export for MYOB</button>
     </div>
   </div>
 </div>
@@ -5903,10 +5923,44 @@ function _calcMYOBRowsBase(entry, emp, isPH=false, shift=null){
   return [{cat:cats.day,hours:baseHours},{cat:cats.evening||cats.day,hours:eveningHours}];
 }
 
-function exportMYOB(){
+function showMyobExportModal(){
   const fnStart=getPayPeriodStart(tsOffset);
   const fnDays=getFortnight14Days(fnStart);
-  const allEntries=_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted);
+  document.getElementById('myob-ex-period-label').textContent=srFortnightLabel(fnStart);
+  const entryEmpIds=new Set(_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted).map(e=>e.employeeId));
+  const roles=['Receptionist','Nurse','Manager'];
+  const roleLabels={Receptionist:'Receptionists',Nurse:'Nurses',Manager:'Managers'};
+  const cols=roles.map(role=>{
+    const emps=_emps.filter(e=>e.role===role&&e.active!==false&&!e.is_placeholder).sort((a,b)=>a.name.localeCompare(b.name));
+    if(!emps.length) return'';
+    return`<div class="dl-ts-col">
+      <div class="dl-ts-role-label">${roleLabels[role]}</div>
+      ${emps.map(emp=>{
+        const hasRows=entryEmpIds.has(emp.id);
+        return`<label class="dl-ts-check-row${hasRows?'':' disabled'}" title="${hasRows?'':'No timesheet rows this fortnight'}">
+          <input type="checkbox" class="myob-ex-emp-cb" value="${emp.id}" ${hasRows?'checked':'disabled'} />
+          <span>${emp.preferredName||emp.name}</span>
+        </label>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+  document.getElementById('myob-ex-staff-grid').innerHTML=cols;
+  document.getElementById('myob-ex-select-all').checked=true;
+  document.getElementById('myob-export-modal').classList.add('show');
+}
+
+function myobExToggleAll(checked){
+  document.querySelectorAll('.myob-ex-emp-cb:not(:disabled)').forEach(cb=>cb.checked=checked);
+}
+
+function exportMYOBSelected(){
+  const selectedIds=new Set([...document.querySelectorAll('.myob-ex-emp-cb:checked')].map(cb=>cb.value));
+  if(!selectedIds.size){showToast('Select at least one staff member');return;}
+  document.getElementById('myob-export-modal').classList.remove('show');
+
+  const fnStart=getPayPeriodStart(tsOffset);
+  const fnDays=getFortnight14Days(fnStart);
+  const allEntries=_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted&&selectedIds.has(e.employeeId));
 
   // An entry is "ready" if explicitly locked, auto-approved, or no clock required (leave/manager)
   const isReady=e=>{
@@ -5920,22 +5974,22 @@ function exportMYOB(){
   };
 
   const ready=allEntries.filter(e=>isReady(e)&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
-  const activeEmpIds=new Set(_emps.filter(e=>e.active!==false&&!e.is_placeholder).map(e=>e.id));
   // Check readiness using the same grouped-per-day canonical entry that the UI locks —
-  // prevents false warnings from secondary raw entries on the same day
+  // prevents false warnings from secondary raw entries on the same day. Scoped to the
+  // selected staff only — someone deliberately left unchecked never shows up here.
   const canonicalEntries=groupEntriesByDay(allEntries);
-  const notReady=canonicalEntries.filter(e=>!isReady(e)&&activeEmpIds.has(e.employeeId)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
+  const notReady=canonicalEntries.filter(e=>!isReady(e)&&selectedIds.has(e.employeeId)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
 
-  if(!ready.length){showToast('No locked entries to export.');return;}
+  if(!ready.length){showToast('No locked entries to export for the selected staff.');return;}
   if(notReady.length){
-    const detail=notReady.map(e=>`• ${e.employeeName||'Unknown'} — ${e.date}`).join('\n');
-    if(!confirm(`${notReady.length} entr${notReady.length===1?'y':'ies'} are not yet locked and will not be included:\n\n${detail}\n\nExport ${ready.length} ready entr${ready.length===1?'y':'ies'} anyway?`)) return;
+    const sortedNotReady=notReady.slice().sort((a,b)=>(a.employeeName||'').localeCompare(b.employeeName||'')||a.date.localeCompare(b.date));
+    const detail=sortedNotReady.map(e=>`• ${e.employeeName||'Unknown'} — ${e.date}`).join('\n');
+    if(!confirm(`${notReady.length} entr${notReady.length===1?'y':'ies'} for selected staff are not yet locked and will not be included:\n\n${detail}\n\nExport ${ready.length} ready entr${ready.length===1?'y':'ies'} anyway?`)) return;
   }
 
   const _fmtD=d=>{const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=String(d.getFullYear()).slice(-2);return dd+mm+yy;};
   const fnStartDate=new Date(fnStart+'T12:00:00');
   const fnEndDate=new Date(fnStart+'T12:00:00');fnEndDate.setDate(fnEndDate.getDate()+13);
-  const fnFileLabel=`Running_Well_MYOB_Export_${_fmtD(fnStartDate)}-${_fmtD(fnEndDate)}`;
   const lines=['{}'];
   const headers=['Employee Co./Last Name','Employee First Name','Payroll Category','Job','Customer Co./Last Name','Customer First Name','Notes','Date','Units','Employee Card ID','Employee Record ID','Start/Stop Time','Customer Card ID','Customer Record ID'];
   lines.push(headers.join('\t'));
@@ -5977,12 +6031,17 @@ function exportMYOB(){
     }
   });
 
+  // Filename reflects the actual number of distinct employees whose rows made it into
+  // the file — not just how many checkboxes were ticked, in case some got excluded above.
+  const exportedEmpCount=new Set(deduped.map(e=>e.employeeId)).size;
+  const fnFileLabel=`Running_Well_MYOB_Export_${_fmtD(fnStartDate)}-${_fmtD(fnEndDate)}_${exportedEmpCount}emp`;
+
   const txt=lines.join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));
   a.download=`${fnFileLabel}.txt`;
   a.click();
-  showToast(`Exported ${ready.length} entr${ready.length===1?'y':'ies'} ✓`);
+  showToast(`Exported ${ready.length} entr${ready.length===1?'y':'ies'} for ${exportedEmpCount} staff ✓`);
 }
 
 /* ── DOWNLOAD TIMESHEETS (PDF + ZIP) ── */
@@ -6237,8 +6296,8 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
       if(data.section==='body'){
         const rowType=tableRows[data.row.index]?.type;
         if(rowType==='pending'){
-          data.cell.styles.textColor=[160,155,155];
-          data.cell.styles.fontStyle='italic';
+          data.cell.styles.textColor=[168,110,38];
+          data.cell.styles.fontStyle='bold';
         } else if(rowType==='leave'){
           data.cell.styles.textColor=[100,80,85];
         }
@@ -6261,6 +6320,13 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
   doc.text(`Leave: ${totalLeave.toFixed(2)} hrs`,margin+45,finalY+8);
   doc.setTextColor(45,36,38);
   doc.text(`Total: ${(totalWorked+totalLeave).toFixed(2)} hrs`,margin+90,finalY+8);
+  const pendingCount=tableRows.filter(r=>r.type==='pending').length;
+  if(pendingCount){
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(7.5);
+    doc.setTextColor(150,110,60);
+    doc.text(`Note: ${pendingCount} day${pendingCount===1?'':'s'} not yet finalised — total hours above may be incomplete.`,margin,finalY+14);
+  }
   return doc;
 }
 
