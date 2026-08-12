@@ -122,17 +122,6 @@
     animation: fadeUp 0.55s 0.16s ease both;
   }
 
-  .scan-card::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg,
-      var(--blush) 0%, var(--dusty) 25%, var(--wine) 50%, var(--dusty) 75%, var(--blush) 100%);
-    background-size: 200%;
-    animation: flow 5s linear infinite;
-  }
-
-  @keyframes flow { 0% { background-position: 0%; } 100% { background-position: 200%; } }
-
   .scan-emoji {
     font-size: 2.4rem; margin-bottom: 0.85rem; display: block;
     animation: sway 3.5s ease-in-out infinite;
@@ -517,12 +506,15 @@
 
   /* Modal */
   .modal-bg {
-    position: fixed; inset: 0; background: rgba(45,36,38,0.2); backdrop-filter: blur(7px);
+    position: fixed; inset: 0; background: rgba(45,36,38,0.2);
     z-index: 200; display: flex; align-items: flex-start; justify-content: center;
     padding-top: 10vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
     opacity: 0; pointer-events: none; transition: opacity 0.2s;
   }
-  .modal-bg.show { opacity: 1; pointer-events: all; }
+  /* Blur only while the modal is actually shown — every .modal-bg lives permanently in the
+     DOM, so an unscoped backdrop-filter keeps a full-viewport GPU blur layer hot for all
+     ~12 of them at all times (very costly on Windows Chrome / ANGLE). */
+  .modal-bg.show { opacity: 1; pointer-events: all; backdrop-filter: blur(7px); }
 
   .modal {
     background: var(--white); border: 1.5px solid var(--border); border-radius: 24px;
@@ -3439,6 +3431,9 @@ function showLoading(on) {
     document.body.appendChild(el);
   }
   el.style.opacity = on ? '1' : '0';
+  // The bar stays in the DOM once created; without pausing, its infinite
+  // background-position animation keeps repainting a full-width strip at 60fps forever.
+  el.style.animationPlayState = on ? 'running' : 'paused';
 }
 
 const APP_VERSION='1.6';
@@ -8795,7 +8790,11 @@ function wosUpdatePinFeedback(){
 }
 
 function wosInitPinBoxes(){
+  // Runs every time the Settings tab is opened — bind once per input, otherwise every visit
+  // stacks another copy of these listeners for the whole life of the tab.
   document.querySelectorAll('.wos-pin-box').forEach(input=>{
+    if(input.dataset.wosBound) return;
+    input.dataset.wosBound='1';
     input.addEventListener('input',e=>{
       e.target.value=e.target.value.replace(/[^0-9]/g,'');
       e.target.classList.toggle('filled', e.target.value!=='');
