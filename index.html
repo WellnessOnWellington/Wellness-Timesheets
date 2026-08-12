@@ -2731,15 +2731,22 @@
           <div style="padding:0.5rem 0 1.25rem;">
             <div style="font-size:0.82rem;color:var(--charcoal);font-weight:700;margin-bottom:0.2rem;">Running Well</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.1rem;">Built by Dr Joel Jaya</div>
-            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 1.9 &middot; August 2026</div>
+            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.0 &middot; August 2026</div>
           </div>
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
-                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v1.9</div>
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.0</div>
                 <div>
-                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">3 August 2026 &mdash; Break Shortfall Decisions &amp; iOS Fixes</div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">11 August 2026 &mdash; Go-Live: Paper Timesheets Retired</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Running Well is now the sole record of staff hours &mdash; backup physical timesheets stop from today. This release also bundles several weeks of reliability work: break-shortfall and late-departure gap decisions can no longer be silently bypassed, late overruns can be resolved right from the timesheet row with Notes kept in sync, deleted roster shifts no longer leave orphaned leave entries behind, and MYOB export now lets you choose exactly which staff to include. Kiosk card-reader focus is now reliable during PIN entry, break notes, and staff requests. Fixed several Windows-specific performance issues causing reported mouse lag on kiosk PCs, and timesheet hour totals are now guaranteed to match the MYOB breakdown exactly.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v1.9</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">3 August 2026 &mdash; Break Shortfall Decisions &amp; iOS Fixes</div>
                   <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">A break reported shorter than expected now needs a manager decision &mdash; pay as reported or pay to the standard break &mdash; before a shift can auto-approve or lock, shown with a clear Expected/Actual/Shortfall breakdown on both the Notes tab and the timesheet row. Added late-departure gap handling. Pending Notes tab sorted newest-first. Fixed iOS safe-area and status bar overlap issues on the Staff Portal and mobile views.</div>
                 </div>
               </div>
@@ -3436,8 +3443,8 @@ function showLoading(on) {
   el.style.animationPlayState = on ? 'running' : 'paused';
 }
 
-const APP_VERSION='1.6';
-const APP_VERSION_DATE='July 2026';
+const APP_VERSION='2.0';
+const APP_VERSION_DATE='August 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 // The single per-role threshold: within it, no prompt/flag and the shift auto-approves;
 // beyond it, a gap decision is required before the shift can be locked or exported.
