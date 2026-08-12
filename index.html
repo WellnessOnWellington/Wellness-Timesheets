@@ -4726,6 +4726,31 @@ function tsIsAutoApproved(entry, shift){
   return true;
 }
 
+// Single source of truth for a shift's effective start/end time — snaps each side to
+// the roster independently based on that side's own grace-period proximity. Shared by
+// the timesheet row display (tsBuildRow) and the MYOB category calculation
+// (_calcMYOBRowsBase) so they can't silently drift apart the way they did before (the
+// row snapped each side independently; the MYOB calc only snapped when BOTH sides were
+// already fully auto-approved, so a one-sided manual adjustment showed different hours
+// in the two places).
+function resolveFinalTimes(entry, shift, emp){
+  const rostStart=shift?.start_time||null;
+  const rostEnd=shift?.end_time||null;
+  const clockStart=entry?.clockIn||null;
+  const clockEnd=entry?.clockOut||null;
+  const autoApproved=tsIsAutoApproved(entry,shift);
+  const _ytSnap=GRACE_BY_ROLE[emp?.role]??10;
+  const startSnapsToRoster=!!clockStart&&!!rostStart&&(()=>{
+    const m=timeToMin(entry?.finalStart||clockStart)-timeToMin(rostStart);
+    return m<=0||m<_ytSnap;
+  })();
+  const endSnapsToRoster=!!clockEnd&&!!rostEnd
+    &&Math.abs(timeToMin(entry?.finalEnd||clockEnd)-timeToMin(rostEnd))<_ytSnap;
+  const finalStart=entry?.finalStart||((autoApproved||startSnapsToRoster)&&rostStart?rostStart:clockStart);
+  const finalEnd=entry?.finalEnd||((autoApproved||endSnapsToRoster)&&rostEnd?rostEnd:clockEnd);
+  return {finalStart, finalEnd, autoApproved, startSnapsToRoster, endSnapsToRoster};
+}
+
 function tsGetFlag(locked, noEntry, finalStart, finalEnd, autoApproved, entryStatus, missedClockOut){
   if(autoApproved) return 'green';
   if(locked && !finalEnd) return 'red'; // locked but no end time — incomplete hours
@@ -4754,31 +4779,27 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const payrollType=entry?.payrollType||entry?.leaveType||'';
   const isLeaveShift=!!payrollType;
   const isSplitWorked=splitSegment&&!isLeaveShift;
-  // Compute autoApproved first so we can snap finalStart/finalEnd to roster times for display & MYOB
-  const autoApproved=isSplitWorked
-    ?(entry?.clockIn&&rostStart?(()=>{
-        const m=timeToMin(entry.clockIn)-timeToMin(rostStart);
-        if(!(m<=0||m<(GRACE_BY_ROLE[emp.role]??10))) return false;
-        const _segFe=entry.finalEnd||entry.clockOut;
-        if(_segFe){const _segHrs=Math.max(0,timeToMin(_segFe)-timeToMin(entry.clockIn))/60;if(isBreakGapUnresolved(entry,_segHrs)) return false;}
-        return true;
-      })():false)
-    :tsIsAutoApproved(entry,shift);
+  // Compute autoApproved first so we can snap finalStart/finalEnd to roster times for display & MYOB.
   // Start and end snap to roster independently of each other and of the overall
   // autoApproved flag — an early/on-time arrival should always display snapped to
   // roster start even when it's the DEPARTURE side (late clock-out, unresolved gap,
   // unresolved break) that's the one blocking full auto-approval, and vice versa.
-  // (Split segments keep the combined check above — they don't have this coupling issue.)
-  const _ytSnap=GRACE_BY_ROLE[emp.role]??10;
-  const startSnapsToRoster=!isSplitWorked&&!!clockStart&&!!rostStart&&(()=>{
-    const m=timeToMin(entry?.finalStart||clockStart)-timeToMin(rostStart);
-    return m<=0||m<_ytSnap;
-  })();
-  const endSnapsToRoster=!isSplitWorked&&!!clockEnd&&!!rostEnd
-    &&Math.abs(timeToMin(entry?.finalEnd||clockEnd)-timeToMin(rostEnd))<_ytSnap;
-  // Manager-set finalStart/finalEnd always take priority over any snap
-  const finalStart=entry?.finalStart||((autoApproved||startSnapsToRoster)&&rostStart?rostStart:clockStart);
-  const finalEnd=entry?.finalEnd||((autoApproved||endSnapsToRoster)&&rostEnd?rostEnd:clockEnd);
+  // (Split segments keep the combined check below — they don't have this coupling issue.)
+  let autoApproved, finalStart, finalEnd, startSnapsToRoster=false, endSnapsToRoster=false;
+  if(isSplitWorked){
+    autoApproved=entry?.clockIn&&rostStart?(()=>{
+      const m=timeToMin(entry.clockIn)-timeToMin(rostStart);
+      if(!(m<=0||m<(GRACE_BY_ROLE[emp.role]??10))) return false;
+      const _segFe=entry.finalEnd||entry.clockOut;
+      if(_segFe){const _segHrs=Math.max(0,timeToMin(_segFe)-timeToMin(entry.clockIn))/60;if(isBreakGapUnresolved(entry,_segHrs)) return false;}
+      return true;
+    })():false;
+    // Manager-set finalStart/finalEnd always take priority over any snap
+    finalStart=entry?.finalStart||(autoApproved&&rostStart?rostStart:clockStart);
+    finalEnd=entry?.finalEnd||(autoApproved&&rostEnd?rostEnd:clockEnd);
+  } else {
+    ({finalStart,finalEnd,autoApproved,startSnapsToRoster,endSnapsToRoster}=resolveFinalTimes(entry,shift,emp));
+  }
   const noClockExpected=!entry?.clockIn&&!!rostStart&&!!rostEnd&&(emp.role==='Manager'||isLeaveShift||(isSplitWorked&&!!entry));
   // For split worked segments: cap effectiveFinalEnd to segment boundary (clockOut is full-shift end)
   const effectiveFinalStart=finalStart||(noClockExpected?rostStart:null);
@@ -5868,9 +5889,7 @@ function calcMYOBRows(entry, emp, isPH=false, shift=null){
   return rows;
 }
 function _calcMYOBRowsBase(entry, emp, isPH=false, shift=null){
-  const _snap=!entry.finalStart&&!entry.finalEnd&&tsIsAutoApproved(entry,shift);
-  const start=entry.finalStart||(_snap&&shift?.start_time?shift.start_time:entry.clockIn);
-  const end=entry.finalEnd||(_snap&&shift?.end_time?shift.end_time:entry.clockOut);
+  const {finalStart:start, finalEnd:end}=resolveFinalTimes(entry, shift, emp);
   if(!start||!end) return [];
   const startMins=timeToMin(start);
   const endMins=timeToMin(end);
