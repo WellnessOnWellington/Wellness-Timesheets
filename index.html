@@ -32,6 +32,7 @@
     --success-lt: #E6F0EA;
     --warning:    #A07228;
     --warning-lt: #FDF3E2;
+    --danger:     #C0392B;
     --radius:     18px;
     --radius-sm:  11px;
     --shadow:     0 2px 16px rgba(139,37,53,0.07);
@@ -560,6 +561,17 @@
   .dl-ts-btn:hover { background: var(--wine); }
   .dl-ts-btn.ready { background: var(--success); box-shadow: 0 2px 8px rgba(39,174,96,0.25); }
   .dl-ts-btn.ready:hover { background: #219a52; }
+
+  .finalize-toggle {
+    background: var(--danger); color: #fff; border: none; border-radius: 30px;
+    padding: 0.52rem 1.2rem; font-family: 'Nunito',sans-serif; font-size: 0.79rem; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; gap: 0.4rem; user-select: none;
+    box-shadow: 0 2px 8px rgba(192,57,43,0.2); transition: background 0.18s; white-space: nowrap;
+  }
+  .finalize-toggle:hover { background: #A93226; }
+  .finalize-toggle.live { background: var(--success); box-shadow: 0 2px 8px rgba(39,174,96,0.25); }
+  .finalize-toggle.live:hover { background: #219a52; }
+  .finalize-toggle input { display: none; }
 
   /* Download Timesheets Modal */
   .dl-ts-staff-grid { display: flex; gap: 1.5rem; margin: 1rem 0 1.25rem; }
@@ -1668,6 +1680,7 @@
   <!-- List panel: notifications + active requests -->
   <div class="req-panel" id="req-panel-list" style="display:none;">
     <div id="req-list-content"></div>
+    <button class="req-new-btn" onclick="reqShowTimesheets()" style="background:var(--white);color:var(--burgundy);border:1.5px solid var(--border);">🕒 My Timesheets</button>
     <button class="req-new-btn" onclick="reqShowForm()">+ New Request</button>
     <button class="req-back-btn" onclick="reqLogout()">← Return to Kiosk</button>
   </div>
@@ -1679,6 +1692,11 @@
   <!-- Detail panel: view + respond to a request -->
   <div class="req-panel" id="req-panel-detail" style="display:none;">
     <div id="req-detail-content"></div>
+    <button class="req-back-btn" onclick="reqShowList()">← Back to Staff Portal</button>
+  </div>
+  <!-- Timesheets panel: self-service PDF download for current + previous pay period -->
+  <div class="req-panel" id="req-panel-timesheets" style="display:none;">
+    <div id="req-timesheets-content"></div>
     <button class="req-back-btn" onclick="reqShowList()">← Back to Staff Portal</button>
   </div>
   <!-- Annual leave conflict modal -->
@@ -2127,6 +2145,10 @@
         <button class="ts-fn-btn" onclick="tsNavFn(1)">Next →</button>
         <button class="ts-fn-btn ts-today-btn" onclick="tsGoToday()">Today</button>
         <div class="page-ribbon-spacer"></div>
+        <label class="finalize-toggle" id="ts-finalize-toggle" title="Controls whether staff can download their own timesheet PDF for this pay period from the Staff Portal">
+          <input type="checkbox" id="ts-finalize-cb" onchange="tsToggleFinalize(this)" />
+          <span id="ts-finalize-label">Not finalised for staff</span>
+        </label>
         <button class="dl-ts-btn" onclick="showDownloadTimesheetsModal()">⎙ Download Timesheets</button>
         <button class="export-btn" onclick="showMyobExportModal()">⬇ Export for MYOB</button>
       </div>
@@ -3268,7 +3290,7 @@ const db = {
 let _emps=[], _entries=[], _notes=[], _mgrs=[];
 let _editingEmpId=null;
 let _rosterConfig=null, _rosterTemplates=[], _rosterOverrides=[];
-let _rosterShifts=[], _rosterFortnights=[], _coverageRules=[];
+let _rosterShifts=[], _rosterFortnights=[], _coverageRules=[], _timesheetFinalizations=[];
 let _publicHolidays=new Set(); // dates (YYYY-MM-DD) flagged as public holidays
 
 // Roster builder state
@@ -3285,7 +3307,7 @@ let rbState={Receptionist:{collapsed:false},Nurse:{collapsed:false},Manager:{col
 async function loadAll() {
   showLoading(true);
   try {
-    const [emps, entries, notes, mgrs, rosterCfg, rosterTmpl, rosterOv, rosterShifts, rosterFn, covRules, reqs, notifs, phs] = await Promise.all([
+    const [emps, entries, notes, mgrs, rosterCfg, rosterTmpl, rosterOv, rosterShifts, rosterFn, covRules, reqs, notifs, phs, tsFinal] = await Promise.all([
       db.get('employees'),
       db.get('entries'),
       db.get('notes'),
@@ -3298,7 +3320,8 @@ async function loadAll() {
       db.get('coverage_rules'),
       db.get('requests').catch(()=>[]),
       db.get('notifications').catch(()=>[]),
-      db.get('public_holidays').catch(()=>[])
+      db.get('public_holidays').catch(()=>[]),
+      db.get('timesheet_finalizations').catch(()=>[])
     ]);
     _emps    = emps.filter(e=>e.active!==false);
     _entries = entries.map(normaliseEntry);
@@ -3333,6 +3356,7 @@ async function loadAll() {
     _requests        = reqs.map(normaliseRequest);
     _notifications   = notifs.map(normaliseNotif);
     _publicHolidays  = new Set((phs||[]).map(r=>r.date));
+    _timesheetFinalizations = tsFinal||[];
   } catch(e) {
     showToast('⚠ Could not connect to database — check your internet connection');
     console.error(e);
@@ -4733,6 +4757,26 @@ function tsIsAutoApproved(entry, shift){
   return true;
 }
 
+// An entry is "ready" if explicitly locked, auto-approved, or no clock required (leave/manager).
+// Core logic takes the actual emp/shift objects directly — no array lookups — so it's safe to
+// call from anywhere that already has them locally scoped (e.g. dlTsGeneratePDF, which may be
+// operating on a Staff Portal employee-scoped dataset rather than the admin's shared globals).
+function tsEntryReadyCore(entry, emp, shift){
+  if(entry.locked&&!!(entry.finalEnd||entry.clockOut)) return true;
+  const _pt=entry.payrollType||entry.leaveType||'';
+  const _nce=!entry.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp?.role==='Manager'||!!_pt);
+  return _nce||tsIsAutoApproved(entry,shift);
+}
+// Array-lookup wrapper for admin code that only has the entry and needs to find its emp/shift
+// from the full company dataset. Shared by the MYOB export readiness check and the
+// timesheet-finalize toggle readiness check so the two can't quietly diverge on what "ready" means.
+function tsIsEntryReady(e, rosterShiftsSrc=_rosterShifts, empsSrc=_emps){
+  const emp=empsSrc.find(em=>em.id===e.employeeId);
+  const shift=(e.shiftId&&rosterShiftsSrc.find(s=>String(s.id)===String(e.shiftId)))
+    ||rosterShiftsSrc.find(s=>s.employee_id===e.employeeId&&s.date===e.date&&!s.is_day_off);
+  return tsEntryReadyCore(e,emp,shift);
+}
+
 // Single source of truth for a shift's effective start/end time — snaps each side to
 // the roster independently based on that side's own grace-period proximity. Shared by
 // the timesheet row display (tsBuildRow) and the MYOB category calculation
@@ -5269,11 +5313,95 @@ async function tsAutoLockSweep(){
   if(changed) renderTimesheets();
 }
 
+function tsRenderFinalizeToggle(fnStart){
+  const toggle=document.getElementById('ts-finalize-toggle');
+  const cb=document.getElementById('ts-finalize-cb');
+  const label=document.getElementById('ts-finalize-label');
+  if(!toggle||!cb||!label) return;
+  const isFinal=_timesheetFinalizations.some(f=>f.fn_start===fnStart);
+  cb.checked=isFinal;
+  toggle.classList.toggle('live',isFinal);
+  label.textContent=isFinal?'✓ Finalised for staff':'Not finalised for staff';
+}
+
+async function tsToggleFinalize(cb){
+  const fnStart=getPayPeriodStart(tsOffset);
+  const fnDays=getFortnight14Days(fnStart);
+  if(cb.checked){
+    // Turning ON — warn about anything that won't render as a final, reviewed day on staff's PDF.
+    // Two distinct cases, matching dlTsGeneratePDF's own row types exactly:
+    //  - an entry exists but isn't locked/auto-approved (missed clock-out, unresolved gap, etc.) → "Provisional"
+    //  - a rostered day has no entry at all yet → "Not yet finalised"
+    const activeEmps=_emps.filter(e=>!e.is_placeholder);
+    const activeEmpIds=new Set(activeEmps.map(e=>e.id));
+    const allEntries=_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted&&activeEmpIds.has(e.employeeId));
+    const canonicalEntries=groupEntriesByDay(allEntries);
+    const notReady=canonicalEntries.filter(e=>!tsIsEntryReady(e));
+    const missing=[];
+    activeEmps.forEach(emp=>{
+      _rosterShifts.filter(s=>s.employee_id===emp.id&&fnDays.includes(s.date)&&!s.is_day_off).forEach(s=>{
+        if(!canonicalEntries.some(e=>e.employeeId===emp.id&&e.date===s.date)) missing.push({employeeName:emp.name});
+      });
+    });
+    let msg;
+    if(!canonicalEntries.length&&!missing.length){
+      msg=`${srFortnightLabel(fnStart)} has no timesheet data yet — finalising now would publish an empty timesheet to every staff member.\n\nFinalise anyway?`;
+    } else {
+      msg=`Finalise ${srFortnightLabel(fnStart)} for staff self-service download?\n\nStaff will be able to download their own PDF timesheet for this pay period from the Staff Portal.`;
+      const issues=[];
+      if(notReady.length){
+        const names=[...new Set(notReady.map(e=>e.employeeName||'Unknown'))];
+        issues.push(`${notReady.length} entr${notReady.length===1?'y is':'ies are'} not yet locked/approved (${names.slice(0,5).join(', ')}${names.length>5?`, +${names.length-5} more`:''}) — will show as "Provisional" on their PDF.`);
+      }
+      if(missing.length){
+        const names=[...new Set(missing.map(m=>m.employeeName))];
+        issues.push(`${missing.length} rostered day${missing.length===1?'':'s'} with no clock-in yet (${names.slice(0,5).join(', ')}${names.length>5?`, +${names.length-5} more`:''}) — will show as "Not yet finalised" on their PDF.`);
+      }
+      if(issues.length) msg=`${issues.join('\n\n')}\n\nFinalise anyway?`;
+    }
+    if(!confirm(msg)){ cb.checked=false; return; }
+    const row={id:'TF'+Date.now(), fn_start:fnStart, finalized_by:currentManager?.name||null, finalized_at:new Date().toISOString()};
+    try{
+      await db.insert('timesheet_finalizations',row);
+      _timesheetFinalizations.push(row);
+      tsRenderFinalizeToggle(fnStart);
+      showToast('Finalised — staff can now download their timesheet for this period ✓');
+    }catch(e){
+      cb.checked=false;
+      if(/duplicate|unique|conflict/i.test(e?.message||'')){
+        try{ _timesheetFinalizations=await db.get('timesheet_finalizations'); }catch(e2){}
+        tsRenderFinalizeToggle(fnStart);
+        showToast('Already finalised by someone else — refreshed');
+      } else {
+        showToast('Could not finalise — check your internet connection');
+        console.error(e);
+      }
+    }
+  } else {
+    // Turning OFF
+    if(!confirm(`Un-finalise ${srFortnightLabel(fnStart)}?\n\nStaff will no longer be able to download their timesheet PDF for this period until you re-finalise it. This does not affect anything they've already downloaded.`)){
+      cb.checked=true; return;
+    }
+    const existing=_timesheetFinalizations.find(f=>f.fn_start===fnStart);
+    try{
+      if(existing) await db.delete('timesheet_finalizations',existing.id);
+      _timesheetFinalizations=_timesheetFinalizations.filter(f=>f.fn_start!==fnStart);
+      tsRenderFinalizeToggle(fnStart);
+      showToast('Un-finalised');
+    }catch(e){
+      cb.checked=true;
+      showToast('Could not un-finalise — check your internet connection');
+      console.error(e);
+    }
+  }
+}
+
 function renderTimesheets(){
   const fnStart=getPayPeriodStart(tsOffset);
   const fnDays=getFortnight14Days(fnStart);
   const labelEl=document.getElementById('ts-fn-label');
   if(labelEl) labelEl.textContent=srFortnightLabel(fnStart);
+  tsRenderFinalizeToggle(fnStart);
 
   const emps=_emps.filter(e=>e.role===tsRole&&!e.is_placeholder).sort((a,b)=>a.name.localeCompare(b.name));
   // Collapse all employees the first time each role tab is visited; preserve state after that
@@ -5992,23 +6120,12 @@ function exportMYOBSelected(){
   const fnDays=getFortnight14Days(fnStart);
   const allEntries=_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted&&selectedIds.has(e.employeeId));
 
-  // An entry is "ready" if explicitly locked, auto-approved, or no clock required (leave/manager)
-  const isReady=e=>{
-    if(e.locked&&!!(e.finalEnd||e.clockOut)) return true;
-    const emp=_emps.find(em=>em.id===e.employeeId);
-    const shift=(e.shiftId&&_rosterShifts.find(s=>String(s.id)===String(e.shiftId)))
-      ||_rosterShifts.find(s=>s.employee_id===e.employeeId&&s.date===e.date&&!s.is_day_off);
-    const _pt=e.payrollType||e.leaveType||'';
-    const _nce=!e.clockIn&&!!shift?.start_time&&!!shift?.end_time&&(emp?.role==='Manager'||!!_pt);
-    return _nce||tsIsAutoApproved(e,shift);
-  };
-
-  const ready=allEntries.filter(e=>isReady(e)&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
+  const ready=allEntries.filter(e=>tsIsEntryReady(e)&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
   // Check readiness using the same grouped-per-day canonical entry that the UI locks —
   // prevents false warnings from secondary raw entries on the same day. Scoped to the
   // selected staff only — someone deliberately left unchecked never shows up here.
   const canonicalEntries=groupEntriesByDay(allEntries);
-  const notReady=canonicalEntries.filter(e=>!isReady(e)&&selectedIds.has(e.employeeId)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
+  const notReady=canonicalEntries.filter(e=>!tsIsEntryReady(e)&&selectedIds.has(e.employeeId)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
 
   if(!ready.length){showToast('No locked entries to export for the selected staff.');return;}
   if(notReady.length){
@@ -6175,7 +6292,11 @@ async function downloadTimesheetsPDFs(){
   }
 }
 
-function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
+// shiftsSrc/entriesSrc/notesSrc default to the admin's shared globals so the existing bulk-download
+// call site needs no changes. The Staff Portal's self-service download passes its own
+// employee-scoped arrays instead — deliberately never touching the shared globals, so flipping
+// between Admin and the Portal in the same session can't silently narrow the admin's data.
+function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo,shiftsSrc=_rosterShifts,entriesSrc=_entries,notesSrc=_notes){
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const margin=14;
   const pageW=210;
@@ -6230,11 +6351,11 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
   doc.line(margin,43,pageW-margin,43);
 
   // ── Collect data ──
-  const empShifts=_rosterShifts
+  const empShifts=shiftsSrc
     .filter(s=>s.employee_id==emp.id&&fnDays.includes(s.date)&&!s.is_day_off)
     .sort((a,b)=>a.date.localeCompare(b.date)||(a.start_time||'').localeCompare(b.start_time||''));
-  const empEntries=_entries.filter(e=>e.employeeId===emp.id&&fnDays.includes(e.date)&&!e.deleted);
-  const empNotes=_notes.filter(n=>n.employeeId===emp.id&&fnDays.includes(n.date));
+  const empEntries=entriesSrc.filter(e=>e.employeeId===emp.id&&fnDays.includes(e.date)&&!e.deleted);
+  const empNotes=notesSrc.filter(n=>n.employeeId===emp.id&&fnDays.includes(n.date));
 
   // ── Build rows ──
   const tableRows=[];
@@ -6255,10 +6376,14 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
       tableRows.push({cells:[dateStr,'Not yet finalised','','','','','',''],type:'pending'});
       return;
     }
+    // A day that isn't locked/auto-approved yet is shown as Provisional rather than silently
+    // rendering as a normal reviewed row — the manager's finalise-warning promises this.
+    const isProvisional=!tsEntryReadyCore(entry,emp,shift);
     if(entry.leaveType){
       const hrs=entry.hours!=null?parseFloat(entry.hours):null;
       if(hrs!=null&&!isNaN(hrs)&&entry.leaveType!=='public_holiday') totalLeave+=hrs;
-      tableRows.push({cells:[dateStr,LEAVE_TYPES[entry.leaveType]||entry.leaveType,'','','',hrs!=null?hrs.toFixed(2):'','',''],type:'leave'});
+      const leaveLabel=(LEAVE_TYPES[entry.leaveType]||entry.leaveType)+(isProvisional?' (Provisional)':'');
+      tableRows.push({cells:[dateStr,leaveLabel,'','','',hrs!=null?hrs.toFixed(2):'','',''],type:isProvisional?'provisional':'leave'});
       return;
     }
     // Worked
@@ -6286,8 +6411,8 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     if(entry.travelKm) noteParts.push('Car: '+entry.travelKm+'km');
     const resolvedNotes=empNotes.filter(n=>n.entryId===entry.id&&n.status!=='pending'&&n.resolvedBy);
     const approvedBy=resolvedNotes.length?(resolvedNotes[0].resolvedBy||'').split(' ').map(w=>w[0]||'').join(''):'';
-    const shiftLabel=shift?'Worked':'Worked (unrostered)';
-    tableRows.push({cells:[dateStr,shiftLabel,finalIn,finalOut,breakStr,hrs!=null?hrs.toFixed(2):'',noteParts.join(' · '),approvedBy],type:'worked'});
+    const shiftLabel=(shift?'Worked':'Worked (unrostered)')+(isProvisional?' (Provisional)':'');
+    tableRows.push({cells:[dateStr,shiftLabel,finalIn,finalOut,breakStr,hrs!=null?hrs.toFixed(2):'',noteParts.join(' · '),approvedBy],type:isProvisional?'provisional':'worked'});
     // Gap leave rows — only for types that don't fold into worked hours (pay_to_roster already included)
     const paidGapTypes={annual_leave:'Annual Leave',personal_leave:'Personal Leave',compassionate_leave:'Compassionate Leave',long_service_leave:'Long Service Leave'};
     if(entry.leaveTypeGap&&entry.leaveTypeGap!=='pay_to_roster'&&entry.leaveGapHours>0){
@@ -6325,7 +6450,7 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
     didParseCell(data){
       if(data.section==='body'){
         const rowType=tableRows[data.row.index]?.type;
-        if(rowType==='pending'){
+        if(rowType==='pending'||rowType==='provisional'){
           data.cell.styles.textColor=[168,110,38];
           data.cell.styles.fontStyle='bold';
         } else if(rowType==='leave'){
@@ -6351,11 +6476,15 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo){
   doc.setTextColor(45,36,38);
   doc.text(`Total: ${(totalWorked+totalLeave).toFixed(2)} hrs`,margin+90,finalY+8);
   const pendingCount=tableRows.filter(r=>r.type==='pending').length;
-  if(pendingCount){
+  const provisionalCount=tableRows.filter(r=>r.type==='provisional').length;
+  if(pendingCount||provisionalCount){
+    const parts=[];
+    if(pendingCount) parts.push(`${pendingCount} day${pendingCount===1?'':'s'} not yet finalised`);
+    if(provisionalCount) parts.push(`${provisionalCount} day${provisionalCount===1?'':'s'} provisional (pending manager review)`);
     doc.setFont('helvetica','italic');
     doc.setFontSize(7.5);
     doc.setTextColor(150,110,60);
-    doc.text(`Note: ${pendingCount} day${pendingCount===1?'':'s'} not yet finalised — total hours above may be incomplete.`,margin,finalY+14);
+    doc.text(`Note: ${parts.join(', ')} — total hours above may be incomplete or subject to change.`,margin,finalY+14);
   }
   return doc;
 }
@@ -9262,6 +9391,7 @@ async function openRequestsView(){
   document.getElementById('req-panel-list').style.display='none';
   document.getElementById('req-panel-form').style.display='none';
   document.getElementById('req-panel-detail').style.display='none';
+  document.getElementById('req-panel-timesheets').style.display='none';
   const lbl=document.getElementById('req-user-label'); if(lbl) lbl.style.display='none';
   // Reset PIN login form
   const sel=document.getElementById('req-staff-select');
@@ -9390,6 +9520,7 @@ async function reqShowList(){
   document.getElementById('req-panel-list').style.display='';
   document.getElementById('req-panel-form').style.display='none';
   document.getElementById('req-panel-detail').style.display='none';
+  document.getElementById('req-panel-timesheets').style.display='none';
   const lbl=document.getElementById('req-user-label'); if(lbl) lbl.style.display='none';
   setTimeout(focusRFID,80);
 }
@@ -9558,6 +9689,79 @@ function reqStatusSub(r,isInitiator){
   return `Submitted ${reqFmtDate(r.createdAt)}`;
 }
 
+/* ═══════════════════════════════════════════
+   STAFF PORTAL — MY TIMESHEETS
+   Self-service PDF download for the current + previous pay period, gated on a manager
+   having finalised that period (timesheet_finalizations). Generated live on click via the
+   same dlTsGeneratePDF() used by the admin bulk export — never a stored/cached PDF.
+═══════════════════════════════════════════ */
+let _reqTsCache=null; // {shifts,entries} scoped to _reqEmployee, refreshed each time the panel opens
+
+async function reqShowTimesheets(){
+  document.getElementById('req-panel-auth').style.display='none';
+  document.getElementById('req-panel-list').style.display='none';
+  document.getElementById('req-panel-form').style.display='none';
+  document.getElementById('req-panel-detail').style.display='none';
+  document.getElementById('req-panel-timesheets').style.display='';
+  const emp=_reqEmployee;
+  const content=document.getElementById('req-timesheets-content');
+  if(!emp||!content) return;
+  content.innerHTML=`<div class="req-emp-greeting">My Timesheets</div><div class="req-empty">Loading…</div>`;
+  try{
+    const [finals,entriesRaw,shifts]=await Promise.all([
+      db.get('timesheet_finalizations').catch(()=>[]),
+      db.get('entries',{employee_id:emp.id}),
+      db.get('roster_shifts',{employee_id:emp.id})
+    ]);
+    _reqTsCache={shifts,entries:entriesRaw.map(normaliseEntry)};
+    const periods=[0,-1].map(offset=>{
+      const fnStart=getPayPeriodStart(offset);
+      return {offset,fnStart,fnLabel:srFortnightLabel(fnStart),isFinal:(finals||[]).some(f=>f.fn_start===fnStart)};
+    });
+    content.innerHTML=`<div class="req-emp-greeting">My Timesheets</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">Download your own timesheet as a PDF for the current or previous pay period.</div>
+      ${periods.map(p=>`
+        <div class="req-status-card" style="cursor:default;">
+          <div class="req-status-title">${p.offset===0?'This pay period':'Last pay period'}</div>
+          <div class="req-status-sub">${escHtml(p.fnLabel)}</div>
+          ${p.isFinal
+            ?`<button class="req-new-btn" style="margin-top:0.6rem;" onclick="reqDownloadTimesheet('${p.fnStart}','${escHtml(p.fnLabel).replace(/'/g,"\\'")}',this)">⬇ Download PDF</button>`
+            :`<div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">Not yet finalised — check back once your manager completes this pay run.</div>`
+          }
+        </div>`).join('')}`;
+  }catch(e){
+    content.innerHTML=`<div class="req-emp-greeting">My Timesheets</div><div class="req-empty">Could not load your timesheets — check your internet connection</div>`;
+    console.error(e);
+  }
+}
+
+async function reqDownloadTimesheet(fnStart,fnLabel,btn){
+  const emp=_reqEmployee;
+  if(!emp||!_reqTsCache){showToast('Please reopen My Timesheets and try again');return;}
+  const origText=btn.textContent;
+  btn.disabled=true; btn.textContent='Preparing…';
+  try{
+    await loadDlTsLibs();
+    const {jsPDF}=window.jspdf;
+    const logo=await dlTsLoadLogo();
+    const fnDays=getFortnight14Days(fnStart);
+    const pdf=dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo,_reqTsCache.shifts,_reqTsCache.entries);
+    // Match the admin bulk-download's filename convention (name + DDMMYY period) — a bare
+    // date with no name risks two staff overwriting/colliding on a shared kiosk PC.
+    const fmtDDMMYY=iso=>{const[y,m,d]=iso.split('-');return`${d}${m}${y.slice(2)}`;};
+    const periodStr=`${fmtDDMMYY(fnDays[0])}-${fmtDDMMYY(fnDays[fnDays.length-1])}`;
+    const nameParts=emp.name.trim().split(/\s+/);
+    const firstName=(nameParts[0]||'').replace(/[^a-zA-Z0-9]/g,'');
+    const lastName=(nameParts.slice(1).join('_')||'Unknown').replace(/[^a-zA-Z0-9_]/g,'');
+    pdf.save(`Running_Well_Timesheet_${firstName}_${lastName}_${periodStr}.pdf`);
+  }catch(e){
+    showToast('Could not generate PDF — check your internet connection');
+    console.error(e);
+  } finally {
+    btn.disabled=false; btn.textContent=origText;
+  }
+}
+
 function reqShowDetail(requestId){
   _reqDetailId=requestId;
   const r=_requests.find(x=>x.id===requestId);
@@ -9637,6 +9841,7 @@ function reqShowDetail(requestId){
   document.getElementById('req-panel-list').style.display='none';
   document.getElementById('req-panel-form').style.display='none';
   document.getElementById('req-panel-detail').style.display='';
+  document.getElementById('req-panel-timesheets').style.display='none';
 }
 
 function reqPeerAcceptConfirm(requestId){
@@ -9711,6 +9916,7 @@ function reqShowForm(){
   document.getElementById('req-panel-list').style.display='none';
   document.getElementById('req-panel-form').style.display='';
   document.getElementById('req-panel-detail').style.display='none';
+  document.getElementById('req-panel-timesheets').style.display='none';
   const lbl=document.getElementById('req-user-label');
   if(lbl&&_reqEmployee){ lbl.textContent=`${_reqEmployee.name} · ${_reqEmployee.role}`; lbl.style.display=''; }
 }
@@ -9954,13 +10160,27 @@ async function reqSubmitPickup(){
 }
 
 function reqLogout(){
-  _reqEmployee=null; _reqListTab='active';
+  _reqEmployee=null; _reqListTab='active'; _reqTsCache=null;
   document.getElementById('req-panel-auth').style.display='';
   document.getElementById('req-panel-list').style.display='none';
   document.getElementById('req-panel-form').style.display='none';
   document.getElementById('req-panel-detail').style.display='none';
+  document.getElementById('req-panel-timesheets').style.display='none';
   showView('kiosk');
 }
+
+// Idle auto-logout for the Staff Portal — this is a shared, walk-up kiosk screen, and a
+// logged-in session now exposes a one-click download of a full fortnight's payroll PDF
+// (times, breaks, notes, approver initials), not just leave requests. Reuses the same
+// _rwLastActivity tracker the RFID focus-recovery logic already maintains (click/keydown/
+// touchstart/mousemove) rather than adding a second set of activity listeners.
+const REQ_PORTAL_IDLE_MS=90*1000;
+setInterval(()=>{
+  if(_reqEmployee&&Date.now()-_rwLastActivity>REQ_PORTAL_IDLE_MS){
+    reqLogout();
+    showToast('Session timed out — please sign in again');
+  }
+},5000);
 
 async function reqCreateNotification(employeeId,requestId,message,type){
   const id='N'+Date.now();
