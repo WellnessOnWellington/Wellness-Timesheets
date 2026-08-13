@@ -2753,15 +2753,22 @@
           <div style="padding:0.5rem 0 1.25rem;">
             <div style="font-size:0.82rem;color:var(--charcoal);font-weight:700;margin-bottom:0.2rem;">Running Well</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.1rem;">Built by Dr Joel Jaya</div>
-            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.0 &middot; August 2026</div>
+            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.1 &middot; August 2026</div>
           </div>
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
-                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.0</div>
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.1</div>
                 <div>
-                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">11 August 2026 &mdash; Go-Live: Paper Timesheets Retired</div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">13 August 2026 &mdash; Staff Self-Service Timesheets</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Staff can now download their own PDF timesheet for the current and previous pay period directly from the Staff Portal, once a manager has reviewed and pushed that pay period &mdash; no more manual download-and-email. Unreviewed days are clearly marked Provisional so what staff see always matches what's actually been checked. Manager and staff logins now also remember who last signed in on that device, skipping straight to the PIN field on return.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;opacity:0.5;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:3.5rem;">v2.0</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--muted);margin-bottom:0.15rem;">11 August 2026 &mdash; Go-Live: Paper Timesheets Retired</div>
                   <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Running Well is now the sole record of staff hours &mdash; backup physical timesheets stop from today. This release also bundles several weeks of reliability work: break-shortfall and late-departure gap decisions can no longer be silently bypassed, late overruns can be resolved right from the timesheet row with Notes kept in sync, deleted roster shifts no longer leave orphaned leave entries behind, and MYOB export now lets you choose exactly which staff to include. Kiosk card-reader focus is now reliable during PIN entry, break notes, and staff requests. Fixed several Windows-specific performance issues causing reported mouse lag on kiosk PCs, and timesheet hour totals are now guaranteed to match the MYOB breakdown exactly.</div>
                 </div>
               </div>
@@ -3467,7 +3474,7 @@ function showLoading(on) {
   el.style.animationPlayState = on ? 'running' : 'paused';
 }
 
-const APP_VERSION='2.0';
+const APP_VERSION='2.1';
 const APP_VERSION_DATE='August 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 // The single per-role threshold: within it, no prompt/flag and the shift auto-approves;
