@@ -4216,6 +4216,11 @@ async function populateManagerSelect(){
     document.getElementById('login-btn').disabled=true;
     hint.textContent='';
     _mgrs.filter(m=>m.pinHash).forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.name;sel.appendChild(o);});
+    // Remember the last manager who logged in on this device — saves a tap on a personal phone.
+    // Never remembers the PIN itself, only which name to pre-select.
+    let lastId=null;
+    try { lastId=localStorage.getItem('rw_last_manager_id'); } catch(e){}
+    if(lastId&&_mgrs.some(m=>m.id===lastId&&m.pinHash)){ sel.value=lastId; onManagerSelect(); }
   }
   document.getElementById('login-error').textContent='';
   document.getElementById('manager-pin').value='';
@@ -4262,6 +4267,7 @@ async function managerLogin(){
   currentManager={id:mgr.id,name:mgr.name,role:mgr.role||'manager'};
   document.getElementById('manager-pin').value='';
   try { await db.update('managers',mgr.id,{last_login:new Date().toISOString()}); } catch(e){}
+  try { localStorage.setItem('rw_last_manager_id',mgr.id); } catch(e){}
   showView('admin');
   resetLogoutTimer();
 }
@@ -9406,6 +9412,16 @@ async function openRequestsView(){
   const pinInput=document.getElementById('req-staff-pin');
   if(pinInput) pinInput.value='';
   if(_lockoutInterval){clearInterval(_lockoutInterval);_lockoutInterval=null;}
+  // Remember the last staff member who signed in on this device — saves a tap on a personal
+  // phone. Never remembers the PIN itself, only which name to pre-select. Applied after the
+  // resets above so it isn't immediately undone by them.
+  if(sel){
+    let lastId=null;
+    try { lastId=localStorage.getItem('rw_last_staff_id'); } catch(e){}
+    if(lastId&&[..._emps].some(e=>e.id===lastId&&e.active!==false&&!e.is_placeholder)){
+      sel.value=lastId; onStaffNameSelect();
+    }
+  }
   showView('requests');
 }
 
@@ -9491,6 +9507,7 @@ async function staffPINLogin(){
   _staffLoginAttempts[selId]={count:0,lockedUntil:0};
   if(pinInput) pinInput.value='';
   if(_lockoutInterval){clearInterval(_lockoutInterval);_lockoutInterval=null;}
+  try { localStorage.setItem('rw_last_staff_id',emp.id); } catch(e){}
   _reqEmployee=emp;
   await reqShowList();
 }
