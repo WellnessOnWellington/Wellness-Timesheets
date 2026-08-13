@@ -2147,7 +2147,7 @@
         <div class="page-ribbon-spacer"></div>
         <label class="finalize-toggle" id="ts-finalize-toggle" title="Controls whether staff can download their own timesheet PDF for this pay period from the Staff Portal">
           <input type="checkbox" id="ts-finalize-cb" onchange="tsToggleFinalize(this)" />
-          <span id="ts-finalize-label">Not finalised for staff</span>
+          <span id="ts-finalize-label">Timesheets not pushed</span>
         </label>
         <button class="dl-ts-btn" onclick="showDownloadTimesheetsModal()">⎙ Download Timesheets</button>
         <button class="export-btn" onclick="showMyobExportModal()">⬇ Export for MYOB</button>
@@ -5321,7 +5321,7 @@ function tsRenderFinalizeToggle(fnStart){
   const isFinal=_timesheetFinalizations.some(f=>f.fn_start===fnStart);
   cb.checked=isFinal;
   toggle.classList.toggle('live',isFinal);
-  label.textContent=isFinal?'✓ Finalised for staff':'Not finalised for staff';
+  label.textContent=isFinal?'✓ Timesheets pushed':'Timesheets not pushed';
 }
 
 async function tsToggleFinalize(cb){
@@ -5345,9 +5345,9 @@ async function tsToggleFinalize(cb){
     });
     let msg;
     if(!canonicalEntries.length&&!missing.length){
-      msg=`${srFortnightLabel(fnStart)} has no timesheet data yet — finalising now would publish an empty timesheet to every staff member.\n\nFinalise anyway?`;
+      msg=`${srFortnightLabel(fnStart)} has no timesheet data yet — pushing it now would make an empty timesheet available to every staff member.\n\nPush anyway?`;
     } else {
-      msg=`Finalise ${srFortnightLabel(fnStart)} for staff self-service download?\n\nStaff will be able to download their own PDF timesheet for this pay period from the Staff Portal.`;
+      msg=`Push ${srFortnightLabel(fnStart)} to staff for self-service download?\n\nStaff will be able to download their own PDF timesheet for this pay period from the Staff Portal.`;
       const issues=[];
       if(notReady.length){
         const names=[...new Set(notReady.map(e=>e.employeeName||'Unknown'))];
@@ -5357,7 +5357,7 @@ async function tsToggleFinalize(cb){
         const names=[...new Set(missing.map(m=>m.employeeName))];
         issues.push(`${missing.length} rostered day${missing.length===1?'':'s'} with no clock-in yet (${names.slice(0,5).join(', ')}${names.length>5?`, +${names.length-5} more`:''}) — will show as "Not yet finalised" on their PDF.`);
       }
-      if(issues.length) msg=`${issues.join('\n\n')}\n\nFinalise anyway?`;
+      if(issues.length) msg=`${issues.join('\n\n')}\n\nPush anyway?`;
     }
     if(!confirm(msg)){ cb.checked=false; return; }
     const row={id:'TF'+Date.now(), fn_start:fnStart, finalized_by:currentManager?.name||null, finalized_at:new Date().toISOString()};
@@ -5365,21 +5365,21 @@ async function tsToggleFinalize(cb){
       await db.insert('timesheet_finalizations',row);
       _timesheetFinalizations.push(row);
       tsRenderFinalizeToggle(fnStart);
-      showToast('Finalised — staff can now download their timesheet for this period ✓');
+      showToast('Pushed — staff can now download their timesheet for this period ✓');
     }catch(e){
       cb.checked=false;
       if(/duplicate|unique|conflict/i.test(e?.message||'')){
         try{ _timesheetFinalizations=await db.get('timesheet_finalizations'); }catch(e2){}
         tsRenderFinalizeToggle(fnStart);
-        showToast('Already finalised by someone else — refreshed');
+        showToast('Already pushed by someone else — refreshed');
       } else {
-        showToast('Could not finalise — check your internet connection');
+        showToast('Could not push — check your internet connection');
         console.error(e);
       }
     }
   } else {
     // Turning OFF
-    if(!confirm(`Un-finalise ${srFortnightLabel(fnStart)}?\n\nStaff will no longer be able to download their timesheet PDF for this period until you re-finalise it. This does not affect anything they've already downloaded.`)){
+    if(!confirm(`Stop pushing ${srFortnightLabel(fnStart)} to staff?\n\nStaff will no longer be able to download their timesheet PDF for this period until you push it again. This does not affect anything they've already downloaded.`)){
       cb.checked=true; return;
     }
     const existing=_timesheetFinalizations.find(f=>f.fn_start===fnStart);
@@ -5387,10 +5387,10 @@ async function tsToggleFinalize(cb){
       if(existing) await db.delete('timesheet_finalizations',existing.id);
       _timesheetFinalizations=_timesheetFinalizations.filter(f=>f.fn_start!==fnStart);
       tsRenderFinalizeToggle(fnStart);
-      showToast('Un-finalised');
+      showToast('Un-pushed');
     }catch(e){
       cb.checked=true;
-      showToast('Could not un-finalise — check your internet connection');
+      showToast('Could not un-push — check your internet connection');
       console.error(e);
     }
   }
@@ -9726,7 +9726,7 @@ async function reqShowTimesheets(){
           <div class="req-status-sub">${escHtml(p.fnLabel)}</div>
           ${p.isFinal
             ?`<button class="req-new-btn" style="margin-top:0.6rem;" onclick="reqDownloadTimesheet('${p.fnStart}','${escHtml(p.fnLabel).replace(/'/g,"\\'")}',this)">⬇ Download PDF</button>`
-            :`<div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">Not yet finalised — check back once your manager completes this pay run.</div>`
+            :`<div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">Not yet pushed by your manager — check back once this pay run is complete.</div>`
           }
         </div>`).join('')}`;
   }catch(e){
