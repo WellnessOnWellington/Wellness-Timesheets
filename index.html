@@ -1694,7 +1694,7 @@
     <div id="req-detail-content"></div>
     <button class="req-back-btn" onclick="reqShowList()">← Back to Staff Portal</button>
   </div>
-  <!-- Timesheets panel: self-service PDF download for current + previous pay period -->
+  <!-- Timesheets panel: self-service PDF download for the two most recently completed pay periods -->
   <div class="req-panel" id="req-panel-timesheets" style="display:none;">
     <div id="req-timesheets-content"></div>
     <button class="req-back-btn" onclick="reqShowList()">← Back to Staff Portal</button>
@@ -9715,9 +9715,9 @@ function reqStatusSub(r,isInitiator){
 
 /* ═══════════════════════════════════════════
    STAFF PORTAL — MY TIMESHEETS
-   Self-service PDF download for the current + previous pay period, gated on a manager
-   having finalised that period (timesheet_finalizations). Generated live on click via the
-   same dlTsGeneratePDF() used by the admin bulk export — never a stored/cached PDF.
+   Self-service PDF download for the two most recently completed pay periods, gated on a
+   manager having finalised that period (timesheet_finalizations). Generated live on click
+   via the same dlTsGeneratePDF() used by the admin bulk export — never a stored/cached PDF.
 ═══════════════════════════════════════════ */
 let _reqTsCache=null; // {shifts,entries} scoped to _reqEmployee, refreshed each time the panel opens
 
@@ -9738,16 +9738,16 @@ async function reqShowTimesheets(){
       db.get('roster_shifts',{employee_id:emp.id})
     ]);
     _reqTsCache={shifts,entries:entriesRaw.map(normaliseEntry)};
-    const periods=[0,-1].map(offset=>{
+    const periods=[-1,-2].map(offset=>{
       const fnStart=getPayPeriodStart(offset);
       return {offset,fnStart,fnLabel:srFortnightLabel(fnStart),isFinal:(finals||[]).some(f=>f.fn_start===fnStart)};
     });
     content.innerHTML=`<div class="req-emp-greeting">My Timesheets</div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">Download your own timesheet as a PDF for the current or previous pay period.</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">Download your own timesheet as a PDF for your two most recently completed pay periods.</div>
       ${periods.map(p=>`
         <div class="req-status-card" style="cursor:default;">
-          <div class="req-status-title">${p.offset===0?'This pay period':'Last pay period'}</div>
-          <div class="req-status-sub">${escHtml(p.fnLabel)}</div>
+          <div class="req-status-title">${escHtml(p.fnLabel)}</div>
+          ${p.offset===-1?`<div class="req-status-sub">Most recent</div>`:''}
           ${p.isFinal
             ?`<button class="req-new-btn" style="margin-top:0.6rem;" onclick="reqDownloadTimesheet('${p.fnStart}','${escHtml(p.fnLabel).replace(/'/g,"\\'")}',this)">⬇ Download PDF</button>`
             :`<div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">Not yet pushed by your manager — check back once this pay run is complete.</div>`
