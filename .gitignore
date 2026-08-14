@@ -1,0 +1,26 @@
+# This repo is served publicly via GitHub Pages — anything committed here is
+# downloadable by anyone. Keep payroll data, staff records and exports out of it.
+
+# macOS
+.DS_Store
+._*
+
+# Local Claude Code settings (per-machine, not shared)
+.claude/settings.local.json
+
+# Local working folders — payroll exports, physical timesheets, staff records
+July 2026/
+Old Support Files/
+Recent Exports/
+
+# Safety net for payroll/staff data formats, so a new working folder can't be
+# committed by accident. Remove or narrow these if the repo ever needs to track
+# a file of one of these types — note they are ignored silently.
+*.xlsx
+*.xls
+*.csv
+*.HEIC
+*.heic
+EMPLOY.TXT
+*MYOB*.TXT
+*MYOB*.txt
