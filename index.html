@@ -10430,22 +10430,32 @@ async function applyRosterWriteback(req){
     const end=new Date(req.leaveEndDate+'T12:00:00');
     while(cur<=end){ dates.push(rbDateKey(cur)); cur.setDate(cur.getDate()+1); }
     for(const date of dates){
-      // Leave is stored in entries table (not roster_shifts which has no leave_type column)
-      const rShift=_rosterShifts.find(s=>s.employee_id===req.initiatorId&&s.date===date);
-      if(!rShift) continue;
-      const clockIn=(rShift.start_time||'').slice(0,5);
-      const clockOut=(rShift.end_time||'').slice(0,5);
-      const mins=timeStrToMin(rShift.end_time)-timeStrToMin(rShift.start_time);
-      const hours=(mins/60).toFixed(2);
-      const existingLeave=_entries.find(e=>e.employeeId===req.initiatorId&&e.date===date&&e.leaveType);
-      if(existingLeave){
-        await db.update('entries',existingLeave.id,{leave_type:req.leaveType,clock_in:clockIn,clock_out:clockOut,hours});
-        Object.assign(existingLeave,{leaveType:req.leaveType,clockIn,clockOut,hours});
-      } else {
-        const row={id:'L'+Date.now()+'_'+date,employee_id:req.initiatorId,employee_name:req.initiatorName,role:req.initiatorRole,date,clock_in:clockIn,clock_out:clockOut,hours,leave_type:req.leaveType,status:'normal'};
-        const returned=await db.insert('entries',row);
-        const saved=Array.isArray(returned)?returned[0]:returned;
-        _entries.push(normaliseEntry({...row,id:saved?.id||row.id}));
+      // Leave is stored in entries table (not roster_shifts which has no leave_type column).
+      // A day can hold several shifts (split shift), and EVERY segment needs its own leave
+      // entry carrying shift_id — the split-shift timesheet branch matches leave to segments
+      // by shift_id, so an entry without one matches no segment and the whole day renders as
+      // an unexplained no-clock-in. Previously this took only the first shift of the day and
+      // set no shift_id at all, so split-shift leave was both half-applied and orphaned.
+      const dayShifts=_rosterShifts.filter(s=>s.employee_id===req.initiatorId&&s.date===date&&!s.is_day_off&&s.start_time&&s.end_time);
+      if(!dayShifts.length) continue;
+      for(const rShift of dayShifts){
+        const clockIn=(rShift.start_time||'').slice(0,5);
+        const clockOut=(rShift.end_time||'').slice(0,5);
+        const mins=timeStrToMin(rShift.end_time)-timeStrToMin(rShift.start_time);
+        const hours=(mins/60).toFixed(2);
+        // Adopt an existing entry for this segment, or a legacy one with no shift_id at all
+        // (written before this fix) — the first segment claims it and stamps shift_id on it,
+        // so a later segment in the same loop no longer matches and creates its own.
+        const existingLeave=_entries.find(e=>e.employeeId===req.initiatorId&&e.date===date&&e.leaveType&&(e.shiftId===rShift.id||!e.shiftId));
+        if(existingLeave){
+          await db.update('entries',existingLeave.id,{leave_type:req.leaveType,clock_in:clockIn,clock_out:clockOut,hours,shift_id:rShift.id});
+          Object.assign(existingLeave,{leaveType:req.leaveType,clockIn,clockOut,hours,shiftId:rShift.id});
+        } else {
+          const row={id:'L'+Date.now()+'_'+rShift.id,employee_id:req.initiatorId,employee_name:req.initiatorName,role:req.initiatorRole,date,clock_in:clockIn,clock_out:clockOut,hours,leave_type:req.leaveType,shift_id:rShift.id,status:'normal'};
+          const returned=await db.insert('entries',row);
+          const saved=Array.isArray(returned)?returned[0]:returned;
+          _entries.push(normaliseEntry({...row,id:saved?.id||row.id}));
+        }
       }
     }
   } else if(req.type==='swap'){
@@ -10463,9 +10473,11 @@ async function applyRosterWriteback(req){
     await rbCleanupLinkedEntryOnShiftDelete(initShift.id);
     await rbCleanupLinkedEntryOnShiftDelete(colShift.id);
     // Insert new cross-swapped shifts before deleting originals
-    const rowA={id:'SH'+Date.now(),employee_id:req.initiatorId,date:req.colleagueShiftDate,start_time:req.colleagueShiftStart,end_time:req.colleagueShiftEnd,is_day_off:false};
+    // lane travels with the shift, not the person — dropping it silently moves a clinic
+    // (75plus) or admin shift onto the floor lane and breaks the dual-lane view.
+    const rowA={id:'SH'+Date.now(),employee_id:req.initiatorId,date:req.colleagueShiftDate,start_time:req.colleagueShiftStart,end_time:req.colleagueShiftEnd,is_day_off:false,lane:colShift.lane||null};
     await db.insert('roster_shifts',rowA);
-    const rowB={id:'SH'+(Date.now()+1),employee_id:req.colleagueId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false};
+    const rowB={id:'SH'+(Date.now()+1),employee_id:req.colleagueId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false,lane:initShift.lane||null};
     await db.insert('roster_shifts',rowB);
     await db.delete('roster_shifts',initShift.id);
     await db.delete('roster_shifts',colShift.id);
@@ -10478,7 +10490,7 @@ async function applyRosterWriteback(req){
     if(!initShift) throw new Error('Shift no longer exists in the roster — it may have been modified. Please check the roster and update manually.');
     const giveawayCleanup=await rbCleanupLinkedEntryOnShiftDelete(initShift.id);
     if(!giveawayCleanup.ok) throw new Error(`${req.initiatorName}'s shift has a locked leave entry — remove it from Timesheets before approving this give-away.`);
-    const newRow={id:'SH'+Date.now(),employee_id:req.colleagueId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false};
+    const newRow={id:'SH'+Date.now(),employee_id:req.colleagueId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false,lane:initShift.lane||null};
     await db.insert('roster_shifts',newRow);
     await db.delete('roster_shifts',initShift.id);
     _rosterShifts=freshShifts.filter(s=>s.id!==initShift.id);
@@ -10489,7 +10501,7 @@ async function applyRosterWriteback(req){
     if(!coverShift) throw new Error('Cover shift no longer exists — it may have already been filled or removed. Please check the roster.');
     const pickupCleanup=await rbCleanupLinkedEntryOnShiftDelete(coverShift.id);
     if(!pickupCleanup.ok) throw new Error('This cover shift has a locked leave entry — remove it from Timesheets before approving this pickup.');
-    const newRow={id:'SH'+Date.now(),employee_id:req.initiatorId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false};
+    const newRow={id:'SH'+Date.now(),employee_id:req.initiatorId,date:req.initiatorShiftDate,start_time:req.initiatorShiftStart,end_time:req.initiatorShiftEnd,is_day_off:false,lane:coverShift.lane||null};
     await db.insert('roster_shifts',newRow);
     await db.delete('roster_shifts',coverShift.id);
     _rosterShifts=freshShifts.filter(s=>s.id!==coverShift.id);
