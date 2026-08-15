@@ -2604,26 +2604,18 @@
         <div class="settings-section-body" id="ss-body-calendar" style="display:none;">
           <div class="roster-section" style="margin-bottom:1rem;">
             <div class="roster-section-title">Roster Cycle Start Date</div>
-            <div class="roster-anchor-bar" style="border-color:#e6a817;">
-              <div style="width:100%;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;background:#fff8e1;border:1.5px solid #f9c825;border-radius:8px;padding:0.45rem 0.75rem;">
-                <span style="font-size:1rem;flex-shrink:0;">⚠</span>
-                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all roster fortnight boundaries. Only change this during initial setup or if advised to do so.</span>
-              </div>
+            <div class="settings-section-hint">Roster fortnights run Monday to Sunday from this date, and it decides which weeks are A and which are B. Set during initial setup and fixed since &mdash; changing it would move every fortnight boundary and unlock published rosters, so it is shown here for reference rather than editing.</div>
+            <div class="roster-anchor-bar">
               <label class="form-label" style="margin:0;white-space:nowrap;">Cycle starts</label>
-              <input class="form-input" type="date" id="anchor-date" style="width:auto;border-color:#e6a817;" />
-              <button class="add-emp-btn" style="background:#e6a817;border-color:#e6a817;" onclick="saveAnchorDate()">Save</button>
+              <strong id="anchor-date-display" style="font-size:0.9rem;color:var(--text);"></strong>
             </div>
           </div>
           <div class="roster-section" style="margin-bottom:1rem;">
             <div class="roster-section-title">Pay Cycle Start Date</div>
-            <div class="roster-anchor-bar" style="border-color:#e6a817;">
-              <div style="width:100%;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;background:#fff8e1;border:1.5px solid #f9c825;border-radius:8px;padding:0.45rem 0.75rem;">
-                <span style="font-size:1rem;flex-shrink:0;">⚠</span>
-                <span style="font-size:0.75rem;font-weight:600;color:#7a5c00;line-height:1.4;">Changing this date recalculates all pay period boundaries in Timesheets and MYOB export. Must be a Tuesday. Only change this during initial setup or if advised to do so.</span>
-              </div>
+            <div class="settings-section-hint">Pay periods run Tuesday to Monday from this date. It is fixed in the app rather than editable &mdash; changing it would move every past pay period boundary in Timesheets and MYOB export, which is not something to do on a live payroll.</div>
+            <div class="roster-anchor-bar">
               <label class="form-label" style="margin:0;white-space:nowrap;">Period starts</label>
-              <input class="form-input" type="date" id="pay-period-anchor" style="width:auto;border-color:#e6a817;" />
-              <button class="add-emp-btn" style="background:#e6a817;border-color:#e6a817;" onclick="savePayPeriodAnchor()">Save</button>
+              <strong id="pay-period-anchor-display" style="font-size:0.9rem;color:var(--text);"></strong>
             </div>
           </div>
         </div>
@@ -7204,6 +7196,24 @@ const SR_ROLE_BAR={
 };
 const SR_ROLE_BG={Doctor:'rgba(139,37,53,0.10)',Nurse:'rgba(166,50,69,0.12)',Receptionist:'rgba(212,137,154,0.2)',Manager:'rgba(139,37,53,0.07)'};
 
+/* ── TWO SEPARATE FORTNIGHT GRIDS — read this before comparing any fn_start ──
+   The roster grid (below) is MONDAY-anchored off roster_config.cycle_start_date.
+   The pay grid (getPayPeriodStart) is TUESDAY-anchored. They are permanently one
+   day out of phase, by design and not by accident:
+
+       roster fortnight   Mon 10 Aug -> Sun 23 Aug
+       pay period         Tue 11 Aug -> Mon 24 Aug
+
+   So every roster fortnight opens with a Monday belonging to the PREVIOUS pay
+   period, and every pay period closes with a Monday that appears in the NEXT
+   roster fortnight. This is display-only — timesheets, MYOB export, finalisation
+   and the staff PDFs all map dates to pay periods directly, so nothing is mispaid.
+
+   The trap: `fn_start` in roster_fortnights is keyed to THIS grid, while
+   `fn_start` in timesheet_finalizations is keyed to the pay grid. Same column
+   name, different meaning, one day apart. Never compare or join them, and pick
+   the grid that matches what you're navigating — roster UI uses this one.
+   ─────────────────────────────────────────────────────────────────────────── */
 function getFortnightStart(offsetFortnights){
   const toMonday=d=>{const day=d.getDay();const diff=day===0?-6:1-day;return new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff);};
   const localDateStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -7222,10 +7232,22 @@ function getFortnightStart(offsetFortnights){
   return localDateStr(base);
 }
 
+/* Pay grid: TUESDAY-anchored, Tue -> Mon. One day out of phase with the roster
+   grid — see the block above getFortnightStart() for why, and for the fn_start
+   trap between roster_fortnights and timesheet_finalizations.
+
+   PAY_PERIOD_ANCHOR is deliberately a constant, not database-backed: there is no
+   pay_period_anchor column on roster_config (confirmed against live, 15 Aug 2026)
+   and the value below has always been what the app actually used. Re-cutting this
+   on a live payroll system would retroactively move every pay period boundary, so
+   it is not exposed in Settings. If it ever genuinely needs to change, add the
+   column and restore this as the fallback. */
+const PAY_PERIOD_ANCHOR='2026-04-21'; // Tuesday; PP26 (16-29 Jun 2026) lands exactly on this grid
+
 function getPayPeriodStart(offsetFortnights){
   const toTuesday=d=>{const day=d.getDay();const diff=-(((day-2)+7)%7);return new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff);};
   const localDateStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  const ppAnchorStr=_rosterConfig?.pay_period_anchor||'2026-04-21';
+  const ppAnchorStr=PAY_PERIOD_ANCHOR;
   const anchor=toTuesday(new Date(ppAnchorStr+'T12:00:00'));
   const today=toTuesday(new Date());
   const daysDiff=Math.floor((today-anchor)/86400000);
@@ -7988,8 +8010,6 @@ function getScheduledTimes(employeeId,dateStr){
    ROSTER UI – PHASE 2 BUILDER
 ═══════════════════════════════════════════ */
 function renderRoster(){
-  const anchorEl=document.getElementById('anchor-date');
-  if(anchorEl&&_rosterConfig) anchorEl.value=_rosterConfig.cycle_start_date;
   const fnStart=rbGetFnStart();
   const labelEl=document.getElementById('rb-fn-label');
   if(labelEl) labelEl.innerHTML=rbFnLabel(fnStart);
@@ -8884,10 +8904,11 @@ function toggleSettingsSection(key){
 }
 
 function renderAnchorDate(){
-  const el=document.getElementById('anchor-date');
-  if(el&&_rosterConfig) el.value=_rosterConfig.cycle_start_date||'';
-  const ppEl=document.getElementById('pay-period-anchor');
-  if(ppEl) ppEl.value=_rosterConfig?.pay_period_anchor||'2026-04-21';
+  const fmtAnchor=s=>s?new Date(s+'T12:00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'Not set';
+  const el=document.getElementById('anchor-date-display');
+  if(el) el.textContent=fmtAnchor(_rosterConfig?.cycle_start_date);
+  const ppEl=document.getElementById('pay-period-anchor-display');
+  if(ppEl) ppEl.textContent=new Date(PAY_PERIOD_ANCHOR+'T12:00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const currentPin=_rosterConfig?.roster_view_pin||ROSTER_VIEW_PIN;
   _savedWosPin=currentPin;
   [...document.querySelectorAll('.wos-pin-box[data-group="new"]')].forEach((box,i)=>{
@@ -8998,34 +9019,26 @@ async function saveWhosOnPIN(){
   }catch(e){showToast('Could not save PIN — check connection');console.error(e);}
 }
 
-async function saveAnchorDate(){
-  const v=document.getElementById('anchor-date').value;
-  if(!v){showToast('Please select a date');return;}
-  if(!confirm(`⚠ Change roster cycle anchor to ${v}?\n\nThis will recalculate ALL roster fortnight boundaries. Existing shifts will not move — they may appear in different fortnights than expected.\n\nOnly proceed if you are setting up the system for the first time or have been advised to do so.`)) return;
-  try{
-    if(_rosterConfig) await db.update('roster_config','default',{cycle_start_date:v});
-    else await db.insert('roster_config',{id:'default',cycle_start_date:v});
-    if(_rosterConfig) _rosterConfig.cycle_start_date=v;
-    else _rosterConfig={id:'default',cycle_start_date:v};
-    showToast('Roster cycle anchor saved');
-  }catch(e){showToast('Could not save — check connection');console.error(e);}
-}
+/* Both Calendar Setup editors were removed 15 Aug 2026; the section is now read-only.
+   They were setup-only values on a system that went live in August, and the only
+   realistic reason anyone would reach for either is a case where changing it is the
+   wrong fix.
 
-async function savePayPeriodAnchor(){
-  const v=document.getElementById('pay-period-anchor').value;
-  if(!v){showToast('Please select a date');return;}
-  const d=new Date(v+'T12:00:00');
-  if(d.getDay()!==2){showToast('Pay period anchor must be a Tuesday');return;}
-  if(!confirm(`⚠ Change pay period anchor to ${v}?\n\nThis will recalculate ALL pay period boundaries in Timesheets and MYOB export. Existing clock entries are not affected.\n\nOnly proceed if you are setting up the system for the first time or have been advised to do so.`)) return;
-  try{
-    if(_rosterConfig) await db.update('roster_config','default',{pay_period_anchor:v});
-    else await db.insert('roster_config',{id:'default',pay_period_anchor:v});
-    if(_rosterConfig) _rosterConfig.pay_period_anchor=v;
-    else _rosterConfig={id:'default',pay_period_anchor:v};
-    showToast('Pay period anchor saved');
-    renderTimesheets();
-  }catch(e){showToast('Could not save — check connection');console.error(e);}
-}
+   savePayPeriodAnchor() wrote to roster_config.pay_period_anchor — a column that has
+   never existed, so the save always failed. That value is now the PAY_PERIOD_ANCHOR
+   constant; see the block above getPayPeriodStart().
+
+   saveAnchorDate() wrote roster_config.cycle_start_date, which is real and still read
+   at runtime by getFortnightStart(), rbGetFnStart() and getWeekType() — so it stays
+   database-backed, just not editable from the UI. If it ever genuinely must change,
+   do it as a deliberate SQL update knowing that it:
+     • re-cuts every roster fortnight boundary, orphaning the roster_fortnights rows
+       that hold lock/publish state (they are keyed to fn_start on the old grid), and
+     • flips Week A and Week B when moved an odd number of weeks, since getWeekType()
+       is weeksDiff % 2 off this anchor — which changes the kiosk clock-in fallback
+       times, and with them grace-period prompts and unrostered-arrival notes.
+   A symptom of "Week A and B look swapped" should be fixed by swapping the template
+   rows, never by nudging this anchor. */
 
 async function saveGraceByRole(){
   const vals={};
