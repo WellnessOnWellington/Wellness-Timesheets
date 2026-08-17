@@ -6709,14 +6709,14 @@ function renderApprovals(){
     return`<div class="approval-card${isUnrostered?' unrostered':''}" data-id="${a.id}">
       <div class="approval-meta">
         <div class="approval-header">
-          <div class="approval-who">${a.employeeName}</div>
+          <div class="approval-who">${escHtml(a.employeeName)}</div>
           <div class="approval-role-badge">${a.role}</div>
           <span class="approval-header-dot">●</span>
           <div class="approval-type-badge${isUnrostered?' unrostered':''}">${a.type}</div>
           <div class="approval-time-stamp" style="margin-left:auto">${dateF} · ${a.time}</div>
         </div>
         ${topRowHtml}
-        <div class="approval-reason">${a.reason}</div>
+        <div class="approval-reason">${escHtml(a.reason)}</div>
         ${gapHtml}
       </div>
       <div class="approval-actions">
@@ -6788,7 +6788,7 @@ function renderClockAudit(resetPage=false){
     const badge=r.status==='pending'?'<span class="badge badge-pending">Pending</span>':r.status==='approved'?'<span class="badge badge-approved">✓ Acknowledged</span>':r.status==='flagged'?'<span class="badge badge-flagged">Flagged</span>':'<span class="badge badge-normal">✓ Normal</span>';
     return`<tr${isDeleted?' style="opacity:0.5;"':''}>
       <td>${dateF}</td>
-      <td><strong>${r.employeeName}</strong>${isDeleted?'<span style="color:var(--muted);font-size:0.75rem;margin-left:0.3rem;">†</span>':''}</td>
+      <td><strong>${escHtml(r.employeeName)}</strong>${isDeleted?'<span style="color:var(--muted);font-size:0.75rem;margin-left:0.3rem;">†</span>':''}</td>
       <td style="color:var(--muted)">${r.role}</td>
       <td>${inCell}</td>
       <td>${outCell}</td>
@@ -6855,10 +6855,10 @@ function renderNotesAudit(resetPage=false){
     const badge=n.status==='approved'?'<span class="badge badge-approved">✓ Acknowledged</span>':n.status==='flagged'?'<span class="badge badge-flagged">Flagged</span>':'<span class="badge badge-pending">Pending</span>';
     return`<tr>
       <td>${dateF} <span style="color:var(--muted);font-size:0.75rem;">${n.time||''}</span></td>
-      <td><strong>${n.employeeName}</strong></td>
+      <td><strong>${escHtml(n.employeeName)}</strong></td>
       <td style="color:var(--muted)">${n.role}</td>
       <td style="color:var(--muted)">${n.type||'—'}</td>
-      <td style="max-width:280px;font-size:0.8rem;">${n.reason||'—'}</td>
+      <td style="max-width:280px;font-size:0.8rem;">${escHtml(n.reason)||'—'}</td>
       <td style="color:var(--muted);font-size:0.8rem;">${n.resolvedBy||'—'}</td>
       <td>${badge}</td>
     </tr>`;
@@ -6936,8 +6936,8 @@ async function renderTimesheetAudit(resetPage=false){
       <td style="font-size:0.78rem;color:var(--muted);">${rost}</td>
       <td style="font-size:0.78rem;color:var(--muted);">${clocked}</td>
       <td style="font-size:0.78rem;">${final}</td>
-      <td style="max-width:220px;font-size:0.78rem;">${a.reason||'—'}</td>
-      <td style="font-size:0.78rem;color:var(--muted);">${a.manager_name||'—'}</td>
+      <td style="max-width:220px;font-size:0.78rem;">${escHtml(a.reason)||'—'}</td>
+      <td style="font-size:0.78rem;color:var(--muted);">${escHtml(a.manager_name)||'—'}</td>
       <td style="font-size:0.75rem;color:var(--muted);">${loggedAt}</td>
     </tr>`;
   }).join('');
@@ -9140,7 +9140,7 @@ function renderOverrides(){
       <span class="override-date">${dateF}</span>
       <span class="override-emp">${emp?.name||o.employee_id}</span>
       ${times}
-      <span class="override-note">${o.note||''}</span>
+      <span class="override-note">${escHtml(o.note)}</span>
       <button class="del-btn" onclick="deleteOverride('${o.id}')">Remove</button>
     </div>`;
   }).join('')+'</div>';
@@ -9762,7 +9762,7 @@ async function reqShowTimesheets(){
           <div class="req-status-title">${escHtml(p.fnLabel)}</div>
           ${p.offset===-1?`<div class="req-status-sub">Most recent</div>`:''}
           ${p.isFinal
-            ?`<button class="req-new-btn" style="margin-top:0.6rem;" onclick="reqDownloadTimesheet('${p.fnStart}','${escHtml(p.fnLabel).replace(/'/g,"\\'")}',this)">⬇ Download PDF</button>`
+            ?`<button class="req-new-btn" style="margin-top:0.6rem;" onclick="reqDownloadTimesheet('${p.fnStart}',this)">⬇ Download PDF</button>`
             :`<div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">Not yet pushed by your manager — check back once this pay run is complete.</div>`
           }
         </div>`).join('')}`;
@@ -9772,9 +9772,14 @@ async function reqShowTimesheets(){
   }
 }
 
-async function reqDownloadTimesheet(fnStart,fnLabel,btn){
+// fnLabel is derived here rather than passed through the onclick attribute: text
+// interpolated into an inline handler is HTML-decoded before the JS parser sees it,
+// so escaping it correctly needs two different escapers applied in the right order.
+// Not passing it at all removes the problem.
+async function reqDownloadTimesheet(fnStart,btn){
   const emp=_reqEmployee;
   if(!emp||!_reqTsCache){showToast('Please reopen My Timesheets and try again');return;}
+  const fnLabel=srFortnightLabel(fnStart);
   const origText=btn.textContent;
   btn.disabled=true; btn.textContent='Preparing…';
   try{
@@ -10680,7 +10685,11 @@ function reqFmtDate(dateStr){
   return d.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
 }
 
-function escHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Escapes text for insertion into HTML. Single quotes are escaped too: values
+// reach single-quoted attributes in places (onclick="fn('${...}')"), where a
+// bare ' would close the string early. Must run before any other transform —
+// escaping & first is what stops &amp;lt; style double-encoding bypasses.
+function escHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 /* ═══════════════════════════════════════════
    SWIPE NAVIGATION (mobile) — drag-across
