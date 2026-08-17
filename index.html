@@ -6146,19 +6146,23 @@ function exportMYOBSelected(){
   const headers=['Employee Co./Last Name','Employee First Name','Payroll Category','Job','Customer Co./Last Name','Customer First Name','Notes','Date','Units','Employee Card ID','Employee Record ID','Start/Stop Time','Customer Card ID','Customer Record ID'];
   lines.push(headers.join('\t'));
 
-  // Deduplicate: keep only the best entry per (employee, date).
+  // Deduplicate: for each (employee, date, shiftId) keep only the best entry.
+  // Prevents double rows when the same SHIFT has multiple entries in the DB, while
+  // still exporting BOTH blocks of a split shift — a day with two rostered blocks
+  // has two entries, and keying only on (employee, date) made the second look like a
+  // duplicate of the first, so one block was silently dropped and never paid.
   //
-  // NOTE (2026-08-17): the key deliberately does NOT include shiftId, even though the
-  // comment here once claimed it did. Adding it looks like the obvious fix for split
-  // shifts — two rostered blocks in a day currently collapse to one exported row — but
-  // the live DB contains orphaned duplicate leave entries (one day has four identical
-  // annual-leave rows pointing at three shift ids that no longer exist). This day-level
-  // key is what collapses those. Keying on shiftId would export all four and pay 26h
-  // of leave for a 6.5h day. Clean up the orphans first, then revisit. See
-  // security_posture memory.
+  // This key was (employee, date) until 2026-08-17. It could not include shiftId
+  // before then: the DB held orphaned duplicate leave rows from four June roster
+  // rebuilds (one day carried four identical annual-leave rows pointing at shift ids
+  // that no longer existed), and the day-level key was the only thing collapsing
+  // them — keying on shiftId would have exported all four. Those 72 orphans were
+  // cleaned up on 2026-08-17, verified to zero across every date, which is what
+  // unblocked this. If duplicate leave rows ever reappear, this key will pay them
+  // out — so keep rbCleanupLinkedEntryOnShiftDelete working.
   const dedupMap={};
   ready.forEach(e=>{
-    const key=`${e.employeeId}|${e.date}`;
+    const key=`${e.employeeId}|${e.date}|${e.shiftId||''}`;
     if(!dedupMap[key]){dedupMap[key]=e;return;}
     const cur=dedupMap[key];
     if(!cur.locked&&e.locked){dedupMap[key]=e;return;}
