@@ -6146,8 +6146,16 @@ function exportMYOBSelected(){
   const headers=['Employee Co./Last Name','Employee First Name','Payroll Category','Job','Customer Co./Last Name','Customer First Name','Notes','Date','Units','Employee Card ID','Employee Record ID','Start/Stop Time','Customer Card ID','Customer Record ID'];
   lines.push(headers.join('\t'));
 
-  // Deduplicate: for each (employee, date, shiftId) keep only the best entry.
-  // Prevents double rows when the same shift has multiple entries in the DB.
+  // Deduplicate: keep only the best entry per (employee, date).
+  //
+  // NOTE (2026-08-17): the key deliberately does NOT include shiftId, even though the
+  // comment here once claimed it did. Adding it looks like the obvious fix for split
+  // shifts — two rostered blocks in a day currently collapse to one exported row — but
+  // the live DB contains orphaned duplicate leave entries (one day has four identical
+  // annual-leave rows pointing at three shift ids that no longer exist). This day-level
+  // key is what collapses those. Keying on shiftId would export all four and pay 26h
+  // of leave for a 6.5h day. Clean up the orphans first, then revisit. See
+  // security_posture memory.
   const dedupMap={};
   ready.forEach(e=>{
     const key=`${e.employeeId}|${e.date}`;
@@ -6166,7 +6174,11 @@ function exportMYOBSelected(){
     const firstName=nameParts[0]||'';
     const lastName=nameParts.slice(1).join(' ')||'';
     const dateF=entry.date.split('-').reverse().join('/');
-    const shift=_rosterShifts.find(s=>s.employee_id===entry.employeeId&&s.date===entry.date&&!s.is_day_off)||null;
+    // Resolve to the shift this entry actually belongs to, not just the day's first —
+    // on a split shift the wrong block would otherwise set the rostered times that
+    // drive snapping and the payroll category. Same lookup as tsIsEntryReady.
+    const shift=(entry.shiftId&&_rosterShifts.find(s=>String(s.id)===String(entry.shiftId)))
+      ||_rosterShifts.find(s=>s.employee_id===entry.employeeId&&s.date===entry.date&&!s.is_day_off)||null;
     const myobRows=calcMYOBRows(entry,emp,_publicHolidays?.has(entry.date)||false,shift);
     myobRows.forEach(({cat,hours})=>{
       const units=hours.toFixed(2);
