@@ -626,6 +626,30 @@
   .approval-type-badge { font-size:0.68rem; font-weight:700; padding:0.12rem 0.5rem; border-radius:999px; background:rgba(0,0,0,0.05); color:var(--charcoal); }
   .approval-header-dot { color:var(--muted); font-size:0.55rem; align-self:center; }
   .approval-type-badge.unrostered { background:#fef3e8; color:#e67e22; border:1px solid rgba(230,126,34,0.3); }
+
+  /* ── Pending-request markers (Timesheets rows + Notes cards) ── */
+  .ts-req-badge { font-size:0.55rem; font-weight:800; border-radius:3px; padding:1px 4px; margin-top:2px;
+                  display:inline-block; background:#fef3e8; color:#b35c0f; border:1px solid rgba(230,126,34,0.35);
+                  cursor:pointer; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ts-req-badge:hover { background:#fde3ca; }
+  .ts-req-badge.expired { background:#f4e6e8; color:var(--burgundy); border-color:rgba(139,37,53,0.3); cursor:default; }
+  .approval-req-line { font-size:0.72rem; font-weight:700; margin-bottom:0.6rem; padding:0.4rem 0.6rem; border-radius:6px;
+                       background:#fef3e8; color:#b35c0f; border:1px solid rgba(230,126,34,0.3); cursor:pointer; }
+  .approval-req-line:hover { background:#fde3ca; }
+  .approval-req-line.expired { background:#f4e6e8; color:var(--burgundy); border-color:rgba(139,37,53,0.3); cursor:default; }
+  /* Sits at the far right of the primary row, after the MYOB preview. flex-shrink:0 so the
+     preview (which has flex:1 and its own ellipsis) gives up width first, not the badge. */
+  .ts-row-right .ts-req-badge { flex:0 0 auto; margin-left:auto; }
+  /* Same gold pulse as the roster's reqCellPulse, sized for a card rather than a day cell. */
+  .req-admin-card.req-highlight { animation: reqCardPulse 3s ease forwards; }
+  @keyframes reqCardPulse {
+    0%   { box-shadow: 0 0 0 3px rgba(160,114,40,0.85), inset 0 0 0 2000px rgba(253,243,226,0.55); }
+    60%  { box-shadow: 0 0 0 3px rgba(160,114,40,0.6),  inset 0 0 0 2000px rgba(253,243,226,0.35); }
+    100% { box-shadow: none; }
+  }
+  .req-actual-line { font-size:0.8rem; line-height:1.5; margin:0.6rem 0; padding:0.55rem 0.7rem; border-radius:8px;
+                     background:#fef3e8; color:#b35c0f; border:1px solid rgba(230,126,34,0.3); }
+  .req-actual-line.quiet { background:var(--blush-lt); color:var(--muted); border-color:var(--border); }
   .approval-time-stamp { font-size:0.72rem; color:var(--muted); font-weight:500; white-space:nowrap; }
   .approval-times-row { display:flex; gap:1.5rem; margin-bottom:0.75rem; }
   .approval-time-col { display:flex; flex-direction:column; gap:0.18rem; }
@@ -2751,6 +2775,13 @@
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.3</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">21 August 2026 &mdash; Requests Joined Up With Timesheets</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Outstanding shift swaps, give-aways, cover pick-ups and leave requests now show up where their consequences land. A timesheet row for a day with an unactioned request carries a marker on the right &mdash; &ldquo;Give-away &rarr; Claire Emmons&rdquo; on the person handing the shift over, &ldquo;Covering Samantha Melmoth&rdquo; on the person picking it up &mdash; and clicking it opens that request. The same marker appears on clock-in notes, so a note is never acknowledged while the roster still says something different. Requests that expired without ever reaching a manager are flagged too. Each pending request now states what actually happened on the day: who clocked in, who did not, and who was paid without clocking in. Pushing a pay period to staff warns if unactioned requests still affect it. Approving leave for a day already worked no longer writes a leave record on top of the worked hours, which would have paid that block twice &mdash; split shifts, where one block is worked and the other is leave, are unaffected. Acknowledging a note is now recorded in the change log like every other timesheet edit.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:baseline;">
                 <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.2</div>
                 <div>
                   <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">20 August 2026 &mdash; Pay Accuracy &amp; Data Protection</div>
@@ -3423,6 +3454,216 @@ function normaliseRequest(r) {
   };
 }
 
+/* ═══════════════════════════════════════════
+   PENDING REQUEST INDEX
+
+   The Timesheets and Notes tabs had no link to the Requests tab at all, so a
+   give-away that was worked before the manager approved it showed up as two
+   unexplained halves: an unrostered arrival for the person who covered, and a
+   red "No clock-in" row for the person who was still rostered — with nothing
+   on either row saying why. This maps employeeId|date -> the request that
+   explains it, so both halves can say so.
+
+   Only statuses a manager can still do something about:
+     pending_manager — never expires (the sweep only touches pending_peer), so
+                       these sit indefinitely until actioned.
+     expired         — a peer swap that timed out and was never seen. Shown
+                       because the shift may still have been worked, but NOT
+                       clickable: renderRequests only lists pending_manager,
+                       so there is nothing to click through to.
+   pending_peer is deliberately excluded — the manager cannot action it and it
+   would put a marker on every row of every speculative swap.
+═══════════════════════════════════════════ */
+const REQ_MARKER_STATUSES=['pending_manager','expired'];
+let _reqMarkerIndex=null;
+
+function reqMarkerKey(empId,date){ return empId+'|'+date; }
+
+// Rebuilt at the top of renderTimesheets/renderApprovals rather than cached across
+// renders — the request list changes underneath this from approvals, declines and
+// the expiry sweep, and a stale marker is worse than no marker.
+function reqBuildMarkerIndex(){
+  const idx=new Map();
+  const add=(empId,date,req,kind,otherName)=>{
+    if(!empId||!date) return;
+    const k=reqMarkerKey(empId,date);
+    if(!idx.has(k)) idx.set(k,[]);
+    const list=idx.get(k);
+    // A same-day swap (both shifts on one date, which is the common case) makes each
+    // person both give a shift away and cover one, on that date. Two markers saying
+    // opposite things about the same request reads as a contradiction — collapse to one.
+    const existing=list.find(m=>m.req.id===req.id);
+    if(existing){ if(existing.kind!==kind) existing.kind='both'; return; }
+    list.push({req,kind,otherName:otherName||null});
+  };
+  (_requests||[]).forEach(r=>{
+    if(!REQ_MARKER_STATUSES.includes(r.status)) return;
+    if(r.type==='giveaway'){
+      // One shift, two people: initiator loses it, colleague picks it up.
+      add(r.initiatorId,r.initiatorShiftDate,r,'out',r.colleagueName);
+      add(r.colleagueId,r.initiatorShiftDate,r,'in',r.initiatorName);
+    } else if(r.type==='swap'){
+      // Two shifts on two dates — every leg gets a marker.
+      add(r.initiatorId,r.initiatorShiftDate,r,'out',r.colleagueName);
+      add(r.colleagueId,r.initiatorShiftDate,r,'in',r.initiatorName);
+      add(r.colleagueId,r.colleagueShiftDate,r,'out',r.initiatorName);
+      add(r.initiatorId,r.colleagueShiftDate,r,'in',r.colleagueName);
+    } else if(r.type==='pickup'){
+      add(r.initiatorId,r.initiatorShiftDate,r,'in',null);
+    } else if(r.type==='leave'&&r.leaveStartDate&&r.leaveEndDate){
+      const cur=new Date(r.leaveStartDate+'T12:00:00');
+      const end=new Date(r.leaveEndDate+'T12:00:00');
+      let guard=0;
+      while(cur<=end&&guard++<400){ add(r.initiatorId,rbDateKey(cur),r,'leave',null); cur.setDate(cur.getDate()+1); }
+    }
+  });
+  return idx;
+}
+
+function reqMarkersFor(empId,date){
+  if(!_reqMarkerIndex) _reqMarkerIndex=reqBuildMarkerIndex();
+  return _reqMarkerIndex.get(reqMarkerKey(empId,date))||[];
+}
+
+// Raw (unescaped) label — the single source of the wording. Escaped once at the
+// point of use, so the title attribute doesn't end up double-encoding a name
+// like O'Brien into O&#39;Brien.
+function reqMarkerLabelRaw(m){
+  const t=m.req.type, other=m.otherName||'a colleague';
+  if(t==='giveaway') return m.kind==='out'?`Give-away → ${other}`:`Covering ${other}`;
+  if(t==='swap')     return m.kind==='both'?`Swap with ${other}`:m.kind==='out'?`Swap → ${other}`:`Covering ${other} (swap)`;
+  if(t==='pickup')   return 'Cover pick-up';
+  if(t==='leave')    return `Leave: ${formatLeaveType(m.req.leaveType)}`;
+  return 'Request';
+}
+
+function reqMarkerLabel(m){ return escHtml(reqMarkerLabelRaw(m)); }
+
+function reqMarkerTitle(m){
+  const lbl=reqMarkerLabelRaw(m);
+  return m.req.status==='expired'
+    ? `${lbl} — this request EXPIRED without ever reaching a manager. If the shift was worked as requested, correct the roster by hand.`
+    : `${lbl} — awaiting your approval. Click to open it in Requests.`;
+}
+
+// Timesheets row marker — rendered into the date cell alongside the public-holiday badge.
+function reqRowMarkerHtml(empId,date){
+  return reqMarkersFor(empId,date).map(m=>{
+    const exp=m.req.status==='expired';
+    return `<div class="ts-req-badge${exp?' expired':''}" title="${escHtml(reqMarkerTitle(m))}"${
+      exp?'':` onclick="reqJumpToRequest('${m.req.id}',event)"`}>${exp?'⚠ EXPIRED · ':''}${reqMarkerLabel(m)}</div>`;
+  }).join('');
+}
+
+// Notes card marker — states whether the roster question behind the note is settled.
+function reqNoteMarkerHtml(empId,date){
+  return reqMarkersFor(empId,date).map(m=>{
+    const exp=m.req.status==='expired';
+    return `<div class="approval-req-line${exp?' expired':''}" title="${escHtml(reqMarkerTitle(m))}"${
+      exp?'':` onclick="reqJumpToRequest('${m.req.id}',event)"`}>${
+      exp?'⚠ ':'⚠ '}${reqMarkerLabel(m)} — ${exp?'expired, never actioned. Fix the roster by hand.':'awaiting your approval. The roster still says otherwise.'}</div>`;
+  }).join('');
+}
+
+// Set before the tab switch so the class is present on the FIRST render — switchTab and
+// reqSetRole both call renderRequests(), and the card has to arrive already glowing.
+let _reqHighlightId=null;
+
+function reqJumpToRequest(reqId,e){
+  e?.stopPropagation?.();
+  const r=(_requests||[]).find(x=>x.id===reqId);
+  if(!r){ showToast('Request not found'); return; }
+  const tabBtn=document.querySelector('.tab[onclick*="requests"]');
+  if(!tabBtn){ showToast('Requests tab unavailable'); return; }
+  _reqHighlightId=reqId;
+  switchTab('requests',tabBtn);
+  const roleBtn=document.getElementById('req-tab-'+r.initiatorRole);
+  if(roleBtn) reqSetRole(r.initiatorRole,roleBtn);
+  // Unlike the roster grid, the requests list is a vertical stack — the glowing card can
+  // easily be below the fold, so bring it into view or the highlight is invisible.
+  const card=document.querySelector(`.req-admin-card[data-req-id="${reqId}"]`);
+  if(card) card.scrollIntoView({block:'center',behavior:'smooth'});
+  else showToast('Opened Requests — the request is no longer pending');
+  // The animation is `forwards` so it ends invisible on its own; clearing the id just stops
+  // a later re-render from replaying it.
+  setTimeout(()=>{ _reqHighlightId=null; },3200);
+}
+
+/* ── What actually happened on the affected days ──────────────────────────────
+   A manager looking at a stale request needs one fact above all: was this shift
+   already worked, and by whom? Reading it off the entries and stating it on the
+   card answers that without a round trip to Timesheets — and unlike a jump link
+   it works when a swap touches two people across two pay periods.
+   Only rendered for dates that have already passed; a future request has nothing
+   to report and a "no clock-in" line on one would be noise. */
+function reqAffectedPairs(r){
+  const out=[], seen=new Set();
+  const add=(id,name,date)=>{
+    if(!id||!date) return;
+    const k=id+'|'+date;
+    if(seen.has(k)) return;
+    seen.add(k); out.push({id,name:name||'Unknown',date});
+  };
+  if(r.type==='giveaway'){
+    add(r.initiatorId,r.initiatorName,r.initiatorShiftDate);
+    add(r.colleagueId,r.colleagueName,r.initiatorShiftDate);
+  } else if(r.type==='swap'){
+    // Same-day swaps collapse to two pairs, not four — add() dedupes on person+date.
+    add(r.initiatorId,r.initiatorName,r.initiatorShiftDate);
+    add(r.colleagueId,r.colleagueName,r.initiatorShiftDate);
+    add(r.colleagueId,r.colleagueName,r.colleagueShiftDate);
+    add(r.initiatorId,r.initiatorName,r.colleagueShiftDate);
+  } else if(r.type==='pickup'){
+    add(r.initiatorId,r.initiatorName,r.initiatorShiftDate);
+  } else if(r.type==='leave'&&r.leaveStartDate&&r.leaveEndDate){
+    const cur=new Date(r.leaveStartDate+'T12:00:00'), end=new Date(r.leaveEndDate+'T12:00:00');
+    let guard=0;
+    while(cur<=end&&guard++<400){ add(r.initiatorId,r.initiatorName,rbDateKey(cur)); cur.setDate(cur.getDate()+1); }
+  }
+  return out;
+}
+
+function reqActivityFor(pair){
+  const es=(_entries||[]).filter(e=>e.employeeId===pair.id&&e.date===pair.date&&!e.deleted);
+  const worked=es.find(e=>e.clockIn);
+  const leave=es.find(e=>e.leaveType);
+  if(worked) return {worked:true,
+    html:`${escHtml(pair.name)} clocked <strong>${worked.clockIn}–${worked.clockOut||'still in'}</strong>${worked.locked?' · locked':''}`};
+  if(leave)  return {worked:false, html:`${escHtml(pair.name)} — ${escHtml(formatLeaveType(leave.leaveType))}`};
+  // No clock, but an entry with final times = a manager used the no-clock auto-lock and
+  // paid the rostered hours. "No clock-in" on its own reads as "nothing happened", which
+  // is the opposite of the truth and exactly the case worth catching on a stale request.
+  const paid=es.find(e=>!e.clockIn&&(e.finalStart||e.finalEnd));
+  if(paid) return {worked:true,
+    html:`${escHtml(pair.name)} <strong>no clock-in</strong> but paid <strong>${paid.finalStart||'?'}–${paid.finalEnd||'?'}</strong>${paid.locked?' · locked':''}`};
+  return {worked:false, html:`${escHtml(pair.name)} <strong>no clock-in</strong>`};
+}
+
+function reqActualActivityHtml(r){
+  const today=rbDateKey(new Date());
+  const past=reqAffectedPairs(r).filter(p=>p.date<=today);
+  if(!past.length) return '';
+  const rows=past.map(p=>({p,a:reqActivityFor(p)}));
+  const anyWorked=rows.some(x=>x.a.worked);
+  // Leave is the exception: a whole approved range of "no clock-in" days is the expected
+  // outcome and says nothing. Only surface it when somebody actually turned up.
+  if(r.type==='leave'&&!anyWorked) return '';
+  const byDate=new Map();
+  rows.forEach(x=>{
+    if(r.type==='leave'&&!x.a.worked) return;
+    if(!byDate.has(x.p.date)) byDate.set(x.p.date,[]);
+    byDate.get(x.p.date).push(x.a.html);
+  });
+  const detail=[...byDate.entries()].map(([d,list])=>
+    `${reqFmtDate(d)}: ${list.join(' &nbsp;·&nbsp; ')}`).join('<br>');
+  const head=anyWorked
+    ? (r.type==='leave'
+        ? '⚠ <strong>Clocked in during this leave.</strong>'
+        : '⚠ <strong>This shift has already been worked.</strong>')
+    : 'Nobody clocked in on the affected day' + (byDate.size>1?'s':'') + '.';
+  return `<div class="req-actual-line${anyWorked?'':' quiet'}">${head}<br>${detail}</div>`;
+}
+
 function normaliseNotif(r) {
   return { id:r.id, employeeId:r.employee_id, requestId:r.request_id, message:r.message, type:r.type, seenAt:r.seen_at, createdAt:r.created_at };
 }
@@ -3473,7 +3714,7 @@ function showLoading(on) {
   el.style.animationPlayState = on ? 'running' : 'paused';
 }
 
-const APP_VERSION='2.2';
+const APP_VERSION='2.3';
 const APP_VERSION_DATE='August 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 // The single per-role threshold: within it, no prompt/flag and the shift auto-approves;
@@ -4827,6 +5068,10 @@ function tsGetFlag(locked, noEntry, finalStart, finalEnd, autoApproved, entrySta
 function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const d=new Date(date+'T12:00:00');
   const _phBadge=_publicHolidays?.has(date)?'<div style="font-size:0.55rem;font-weight:800;background:var(--burgundy);color:#fff;border-radius:3px;padding:1px 4px;margin-top:2px;display:inline-block;">Public Holiday</div>':'';
+  // Rendered at the far right of the primary row (see compactRow), not in the date cell —
+  // the date column is too narrow for it. Only on the first segment of a split day: the
+  // request covers the whole day, not one block.
+  const _reqBadge=splitSegment?'':reqRowMarkerHtml(emp.id,date);
   const dateLabel=`<div>${d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'})}</div>${_phBadge}`;
   const rostStart=shift?.start_time||null;
   const rostEnd=shift?.end_time||null;
@@ -4946,6 +5191,7 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
       <div class="ts-row-flag-dot" style="background:${flagColor}"></div><div class="ts-travel-icon">${entry?.travelKm?`<span title="${entry.travelKm} km travel">🚗</span>`:''}</div><span class="ts-adjusted-pencil" title="Acknowledged by manager" style="${locked&&manuallyAdjusted?'':'visibility:hidden'}">✎</span><span class="ts-flag-icon" title="Flagged for follow-up" style="${flag==='flagged'?'':'visibility:hidden'}">⚑</span>
       <span class="ts-locked-label" style="${locked||effectiveAutoApproved?'':'visibility:hidden'}">${locked?'Locked'+(lockedBy?' · '+lockedBy:''):'Auto-approved'}</span>
       <div class="ts-myob-preview">${myobPreviewText}</div>
+      ${_reqBadge}
     </div>
   </div>`;
 
@@ -5355,6 +5601,14 @@ async function tsToggleFinalize(cb){
         if(!canonicalEntries.some(e=>e.employeeId===emp.id&&e.date===s.date)) missing.push({employeeName:emp.name});
       });
     });
+    // Unactioned swaps/give-aways/leave in this period mean the roster may not describe
+    // what actually happened — pushing publishes that to staff as a final record.
+    const fnDaySet=new Set(fnDays);
+    const openReqs=new Map();
+    reqBuildMarkerIndex().forEach((list,key)=>{
+      if(!fnDaySet.has(key.split('|')[1])) return;
+      list.forEach(m=>openReqs.set(m.req.id,m.req));
+    });
     let msg;
     if(!canonicalEntries.length&&!missing.length){
       msg=`${srFortnightLabel(fnStart)} has no timesheet data yet — pushing it now would make an empty timesheet available to every staff member.\n\nPush anyway?`;
@@ -5368,6 +5622,15 @@ async function tsToggleFinalize(cb){
       if(missing.length){
         const names=[...new Set(missing.map(m=>m.employeeName))];
         issues.push(`${missing.length} rostered day${missing.length===1?'':'s'} with no clock-in yet (${names.slice(0,5).join(', ')}${names.length>5?`, +${names.length-5} more`:''}) — will show as "Not yet finalised" on their PDF.`);
+      }
+      if(openReqs.size){
+        const reqs=[...openReqs.values()];
+        const expired=reqs.filter(r=>r.status==='expired').length;
+        const desc=reqs.slice(0,4).map(r=>{
+          const label=r.type==='leave'?'leave':r.type==='giveaway'?'give-away':r.type;
+          return `${r.initiatorName} (${label}${r.status==='expired'?', expired':''})`;
+        }).join(', ');
+        issues.push(`${reqs.length} unactioned request${reqs.length===1?'':'s'} affect${reqs.length===1?'s':''} this period (${desc}${reqs.length>4?`, +${reqs.length-4} more`:''})${expired?` — ${expired} of them expired without ever reaching a manager`:''}. The roster may not match what was actually worked.`);
       }
       if(issues.length) msg=`${issues.join('\n\n')}\n\nPush anyway?`;
     }
@@ -5409,6 +5672,7 @@ async function tsToggleFinalize(cb){
 }
 
 function renderTimesheets(){
+  _reqMarkerIndex=reqBuildMarkerIndex();
   const fnStart=getPayPeriodStart(tsOffset);
   const fnDays=getFortnight14Days(fnStart);
   const labelEl=document.getElementById('ts-fn-label');
@@ -6614,6 +6878,7 @@ function notesSetRole(role, btn){
 }
 
 function renderApprovals(){
+  _reqMarkerIndex=reqBuildMarkerIndex();
   const pend=_notes.filter(a=>a.status==='pending');
   const badge=document.getElementById('notif-badge');
   badge.textContent=pend.length; badge.style.display=pend.length?'inline':'none';
@@ -6739,6 +7004,7 @@ function renderApprovals(){
           <div class="approval-time-stamp" style="margin-left:auto">${dateF} · ${a.time}</div>
         </div>
         ${topRowHtml}
+        ${reqNoteMarkerHtml(a.employeeId,a.date)}
         <div class="approval-reason">${escHtml(a.reason)}</div>
         ${gapHtml}
       </div>
@@ -6991,6 +7257,13 @@ async function resolveNote(id,status){
     const isArrivalNote=note.type==='Arrival note';
     const isBreakNote=note.type==='Break note';
     const gapSel=document.getElementById('gap-sel-'+id)?.value||null;
+    // Captured for the audit row below — `shift` is const inside the approved branch.
+    let _auditRostStart=null,_auditRostEnd=null;
+    // Snapshot the finals BEFORE anything touches them. The local-cache mirror further down
+    // overwrites entry.finalStart/finalEnd in place, so by audit time the previous value is
+    // gone — and when a manager's own correction is the thing being replaced, that previous
+    // value is the single most useful fact the audit row can carry.
+    const _priorFinalStart=entry?.finalStart??null, _priorFinalEnd=entry?.finalEnd??null;
     if(status==='approved'&&entry&&isBreakNote){
       // Break notes only settle the break question — never force a lock or final-time change,
       // since the entry may still have its own separate arrival/departure gap to resolve.
@@ -7000,6 +7273,7 @@ async function resolveNote(id,status){
       const shift=_rosterShifts.find(s=>s.employee_id===note.employeeId&&s.date===note.date)||null;
       const rostStart=shift?.start_time||null;
       const rostEnd=shift?.end_time||null;
+      _auditRostStart=rostStart; _auditRostEnd=rostEnd;
       const _grace=GRACE_BY_ROLE[note.role]??10;
       // Calculate gap mins for auto-hours
       let gapAutoMins=0;
@@ -7064,6 +7338,29 @@ async function resolveNote(id,status){
         if('leave_type_gap' in entryPatch){ entry.leaveTypeGap=entryPatch.leave_type_gap??null; entry.leaveGapHours=entryPatch.leave_gap_hours??null; }
         if('leave_type_gap_start' in entryPatch){ entry.leaveTypeGapStart=entryPatch.leave_type_gap_start??null; entry.leaveGapHoursStart=entryPatch.leave_gap_hours_start??null; }
       }
+    }
+    // Acknowledging a note changes pay — final times, the lock, or the break decision —
+    // and until now was the ONLY writer of those that recorded nothing. Every other one
+    // logs (tsLockRow, tsMgrAutoLock x2, tsUpdateFinal, manual entry), which is why an
+    // overwrite here could previously only be reconstructed by replaying the backup.
+    // Not logged for 'flagged': that patches status alone and moves no hours.
+    if(status==='approved'&&entry){
+      await tsSaveAudit({
+        entry_id:note.entryId, employee_id:note.employeeId, employee_name:note.employeeName||entry.employeeName||'',
+        date:note.date,
+        rostered_start:_auditRostStart, rostered_end:_auditRostEnd,
+        clocked_start:entry.clockIn||null, clocked_end:entry.clockOut||null,
+        final_start:entryPatch.final_start??entry.finalStart??null,
+        final_end:entryPatch.final_end??entry.finalEnd??null,
+        action:'adjustment', manager_name:resolvedBy,
+        reason:`Note acknowledged: ${note.type}`
+              +(isBreakNote?` · break ${entryPatch.break_gap_decision||'cleared'}`
+                           :` · final times set from clock, entry locked`)
+              +(gapSel?` · gap: ${gapSel}`:'')
+              +((!isBreakNote&&(_priorFinalStart||_priorFinalEnd)
+                 &&(entryPatch.final_start!==_priorFinalStart||entryPatch.final_end!==_priorFinalEnd))
+                 ?` · REPLACED existing finals ${_priorFinalStart||'—'}–${_priorFinalEnd||'—'}`:'')
+      });
     }
     // Animate: flash colour → collapse → re-render
     if(card){
@@ -10342,7 +10639,7 @@ function buildReqAdminCard(r,isPending){
         ${r.status==='approved'?'✓ Approved':'✗ Declined'} by ${escHtml(r.managerName||'manager')} · ${reqFmtDate(r.managerDecidedAt)}
         ${r.managerReason?`<br>Reason: ${escHtml(r.managerReason)}`:''}
       </div>`;
-  return `<div class="req-admin-card">
+  return `<div class="req-admin-card${r.id===_reqHighlightId?' req-highlight':''}" data-req-id="${r.id}">
     <div class="req-admin-header">
       <div>
         <div class="req-admin-names">${escHtml(r.initiatorName)}${r.type!=='leave'&&r.type!=='pickup'?` ↔ ${escHtml(r.colleagueName||'')}`:''}</div>
@@ -10352,6 +10649,7 @@ function buildReqAdminCard(r,isPending){
     </div>
     <div class="req-admin-shifts">${shiftsHtml}<br>${viewInRosterBtn}</div>
     ${coverageWarn}
+    ${reqActualActivityHtml(r)}
     ${actions}
   </div>`;
 }
@@ -10429,8 +10727,18 @@ async function managerApproveRequest(id){
   if(!r) return;
   const mgr=currentManager?.name||'Manager';
   const now=new Date().toISOString();
+  // Warn BEFORE writing anything: leave will not be applied to blocks that already
+  // carry worked time, because doing so pays the block twice. Informed consent rather
+  // than a refusal — one conflicting block should not block a whole leave range, and a
+  // split shift can legitimately have one block worked and the other on leave.
+  const _clashes=reqLeaveWorkedClashes(r);
+  if(_clashes.length){
+    const list=_clashes.slice(0,6).map(c=>`  ${reqFmtDate(c.date)}  ${c.block}`).join('\n');
+    const more=_clashes.length>6?`\n  +${_clashes.length-6} more`:'';
+    if(!confirm(`${r.initiatorName} already has clocked or paid time on ${_clashes.length} rostered block${_clashes.length===1?'':'s'} in this range:\n\n${list}${more}\n\nLeave will NOT be applied to those blocks — their existing hours stay exactly as they are. Every other day in the range gets leave as normal.\n\nApprove on that basis?`)) return;
+  }
   try{
-    await applyRosterWriteback(r);
+    const _wb=await applyRosterWriteback(r);
     await db.update('requests',id,{status:'approved',manager_id:currentManager?.id||null,manager_name:mgr,manager_decision:'approved',manager_decided_at:now});
     r.status='approved'; r.managerName=mgr; r.managerDecision='approved'; r.managerDecidedAt=now;
     if(r.type==='leave'){
@@ -10441,8 +10749,14 @@ async function managerApproveRequest(id){
       await reqCreateNotification(r.initiatorId,id,`Your ${r.type} request was approved by ${mgr} — roster has been updated`,'manager_approved');
       if(r.colleagueId) await reqCreateNotification(r.colleagueId,id,`${r.type==='swap'?'Shift swap':'Shift give away'} with ${r.initiatorName} was approved by ${mgr} — roster has been updated`,'manager_approved');
     }
-    showToast('Request approved');
+    const _skipped=_wb?.skippedLeaveBlocks||[];
+    showToast(_skipped.length
+      ? `Approved — leave skipped on ${_skipped.length} already-worked block${_skipped.length===1?'':'s'}`
+      : 'Request approved');
     renderRequests();
+    // applyRosterWriteback has mutated _rosterShifts/_entries — refresh the views that
+    // read them, and clear the pending-request markers this request was driving.
+    renderTimesheets(); renderApprovals();
   }catch(e){ showToast('Error: '+(e?.message||String(e)).slice(0,120)); console.error('Approve error:',e); }
 }
 
@@ -10461,10 +10775,58 @@ async function managerDeclineRequest(id){
     if(r.type!=='leave'&&r.colleagueId) await reqCreateNotification(r.colleagueId,id,`The ${r.type} request with ${r.initiatorName} was declined`,'manager_declined');
     showToast('Request declined');
     renderRequests();
+    renderTimesheets(); renderApprovals();
   }catch(e){ showToast('Error declining request'); console.error(e); }
 }
 
+/* ── Leave vs already-worked time ────────────────────────────────────────────
+   Writing a leave row onto a block that already carries worked time pays it
+   twice: the worked entry has no shift_id (the kiosk never sets one) and the
+   leave row does, so they land under DIFFERENT MYOB dedup keys and BOTH export.
+
+   The test is per ROSTERED BLOCK, by time overlap — never per day, and never by
+   shift_id alone. A split shift legitimately has one block worked and the other
+   on leave: Sue Mckellar 18 May and 15 Jun 2026 are exactly that (worked
+   13:30–16:30, annual leave 16:30–20:30), and both rows are supposed to export.
+   Endpoints touching is NOT an overlap, or those two days would break. */
+function rbWorkedEntryCoveringShift(empId, rShift){
+  const rs=timeStrToMin(rShift?.start_time), re=timeStrToMin(rShift?.end_time);
+  if(rs===null||re===null) return null;
+  return (_entries||[]).find(e=>{
+    if(e.employeeId!==empId||e.date!==rShift.date||e.deleted||e.leaveType) return false;
+    if(e.shiftId&&String(e.shiftId)===String(rShift.id)) return true;
+    const s=timeStrToMin(e.finalStart||e.clockIn);
+    if(s===null) return false;              // no times at all — a stub, exports nothing
+    // Still clocked in, or a missed clock-out: the end is unknown, so treat it as
+    // covering everything after it. Erring towards NOT writing leave is the safe
+    // direction — a manager can add leave by hand; a silent double payment is invisible.
+    const eMin=timeStrToMin(e.finalEnd||e.clockOut);
+    const end=eMin===null?Infinity:eMin;
+    return Math.max(s,rs)<Math.min(end,re);
+  })||null;
+}
+
+// Same predicate, used up front so managerApproveRequest can warn before writing
+// anything — kept as one function so the warning and the writeback cannot drift apart.
+function reqLeaveWorkedClashes(req){
+  if(req?.type!=='leave'||!req.leaveStartDate||!req.leaveEndDate) return [];
+  const out=[];
+  const cur=new Date(req.leaveStartDate+'T12:00:00'), end=new Date(req.leaveEndDate+'T12:00:00');
+  let guard=0;
+  while(cur<=end&&guard++<400){
+    const date=rbDateKey(cur);
+    (_rosterShifts||[]).filter(sh=>sh.employee_id===req.initiatorId&&sh.date===date&&!sh.is_day_off&&sh.start_time&&sh.end_time)
+      .forEach(sh=>{
+        const clash=rbWorkedEntryCoveringShift(req.initiatorId,sh);
+        if(clash) out.push({date,block:`${sh.start_time}–${sh.end_time}`,entry:clash});
+      });
+    cur.setDate(cur.getDate()+1);
+  }
+  return out;
+}
+
 async function applyRosterWriteback(req){
+  const skippedLeaveBlocks=[];
   if(req.type==='leave'){
     const dates=[];
     const cur=new Date(req.leaveStartDate+'T12:00:00');
@@ -10480,6 +10842,13 @@ async function applyRosterWriteback(req){
       const dayShifts=_rosterShifts.filter(s=>s.employee_id===req.initiatorId&&s.date===date&&!s.is_day_off&&s.start_time&&s.end_time);
       if(!dayShifts.length) continue;
       for(const rShift of dayShifts){
+        // Never write leave over a block that already carries worked time — see
+        // rbWorkedEntryCoveringShift. The manager has already consented to this being
+        // skipped (managerApproveRequest warns first), so skip quietly and report after.
+        if(rbWorkedEntryCoveringShift(req.initiatorId,rShift)){
+          skippedLeaveBlocks.push({date,block:`${rShift.start_time}–${rShift.end_time}`});
+          continue;
+        }
         const clockIn=(rShift.start_time||'').slice(0,5);
         const clockOut=(rShift.end_time||'').slice(0,5);
         const mins=timeStrToMin(rShift.end_time)-timeStrToMin(rShift.start_time);
@@ -10548,6 +10917,7 @@ async function applyRosterWriteback(req){
     _rosterShifts=freshShifts.filter(s=>s.id!==coverShift.id);
     _rosterShifts.push(newRow);
   }
+  return {skippedLeaveBlocks};
 }
 
 /* ═══════════════════════════════════════════
