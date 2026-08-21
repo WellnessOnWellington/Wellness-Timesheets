@@ -16,7 +16,7 @@ Adding, renaming or dropping a table or column affects three things, and only
 one of them notices on its own. **Do all three in the same sitting.**
 
 ### 1. Re-capture the schema — manual, nothing checks this
-Run `capture_schema.sql` (parent folder) in the Supabase SQL Editor. Replace
+Run `Runningwell-Vault/capture_schema.sql` in the Supabase SQL Editor. Replace
 `Runningwell-Vault/schema/schema.sql` with the output, commit, push.
 
 ### 2. The backup checks itself — but only against step 1
@@ -28,7 +28,7 @@ New *columns* need nothing — the backup does `select=*`.
 New *tables* must be added to `TABLES`.
 
 ### 3. Run the journal coverage query — the only live check
-In `journal_tables.sql` (parent folder), the block headed **COVERAGE CHECK**.
+In `Runningwell-Vault/journal_tables.sql`, the block headed **COVERAGE CHECK**.
 Expect **zero rows**. Anything listed has no `trg_journal`, meaning deletions
 from it are unrecoverable — silently. New tables also need adding to the array
 in that file, then re-run it (safe to re-run; it drops and recreates).
