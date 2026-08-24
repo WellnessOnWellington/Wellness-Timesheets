@@ -2769,11 +2769,18 @@
           <div style="padding:0.5rem 0 1.25rem;">
             <div style="font-size:0.82rem;color:var(--charcoal);font-weight:700;margin-bottom:0.2rem;">Running Well</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.1rem;">Built by Dr Joel Jaya</div>
-            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.3 &middot; August 2026</div>
+            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.4 &middot; August 2026</div>
           </div>
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
+              <div style="display:flex;gap:0.75rem;align-items:baseline;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.4</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">24 August 2026 &mdash; Consistent Thresholds &amp; Export Warnings</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">The kiosk now uses the grace period set in Settings. It had been using a fixed 10 minutes regardless of that setting, so anyone clocking in or out 6&ndash;10 minutes away from their rostered time was never asked for a reason &mdash; while the timesheet still treated the day as needing a decision and would not allow it to be locked. Those days can now be resolved as they arise, and if the prompts become excessive the grace period can be adjusted per role in Settings, which the kiosk now picks up within a minute. Give-away permissions set in Settings are applied at the kiosk too, where previously every role was treated as allowed. Downloading the fortnightly timesheet PDFs now warns when a day is still unlocked or has no clock-in recorded, matching the warning the MYOB export already gave &mdash; the two, along with pushing a period to staff, now share a single definition of what &ldquo;not yet finalised&rdquo; means.</div>
+                </div>
+              </div>
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
                 <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.3</div>
                 <div>
@@ -3341,6 +3348,50 @@ let rbSelectedDay=null;
 let _rbMobDate=null;
 let rbState={Receptionist:{collapsed:false},Nurse:{collapsed:false},Manager:{collapsed:false}};
 
+// Apply roster_config to the module-level settings globals.
+//
+// Lifted out of loadAll() on 24 Aug 2026 because loadAll() runs ONLY on admin login,
+// so every one of these globals kept its hardcoded declaration value on the kiosk —
+// which never loads roster_config. Two of them were visibly wrong there:
+//
+//   GRACE_BY_ROLE     kiosk prompted on the hardcoded 10 while config said 5/5/11, so a
+//                     6-10 minute late clock-out was never asked for a reason and never
+//                     produced a note — yet the Timesheets tab still demanded a gap
+//                     decision and greyed out the Lock. 73 of 87 rows in that band across
+//                     the live snapshot had no note. The comment below has always claimed
+//                     grace is a single threshold for kiosk prompting AND gap decisions;
+//                     on the kiosk it was two.
+//   GIVEAWAY_ENABLED  defaults all-true, config says "Nurse,Manager", so Receptionists at
+//                     the kiosk were offered give-away that policy disables.
+//
+// Same shape as the Who's On PIN bug: a config-derived global read before anything
+// populates it. Callers must pass a row they actually fetched — on a failed fetch, skip
+// the call entirely rather than passing null, which would reset grace to the 10 that
+// caused this.
+function applyRosterConfig(cfg){
+  _rosterConfig=cfg||null;
+  const _lgG=_rosterConfig?.grace_period??10;
+  const _lgR=_rosterConfig?.red_threshold??20;
+  // Grace is now the single threshold for kiosk prompting, gap decisions, AND auto-approval —
+  // yellow_by_role/yellow_threshold are deliberately no longer read (see YELLOW_BY_ROLE removal below).
+  if(_rosterConfig?.grace_by_role){try{Object.assign(GRACE_BY_ROLE,JSON.parse(_rosterConfig.grace_by_role));}catch(e){}}
+  else _ROLES.forEach(r=>GRACE_BY_ROLE[r]=_lgG);
+  if(_rosterConfig?.red_by_role){try{Object.assign(RED_BY_ROLE,JSON.parse(_rosterConfig.red_by_role));}catch(e){}}
+  else _ROLES.forEach(r=>RED_BY_ROLE[r]=_lgR);
+  if(_rosterConfig?.swap_expiry_days!=null) SWAP_EXPIRY_DAYS=_rosterConfig.swap_expiry_days;
+  if(_rosterConfig?.show_decline_reason!=null) SHOW_DECLINE_REASON=_rosterConfig.show_decline_reason;
+  if(_rosterConfig?.giveaway_enabled_roles!=null){
+    const enabled=_rosterConfig.giveaway_enabled_roles.split(',').map(s=>s.trim());
+    ['Receptionist','Nurse','Manager'].forEach(r=>{ GIVEAWAY_ENABLED[r]=enabled.includes(r); });
+  }
+  if(_rosterConfig?.coverage_thresholds){
+    try{
+      const parsed=JSON.parse(_rosterConfig.coverage_thresholds);
+      ['Receptionist','Nurse','Manager'].forEach(r=>{ if(parsed[r]) COVERAGE_THRESHOLDS[r]=parsed[r]; });
+    }catch(e){}
+  }
+}
+
 async function loadAll() {
   showLoading(true);
   try {
@@ -3364,27 +3415,7 @@ async function loadAll() {
     _entries = entries.map(normaliseEntry);
     _notes   = notes.map(normaliseNote);
     _mgrs    = mgrs.map(normaliseMgr);
-    _rosterConfig    = rosterCfg[0] || null;
-    const _lgG=_rosterConfig?.grace_period??10;
-  const _lgR=_rosterConfig?.red_threshold??20;
-  // Grace is now the single threshold for kiosk prompting, gap decisions, AND auto-approval —
-  // yellow_by_role/yellow_threshold are deliberately no longer read (see YELLOW_BY_ROLE removal below).
-  if(_rosterConfig?.grace_by_role){try{Object.assign(GRACE_BY_ROLE,JSON.parse(_rosterConfig.grace_by_role));}catch(e){}}
-  else _ROLES.forEach(r=>GRACE_BY_ROLE[r]=_lgG);
-  if(_rosterConfig?.red_by_role){try{Object.assign(RED_BY_ROLE,JSON.parse(_rosterConfig.red_by_role));}catch(e){}}
-  else _ROLES.forEach(r=>RED_BY_ROLE[r]=_lgR);
-  if(_rosterConfig?.swap_expiry_days!=null) SWAP_EXPIRY_DAYS=_rosterConfig.swap_expiry_days;
-  if(_rosterConfig?.show_decline_reason!=null) SHOW_DECLINE_REASON=_rosterConfig.show_decline_reason;
-  if(_rosterConfig?.giveaway_enabled_roles!=null){
-    const enabled=_rosterConfig.giveaway_enabled_roles.split(',').map(s=>s.trim());
-    ['Receptionist','Nurse','Manager'].forEach(r=>{ GIVEAWAY_ENABLED[r]=enabled.includes(r); });
-  }
-  if(_rosterConfig?.coverage_thresholds){
-    try{
-      const parsed=JSON.parse(_rosterConfig.coverage_thresholds);
-      ['Receptionist','Nurse','Manager'].forEach(r=>{ if(parsed[r]) COVERAGE_THRESHOLDS[r]=parsed[r]; });
-    }catch(e){}
-  }
+    applyRosterConfig(rosterCfg[0] || null);
     _rosterTemplates = rosterTmpl;
     _rosterOverrides = rosterOv;
     _rosterShifts    = rosterShifts;
@@ -3714,7 +3745,7 @@ function showLoading(on) {
   el.style.animationPlayState = on ? 'running' : 'paused';
 }
 
-const APP_VERSION='2.3';
+const APP_VERSION='2.4';
 const APP_VERSION_DATE='August 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 // The single per-role threshold: within it, no prompt/flag and the shift auto-approves;
@@ -3788,13 +3819,19 @@ function showView(v){
   if(v==='kiosk'||v==='requests'){
     setTimeout(focusRFID,80);
     if(v==='kiosk'){
-      Promise.all([db.get('employees'),db.get('entries'),db.get('roster_shifts'),db.get('requests').catch(()=>[])]).then(([emps,entries,shifts,reqs])=>{
+      Promise.all([db.get('employees'),db.get('entries'),db.get('roster_shifts'),db.get('requests').catch(()=>[]),db.get('roster_config').catch(()=>null)]).then(([emps,entries,shifts,reqs,cfg])=>{
         _emps=emps.filter(e=>e.active!==false); _entries=entries.map(normaliseEntry); _rosterShifts=shifts; _requests=reqs.map(normaliseRequest);
+        // Only when a row actually came back: passing null would reset grace to the
+        // hardcoded 10 and reinstate the very bug this fetch exists to fix.
+        if(cfg&&cfg[0]) applyRosterConfig(cfg[0]);
         renderKioskPresence();
       }).catch(()=>{});
       _kioskRefreshInterval=setInterval(()=>{
-        Promise.all([db.get('employees'),db.get('entries'),db.get('roster_shifts'),db.get('requests').catch(()=>[])]).then(([emps,entries,shifts,reqs])=>{
+        Promise.all([db.get('employees'),db.get('entries'),db.get('roster_shifts'),db.get('requests').catch(()=>[]),db.get('roster_config').catch(()=>null)]).then(([emps,entries,shifts,reqs,cfg])=>{
           _emps=emps.filter(e=>e.active!==false); _entries=entries.map(normaliseEntry); _rosterShifts=shifts; _requests=reqs.map(normaliseRequest);
+          // Only when a row actually came back: passing null would reset grace to the
+          // hardcoded 10 and reinstate the very bug this fetch exists to fix.
+          if(cfg&&cfg[0]) applyRosterConfig(cfg[0]);
           renderKioskPresence();
         }).catch(()=>{});
       },60000);
@@ -9584,7 +9621,12 @@ try{ setDefaultDates(); }catch(e){ console.error('setDefaultDates error',e); }
 (async()=>{
   try{
     const[cfg,tmpl,ov,shifts,mgrs]=await Promise.all([db.get('roster_config'),db.get('roster_templates'),db.get('roster_overrides'),db.get('roster_shifts'),db.get('managers')]);
-    _rosterConfig=cfg[0]||null; _rosterTemplates=tmpl; _rosterOverrides=ov; _rosterShifts=shifts;
+    // applyRosterConfig, not a bare assignment: this block already fetched the config for
+    // the reason stated above, but only stored the row — GRACE_BY_ROLE was never derived
+    // from it, so the kiosk kept prompting on the hardcoded 10 while config said 5. That
+    // one missing line is why 73 of 87 six-to-ten-minute rows have no note. Keep the two
+    // together: _rosterConfig and the globals derived from it must never be set apart.
+    applyRosterConfig(cfg[0]||null); _rosterTemplates=tmpl; _rosterOverrides=ov; _rosterShifts=shifts;
     _mgrs=mgrs.map(normaliseMgr);
   }catch(e){console.error('Roster load error:',e);}
 })();
