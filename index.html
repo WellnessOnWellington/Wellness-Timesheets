@@ -2769,11 +2769,18 @@
           <div style="padding:0.5rem 0 1.25rem;">
             <div style="font-size:0.82rem;color:var(--charcoal);font-weight:700;margin-bottom:0.2rem;">Running Well</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.1rem;">Built by Dr Joel Jaya</div>
-            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.4 &middot; August 2026</div>
+            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.5 &middot; August 2026</div>
           </div>
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
+              <div style="display:flex;gap:0.75rem;align-items:baseline;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.5</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">24 August 2026 &mdash; Timesheet PDFs Match Payroll</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Downloaded timesheet PDFs now state exactly what payroll pays. A leave day was printing the full rostered span, and an early arrival was printing the clock time &mdash; both showed more hours than were actually paid. Leave days now have the unpaid meal break deducted the same way a worked day does, and start and finish times show the rostered times your pay is calculated from. Your actual clock times are unchanged and still recorded against the day. <strong>This corrects what the timesheet says, not what anyone was paid</strong> &mdash; those figures have always been what MYOB paid. A day rostered as two separate blocks now also matches each block to its own times rather than the first block of the day.</div>
+                </div>
+              </div>
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
                 <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.4</div>
                 <div>
@@ -3745,7 +3752,7 @@ function showLoading(on) {
   el.style.animationPlayState = on ? 'running' : 'paused';
 }
 
-const APP_VERSION='2.4';
+const APP_VERSION='2.5';
 const APP_VERSION_DATE='August 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 // The single per-role threshold: within it, no prompt/flag and the shift auto-approves;
@@ -6684,6 +6691,12 @@ async function downloadTimesheetsPDFs(){
 // call site needs no changes. The Staff Portal's self-service download passes its own
 // employee-scoped arrays instead — deliberately never touching the shared globals, so flipping
 // between Admin and the Portal in the same session can't silently narrow the admin's data.
+// Resolve an entry to its OWN rostered block. The PDF's per-date lookup uses .find(), which takes
+// the first block of a split day — wrong for the second half. Mirrors the MYOB export's resolution.
+function _leaveShiftForRow(entry,dayShift,shiftsSrc){
+  return (entry&&entry.shiftId&&shiftsSrc.find(s=>String(s.id)===String(entry.shiftId)))||dayShift;
+}
+
 function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo,shiftsSrc=_rosterShifts,entriesSrc=_entries,notesSrc=_notes){
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const margin=14;
@@ -6768,15 +6781,35 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo,shiftsSrc=_rosterShifts,e
     // rendering as a normal reviewed row — the manager's finalise-warning promises this.
     const isProvisional=!tsEntryReadyCore(entry,emp,shift);
     if(entry.leaveType){
-      const hrs=entry.hours!=null?parseFloat(entry.hours):null;
+      // Hours here MUST equal what MYOB pays. The stored entries.hours is the full rostered span
+      // written by rbMarkLeave/applyRosterWriteback, but _calcMYOBRowsBase deducts the expected
+      // unpaid break — so every leave day of 6h or more printed 0.50h HIGH on the PDF while payroll
+      // paid the lower figure. 85 leave rows / 40.5h across the live data, and these PDFs are the
+      // fortnightly Fair Work record, so the record was overstating leave against what was paid.
+      //
+      // Derived FROM _calcMYOBRowsBase rather than recomputed alongside it, so the two cannot drift
+      // — the timesheet row already agrees with MYOB; the PDF was the odd copy out.
+      //
+      // Resolved to the entry's OWN shift, like the MYOB export does: the day-level find() above
+      // takes the first block of a split day, which is the wrong block for the second half.
+      const _leaveShift=_leaveShiftForRow(entry,shift,shiftsSrc);
+      const _mrows=_calcMYOBRowsBase(entry,emp,_publicHolidays?.has(date)||false,_leaveShift);
+      const hrs=_mrows.length?_mrows.reduce((a,r)=>a+r.hours,0):null;
       if(hrs!=null&&!isNaN(hrs)&&entry.leaveType!=='public_holiday') totalLeave+=hrs;
       const leaveLabel=(LEAVE_TYPES[entry.leaveType]||entry.leaveType)+(isProvisional?' (Provisional)':'');
       tableRows.push({cells:[dateStr,leaveLabel,'','','',hrs!=null?hrs.toFixed(2):'','',''],type:isProvisional?'provisional':'leave'});
       return;
     }
     // Worked
-    const finalIn=(entry.finalStart||entry.clockIn||'').slice(0,5);
-    const finalOut=(entry.finalEnd||entry.clockOut||'').slice(0,5);
+    // Times come from resolveFinalTimes — the same roster-snapping the Timesheets tab and the MYOB
+    // export both use. The PDF previously printed the raw finalStart||clockIn, so an early arrival
+    // showed the clock time and hours to match: 84 rows / 18.67h across the live data claimed more
+    // than payroll paid (e.g. 08:31-17:00 = 7.98h on the PDF, 7.50h in MYOB). These PDFs are the
+    // fortnightly Fair Work record, so all three surfaces must state the same paid span.
+    // The raw clock times remain in `entries` and in timesheet_audit; this is the PAID span.
+    const _rf=resolveFinalTimes(entry,_leaveShiftForRow(entry,shift,shiftsSrc),emp);
+    const finalIn=(_rf.finalStart||entry.finalStart||entry.clockIn||'').slice(0,5);
+    const finalOut=(_rf.finalEnd||entry.finalEnd||entry.clockOut||'').slice(0,5);
     let hrs=null;
     let expBreakMins=0;
     let displayUnpaid=0;
