@@ -2769,7 +2769,7 @@
           <div style="padding:0.5rem 0 1.25rem;">
             <div style="font-size:0.82rem;color:var(--charcoal);font-weight:700;margin-bottom:0.2rem;">Running Well</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.1rem;">Built by Dr Joel Jaya</div>
-            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.1 &middot; August 2026</div>
+            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.3 &middot; August 2026</div>
           </div>
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
@@ -5030,6 +5030,58 @@ function tsIsEntryReady(e, rosterShiftsSrc=_rosterShifts, empsSrc=_emps){
   return tsEntryReadyCore(e,emp,shift);
 }
 
+// Which of a period's rows are not finalised — the single source of truth for all three
+// places that ask: the MYOB payroll export, the fortnightly PDF archive kept as the Fair
+// Work record, and the finalize toggle that publishes the period to staff. One definition,
+// because three copies of this filter would drift the way Grace and Yellow did.
+//
+// TWO KINDS OF UNFINALISED, matching dlTsGeneratePDF's row types exactly:
+//   notReady — an entry exists but isn't locked/auto-approved  → prints "(Provisional)"
+//   missing  — a rostered day has no entry at all              → prints "Not yet finalised"
+//
+// Callers opt into what they need, because they are genuinely different questions:
+//   requireTimes   MYOB only cares about rows it could pay; a row with no times has
+//                  nothing to export. The PDF renders it regardless, so it does not.
+//   includeMissing MYOB has nothing to pay on a day nobody clocked, so it ignores these.
+//                  The PDF prints them as blank rows, which is exactly the incomplete
+//                  archive the fortnightly download is meant to catch.
+//
+// What callers must NOT share is the wording: MYOB DROPS an unlocked entry, the PDF
+// INCLUDES it marked "(Provisional)". Same rows, opposite consequences, so each says so.
+function tsUnfinalisedForPeriod(selectedIds, fnDays, opts={}){
+  const {entriesSrc=_entries, shiftsSrc=_rosterShifts, empsSrc=_emps,
+         requireTimes=false, includeMissing=false}=opts;
+  // Ids arrive from checkbox values (strings) and from employee records (text in the DB,
+  // but normalise anyway — a number here would silently match nothing).
+  const sel=new Set([...selectedIds].map(String));
+  const all=entriesSrc.filter(e=>fnDays.includes(e.date)&&!e.deleted&&sel.has(String(e.employeeId)));
+  // Grouped per day so a secondary raw entry on the same date can't raise a false warning;
+  // this is the same canonical row the UI locks.
+  const canonical=groupEntriesByDay(all);
+  const byDate=new Set(canonical.map(e=>String(e.employeeId)+'|'+e.date));
+  const notReady=canonical
+    .filter(e=>!tsIsEntryReady(e)&&(!requireTimes||((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut))))
+    .sort((a,b)=>(a.employeeName||'').localeCompare(b.employeeName||'')||a.date.localeCompare(b.date));
+  const missing=[];
+  if(includeMissing){
+    // One row per employee-day, not per shift: a split-shift day with no clock-in has two
+    // rostered blocks and would otherwise report the same person and date twice.
+    const seen=new Set();
+    shiftsSrc.forEach(sh=>{
+      if(sh.is_day_off||!fnDays.includes(sh.date)) return;
+      const eid=String(sh.employee_id), key=eid+'|'+sh.date;
+      if(!sel.has(eid)||byDate.has(key)||seen.has(key)) return;
+      seen.add(key);
+      const emp=empsSrc.find(em=>String(em.id)===eid);
+      missing.push({employeeId:eid, employeeName:emp?emp.name:'Unknown', date:sh.date});
+    });
+    missing.sort((a,b)=>a.employeeName.localeCompare(b.employeeName)||a.date.localeCompare(b.date));
+  }
+  const bullet=r=>`• ${r.employeeName||'Unknown'} — ${r.date}`;
+  return {all, canonical, notReady, missing,
+          detail:notReady.map(bullet).join('\n'),
+          missingDetail:missing.map(bullet).join('\n')};
+}
 // Single source of truth for a shift's effective start/end time — snaps each side to
 // the roster independently based on that side's own grace-period proximity. Shared by
 // the timesheet row display (tsBuildRow) and the MYOB category calculation
@@ -5590,17 +5642,13 @@ async function tsToggleFinalize(cb){
     // Two distinct cases, matching dlTsGeneratePDF's own row types exactly:
     //  - an entry exists but isn't locked/auto-approved (missed clock-out, unresolved gap, etc.) → "Provisional"
     //  - a rostered day has no entry at all yet → "Not yet finalised"
+    // Same helper as the MYOB export and the PDF archive — one definition of "not
+    // finalised" across all three. Scoped to every active person rather than a selection,
+    // since finalizing publishes the whole period to all staff at once.
     const activeEmps=_emps.filter(e=>!e.is_placeholder);
-    const activeEmpIds=new Set(activeEmps.map(e=>e.id));
-    const allEntries=_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted&&activeEmpIds.has(e.employeeId));
-    const canonicalEntries=groupEntriesByDay(allEntries);
-    const notReady=canonicalEntries.filter(e=>!tsIsEntryReady(e));
-    const missing=[];
-    activeEmps.forEach(emp=>{
-      _rosterShifts.filter(s=>s.employee_id===emp.id&&fnDays.includes(s.date)&&!s.is_day_off).forEach(s=>{
-        if(!canonicalEntries.some(e=>e.employeeId===emp.id&&e.date===s.date)) missing.push({employeeName:emp.name});
-      });
-    });
+    const activeEmpIds=new Set(activeEmps.map(e=>String(e.id)));
+    const {canonical:canonicalEntries, notReady, missing}=
+      tsUnfinalisedForPeriod(activeEmpIds, fnDays, {includeMissing:true});
     // Unactioned swaps/give-aways/leave in this period mean the roster may not describe
     // what actually happened — pushing publishes that to staff as a final record.
     const fnDaySet=new Set(fnDays);
@@ -6394,19 +6442,15 @@ function exportMYOBSelected(){
 
   const fnStart=getPayPeriodStart(tsOffset);
   const fnDays=getFortnight14Days(fnStart);
-  const allEntries=_entries.filter(e=>fnDays.includes(e.date)&&!e.deleted&&selectedIds.has(e.employeeId));
+  // Shared with the PDF archive and the finalize toggle so they can't disagree about what
+  // is finalised. requireTimes: a row with no times has nothing to pay, so it is not the
+  // payroll export's problem. No missing-day check for the same reason.
+  const {all:allEntries, notReady, detail}=tsUnfinalisedForPeriod(selectedIds, fnDays, {requireTimes:true});
 
   const ready=allEntries.filter(e=>tsIsEntryReady(e)&&(e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut));
-  // Check readiness using the same grouped-per-day canonical entry that the UI locks —
-  // prevents false warnings from secondary raw entries on the same day. Scoped to the
-  // selected staff only — someone deliberately left unchecked never shows up here.
-  const canonicalEntries=groupEntriesByDay(allEntries);
-  const notReady=canonicalEntries.filter(e=>!tsIsEntryReady(e)&&selectedIds.has(e.employeeId)&&((e.finalStart||e.clockIn)&&(e.finalEnd||e.clockOut)));
 
   if(!ready.length){showToast('No locked entries to export for the selected staff.');return;}
   if(notReady.length){
-    const sortedNotReady=notReady.slice().sort((a,b)=>(a.employeeName||'').localeCompare(b.employeeName||'')||a.date.localeCompare(b.date));
-    const detail=sortedNotReady.map(e=>`• ${e.employeeName||'Unknown'} — ${e.date}`).join('\n');
     if(!confirm(`${notReady.length} entr${notReady.length===1?'y':'ies'} for selected staff are not yet locked and will not be included:\n\n${detail}\n\nExport ${ready.length} ready entr${ready.length===1?'y':'ies'} anyway?`)) return;
   }
 
@@ -6551,11 +6595,26 @@ async function downloadTimesheetsPDFs(){
   const selectedIds=new Set([...document.querySelectorAll('.dl-ts-emp-cb:checked')].map(cb=>cb.value));
   if(!selectedIds.size){showToast('Select at least one staff member');return;}
   document.getElementById('dl-ts-modal').classList.remove('show');
+  const fnStart=getPayPeriodStart(tsOffset);
+  const fnDays=getFortnight14Days(fnStart);
+
+  // Same helper as the MYOB export and the finalize toggle, so the three can't drift.
+  // Unlike MYOB this reports BOTH kinds, because both appear in the PDF: an unlocked row
+  // prints "(Provisional)" and a rostered day with no clock-in prints "Not yet finalised".
+  // These PDFs are the fortnightly Fair Work record, and an archive is only as good as
+  // the state it captures — a warning that stayed silent about blank days would file an
+  // incomplete record without saying so.
+  const {notReady, missing, detail, missingDetail}=tsUnfinalisedForPeriod(selectedIds, fnDays, {includeMissing:true});
+  if(notReady.length||missing.length){
+    const parts=[];
+    if(notReady.length) parts.push(`${notReady.length} entr${notReady.length===1?'y is':'ies are'} not yet locked and will be marked “(Provisional)”:\n\n${detail}`);
+    if(missing.length) parts.push(`${missing.length} rostered day${missing.length===1?'':'s'} ${missing.length===1?'has':'have'} no clock-in and will print “Not yet finalised”:\n\n${missingDetail}`);
+    if(!confirm(`${parts.join('\n\n')}\n\nDownload ${selectedIds.size} timesheet${selectedIds.size===1?'':'s'} anyway?`)) return;
+  }
+
   showToast('Preparing PDFs…');
   try{ await loadDlTsLibs(); }
   catch(e){ showToast('Could not load PDF libraries — check internet connection'); return; }
-  const fnStart=getPayPeriodStart(tsOffset);
-  const fnDays=getFortnight14Days(fnStart);
   const fnLabel=srFortnightLabel(fnStart);
   const {jsPDF}=window.jspdf;
   const zip=new JSZip();
