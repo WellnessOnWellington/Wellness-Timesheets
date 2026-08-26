@@ -2769,11 +2769,18 @@
           <div style="padding:0.5rem 0 1.25rem;">
             <div style="font-size:0.82rem;color:var(--charcoal);font-weight:700;margin-bottom:0.2rem;">Running Well</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.1rem;">Built by Dr Joel Jaya</div>
-            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.5 &middot; August 2026</div>
+            <div id="about-version" style="font-size:0.78rem;color:var(--muted);">Version 2.6 &middot; August 2026</div>
           </div>
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
+              <div style="display:flex;gap:0.75rem;align-items:baseline;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.6</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">26 August 2026 &mdash; Clearer Unpaid Time on Timesheets</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">Unpaid time no longer appears as its own line with a figure in the Hours column, where it read like hours owed when the meaning was the opposite &mdash; time not worked and not paid. It now reads as a note against the day itself, for example &ldquo;Arrived 7 min after rostered start &mdash; unpaid&rdquo;. Paid leave taken as part of a worked day is unchanged: annual, personal, compassionate and long service leave still appear on their own line with their hours, because those hours are genuinely paid from a leave balance and belong in your totals.</div>
+                </div>
+              </div>
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
                 <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.5</div>
                 <div>
@@ -3752,7 +3759,7 @@ function showLoading(on) {
   el.style.animationPlayState = on ? 'running' : 'paused';
 }
 
-const APP_VERSION='2.5';
+const APP_VERSION='2.6';
 const APP_VERSION_DATE='August 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 // The single per-role threshold: within it, no prompt/flag and the shift auto-approves;
@@ -6830,21 +6837,42 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo,shiftsSrc=_rosterShifts,e
     if(entry.reasonOut) noteParts.push('Out: '+entry.reasonOut);
     if(entry.breakNote) noteParts.push('Break: '+entry.breakNote);
     if(entry.travelKm) noteParts.push('Car: '+entry.travelKm+'km');
+    // Unpaid gaps belong here, as context on the day — NOT as their own row with a figure in the
+    // Hours column. Printed as a row they read as hours owed, when the meaning is the exact
+    // opposite: time not worked and not paid. Every unpaid gap in the live data bar one is a
+    // 6-9 minute late arrival, so staff were getting lines on a payroll document announcing
+    // lateness as though it were an entitlement. The paid gap types (annual, personal,
+    // compassionate, long service) still get their own row below — those genuinely are paid hours
+    // drawn from a leave balance and belong in the Hours column and the leave total.
+    const _gapRost=_leaveShiftForRow(entry,shift,shiftsSrc);
+    // Minutes below an hour, h/min above it — "179 min" is unreadable on a payroll document.
+    const _gapMins=h=>{const m=Math.round(Number(h)*60);
+      return m<60?m+' min':(m%60===0?(m/60)+' h':Math.floor(m/60)+' h '+(m%60)+' min');};
+    if(entry.leaveTypeGapStart==='unpaid'&&entry.leaveGapHoursStart>0)
+      noteParts.push(`Arrived ${_gapMins(entry.leaveGapHoursStart)} after rostered start — unpaid`);
+    if(entry.leaveTypeGap==='unpaid'&&entry.leaveGapHours>0){
+      const _re=_gapRost?.end_time||null;
+      const _late=_re&&finalOut&&timeToMin(finalOut)>timeToMin(_re);
+      noteParts.push(_late
+        ?`Clocked out ${_gapMins(entry.leaveGapHours)} after rostered finish — unpaid`
+        :`Left ${_gapMins(entry.leaveGapHours)} before rostered finish — unpaid`);
+    }
     const resolvedNotes=empNotes.filter(n=>n.entryId===entry.id&&n.status!=='pending'&&n.resolvedBy);
     const approvedBy=resolvedNotes.length?(resolvedNotes[0].resolvedBy||'').split(' ').map(w=>w[0]||'').join(''):'';
     const shiftLabel=(shift?'Worked':'Worked (unrostered)')+(isProvisional?' (Provisional)':'');
     tableRows.push({cells:[dateStr,shiftLabel,finalIn,finalOut,breakStr,hrs!=null?hrs.toFixed(2):'',noteParts.join(' · '),approvedBy],type:isProvisional?'provisional':'worked'});
-    // Gap leave rows — only for types that don't fold into worked hours (pay_to_roster already included)
+    // Gap leave rows — PAID gap types only. These are hours drawn from a leave balance, so they
+    // belong in the Hours column and in the leave total. pay_to_roster/pay_to_clockout are already
+    // folded into the worked row's own hours, and 'unpaid' is now stated in the Notes column above
+    // rather than printed as a figure that reads like hours owed.
     const paidGapTypes={annual_leave:'Annual Leave',personal_leave:'Personal Leave',compassionate_leave:'Compassionate Leave',long_service_leave:'Long Service Leave'};
-    if(entry.leaveTypeGap&&entry.leaveTypeGap!=='pay_to_roster'&&entry.leaveGapHours>0){
-      const gapLabel=(paidGapTypes[entry.leaveTypeGap]||formatGapLeaveType(entry.leaveTypeGap))+' gap';
-      tableRows.push({cells:[dateStr,gapLabel,'','','',Number(entry.leaveGapHours).toFixed(2),'',''],type:'leave'});
-      if(paidGapTypes[entry.leaveTypeGap]) totalLeave+=Number(entry.leaveGapHours);
+    if(paidGapTypes[entry.leaveTypeGap]&&entry.leaveGapHours>0){
+      tableRows.push({cells:[dateStr,paidGapTypes[entry.leaveTypeGap]+' gap','','','',Number(entry.leaveGapHours).toFixed(2),'',''],type:'leave'});
+      totalLeave+=Number(entry.leaveGapHours);
     }
-    if(entry.leaveTypeGapStart&&entry.leaveTypeGapStart!=='pay_to_roster_start'&&entry.leaveGapHoursStart>0){
-      const gapLabel=(paidGapTypes[entry.leaveTypeGapStart]||formatGapLeaveType(entry.leaveTypeGapStart))+' gap';
-      tableRows.push({cells:[dateStr,gapLabel,'','','',Number(entry.leaveGapHoursStart).toFixed(2),'',''],type:'leave'});
-      if(paidGapTypes[entry.leaveTypeGapStart]) totalLeave+=Number(entry.leaveGapHoursStart);
+    if(paidGapTypes[entry.leaveTypeGapStart]&&entry.leaveGapHoursStart>0){
+      tableRows.push({cells:[dateStr,paidGapTypes[entry.leaveTypeGapStart]+' gap','','','',Number(entry.leaveGapHoursStart).toFixed(2),'',''],type:'leave'});
+      totalLeave+=Number(entry.leaveGapHoursStart);
     }
   });
 
