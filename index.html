@@ -7691,6 +7691,20 @@ const SR_ROLE_BG={Doctor:'rgba(139,37,53,0.10)',Nurse:'rgba(166,50,69,0.12)',Rec
    name, different meaning, one day apart. Never compare or join them, and pick
    the grid that matches what you're navigating — roster UI uses this one.
    ─────────────────────────────────────────────────────────────────────────── */
+/* Whole calendar days between two local dates, DST-safe.
+
+   Do NOT go back to `Math.floor((a-b)/86400000)`. Both grids anchor on a local
+   midnight captured in AEST (+10); once Melbourne shifts to AEDT (+11) the gap
+   between two local midnights is an hour short of a whole number of days, so the
+   floor drops a day. Because toMonday()/toTuesday() collapse a whole week onto
+   one weekday first, a boundary day that lands wrong takes its entire week with
+   it — the first week of every fortnight resolves to the PREVIOUS fortnight for
+   the whole of daylight saving. Measured 105 wrong days in 560, first bad day
+   6 Oct 2026. Date.UTC on the y/m/d parts carries no offset, so DST cannot enter
+   the subtraction. */
+const _utcDayNum=d=>Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000;
+const _fnIndex=(target,anchor)=>Math.floor((_utcDayNum(target)-_utcDayNum(anchor))/14);
+
 function getFortnightStart(offsetFortnights){
   const toMonday=d=>{const day=d.getDay();const diff=day===0?-6:1-day;return new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff);};
   const localDateStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -7698,10 +7712,8 @@ function getFortnightStart(offsetFortnights){
   if(_rosterConfig){
     const anchor=toMonday(new Date(_rosterConfig.cycle_start_date+'T12:00:00'));
     const today=toMonday(new Date());
-    const daysDiff=Math.floor((today-anchor)/86400000);
-    const fnNum=Math.floor(daysDiff/14);
     base=new Date(anchor);
-    base.setDate(anchor.getDate()+fnNum*14);
+    base.setDate(anchor.getDate()+_fnIndex(today,anchor)*14);
   }else{
     base=toMonday(new Date());
   }
@@ -7721,18 +7733,37 @@ function getFortnightStart(offsetFortnights){
    column and restore this as the fallback. */
 const PAY_PERIOD_ANCHOR='2026-04-21'; // Tuesday; PP26 (16-29 Jun 2026) lands exactly on this grid
 
-function getPayPeriodStart(offsetFortnights){
+/* Which pay period does an arbitrary date fall in? Returns that period's fn_start
+   (a Tuesday), on the same grid as timesheet_finalizations.fn_start.
+
+   getPayPeriodStart() below is this function asked about today, plus an offset.
+   Keep it that way — the anchor arithmetic used to exist only in the
+   today-relative form, so nothing could ask "which pay period is this date in?". */
+function payPeriodStartFor(dateStr){
   const toTuesday=d=>{const day=d.getDay();const diff=-(((day-2)+7)%7);return new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff);};
   const localDateStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  const ppAnchorStr=PAY_PERIOD_ANCHOR;
-  const anchor=toTuesday(new Date(ppAnchorStr+'T12:00:00'));
-  const today=toTuesday(new Date());
-  const daysDiff=Math.floor((today-anchor)/86400000);
-  const fnNum=Math.floor(daysDiff/14);
+  const anchor=toTuesday(new Date(PAY_PERIOD_ANCHOR+'T12:00:00'));
+  const target=toTuesday(new Date(String(dateStr).slice(0,10)+'T12:00:00'));
   const base=new Date(anchor);
-  base.setDate(anchor.getDate()+fnNum*14);
-  base.setDate(base.getDate()+offsetFortnights*14);
+  base.setDate(anchor.getDate()+_fnIndex(target,anchor)*14);
   return localDateStr(base);
+}
+
+/* Last day of the pay period containing dateStr — always a Monday. */
+function payPeriodEndFor(dateStr){
+  const d=new Date(payPeriodStartFor(dateStr)+'T12:00:00');
+  d.setDate(d.getDate()+13);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getPayPeriodStart(offsetFortnights){
+  // Local date, never toISOString() — that is UTC, and Melbourne mornings are
+  // still "yesterday" in UTC, which would shift the period for half the day.
+  const n=new Date();
+  const todayLocal=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+  const base=new Date(payPeriodStartFor(todayLocal)+'T12:00:00');
+  base.setDate(base.getDate()+offsetFortnights*14);
+  return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;
 }
 
 function getFortnight14Days(startDateStr){
@@ -8593,10 +8624,8 @@ function rbGetFnStart(){
   if(!anchor){const t=toMonday(new Date());return t;}
   const a=toMonday(new Date(anchor+'T12:00:00'));
   const today=toMonday(new Date());
-  const daysDiff=Math.floor((today-a)/86400000);
-  const fnNum=Math.floor(daysDiff/14);
   const base=new Date(a);
-  base.setDate(base.getDate()+(fnNum+rFnOffset)*14);
+  base.setDate(base.getDate()+(_fnIndex(today,a)+rFnOffset)*14);
   return base;
 }
 
@@ -8986,9 +9015,7 @@ function rbSyncFnOffset(){
   const a=toMonday(new Date(_rosterConfig.cycle_start_date+'T12:00:00'));
   const today=toMonday(new Date());
   const sel=toMonday(new Date(rbSelectedDay+'T12:00:00'));
-  const fnNum=Math.floor((today-a)/86400000/14);
-  const selFnNum=Math.floor((sel-a)/86400000/14);
-  rFnOffset=selFnNum-fnNum;
+  rFnOffset=_fnIndex(sel,a)-_fnIndex(today,a);
 }
 
 function minToTimeStr(min){ return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0'); }
