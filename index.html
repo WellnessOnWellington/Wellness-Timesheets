@@ -2447,10 +2447,10 @@
           <div class="roster-section" style="margin-bottom:1.5rem;">
             <div class="roster-section-title">Swap Request Expiry</div>
             <div class="roster-anchor-bar">
-              <label class="form-label" style="margin:0;white-space:nowrap;">Auto-expire after</label>
-              <input class="form-input" type="number" id="swap-expiry-days" min="1" max="30" step="1" style="width:70px;" />
-              <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">days</span>
-              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Swap requests with no peer response after this many days will auto-expire.</span>
+              <label class="form-label" style="margin:0;white-space:nowrap;">Stays open until</label>
+              <input class="form-input" type="number" id="swap-expiry-days" min="0" max="14" step="1" style="width:70px;" />
+              <span style="font-size:0.8rem;color:var(--muted);font-weight:600;">days after the pay period ends</span>
+              <span style="font-size:0.75rem;color:var(--muted);font-weight:500;">Pay periods end on a Monday, so 2 keeps a swap actionable until the Wednesday after — long enough to fix the roster from the request while reconciling timesheets. Finalising the period closes it sooner.</span>
               <button class="add-emp-btn" style="margin-left:auto;" onclick="saveSwapExpiry()">Save</button>
             </div>
           </div>
@@ -2774,6 +2774,13 @@
           <div style="border-top:1.5px solid var(--border);padding-top:1rem;">
             <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.75rem;">Release History</div>
             <div style="display:flex;flex-direction:column;gap:0.85rem;">
+              <div style="display:flex;gap:0.75rem;align-items:baseline;">
+                <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.7</div>
+                <div>
+                  <div style="font-size:0.76rem;font-weight:700;color:var(--charcoal);margin-bottom:0.15rem;">26 August 2026 &mdash; Swap Requests Stay Open Long Enough To Be Useful</div>
+                  <div style="font-size:0.74rem;color:var(--muted);line-height:1.5;">A swap or give-away used to lapse seven days after it was <em>sent</em>, which got it wrong both ways: one raised three weeks ahead died a fortnight before the shift it was about, while one raised the day before a shift lapsed a week after the shift had already been worked. A request now stays open until the shift&rsquo;s pay period has been reconciled &mdash; the Wednesday after the period ends &mdash; so a manager can still approve it and let the roster correct itself instead of editing the roster by hand. If a colleague never answers, the request no longer dies: it goes to the manager, marked as unanswered, because they are the one who can still put it right. Requests that did lapse now stay visible in your History instead of disappearing, and the Staff Portal no longer offers Accept on a request whose deadline has passed. Once a pay period has been finalised and sent to payroll, requests affecting it can no longer be approved &mdash; un-push the period first if it genuinely needs changing. Requests waiting on a manager now show how long they have been waiting, oldest first.</div>
+                </div>
+              </div>
               <div style="display:flex;gap:0.75rem;align-items:baseline;">
                 <div style="font-size:0.72rem;font-weight:800;color:var(--burgundy);white-space:nowrap;min-width:3.5rem;">v2.6</div>
                 <div>
@@ -3510,12 +3517,15 @@ function normaliseRequest(r) {
    explains it, so both halves can say so.
 
    Only statuses a manager can still do something about:
-     pending_manager — never expires (the sweep only touches pending_peer), so
-                       these sit indefinitely until actioned.
-     expired         — a peer swap that timed out and was never seen. Shown
-                       because the shift may still have been worked, but NOT
-                       clickable: renderRequests only lists pending_manager,
-                       so there is nothing to click through to.
+     pending_manager — never expires, so these sit until actioned. Since
+                       26 Aug 2026 this is ALSO where an unanswered peer swap
+                       lands: the sweep routes it here rather than killing it,
+                       because the manager is the one who can still fix the
+                       roster. Those carry peer_response='none'.
+     expired         — now only a request whose pay period was finalised before
+                       anyone acted. Genuinely too late: shown because the shift
+                       may still have been worked, but NOT clickable, since
+                       renderRequests lists only pending_manager.
    pending_peer is deliberately excluded — the manager cannot action it and it
    would put a marker on every row of every speculative swap.
 ═══════════════════════════════════════════ */
@@ -3587,7 +3597,7 @@ function reqMarkerLabel(m){ return escHtml(reqMarkerLabelRaw(m)); }
 function reqMarkerTitle(m){
   const lbl=reqMarkerLabelRaw(m);
   return m.req.status==='expired'
-    ? `${lbl} — this request EXPIRED without ever reaching a manager. If the shift was worked as requested, correct the roster by hand.`
+    ? `${lbl} — this request expired: nobody responded and the pay period was finalised before a manager saw it. If the shift was worked as requested, correct the roster by hand.`
     : `${lbl} — awaiting your approval. Click to open it in Requests.`;
 }
 
@@ -3759,7 +3769,7 @@ function showLoading(on) {
   el.style.animationPlayState = on ? 'running' : 'paused';
 }
 
-const APP_VERSION='2.6';
+const APP_VERSION='2.7';
 const APP_VERSION_DATE='August 2026';
 const _ROLES=['Receptionist','Nurse','Manager'];
 // The single per-role threshold: within it, no prompt/flag and the shift auto-approves;
@@ -3793,7 +3803,12 @@ let _reqMyShifts = [];
 let _reqColleagueShifts = [];
 let _pickupPending = {shiftId:null,date:null,start:null,end:null,placeholderId:null,placeholderName:null};
 let _reqCoverShifts = [];
-let SWAP_EXPIRY_DAYS = 7;
+/* Days AFTER the shift's pay period closes that a swap/give-away stays usable.
+   The pay period ends on a Monday, so the default 2 = the Wednesday after.
+   ⚠ Was 'days from creation' before 26 Aug 2026 and the live roster_config row
+   still holds 7 from that era — reset it to 2, or the window runs to the
+   following Monday. See reqExpiryFor(). */
+let SWAP_EXPIRY_DAYS = 2;
 let SHOW_DECLINE_REASON = true;
 let GIVEAWAY_ENABLED = {Receptionist: true, Nurse: true, Manager: true};
 let reqRole = 'Receptionist';
@@ -7738,7 +7753,8 @@ const PAY_PERIOD_ANCHOR='2026-04-21'; // Tuesday; PP26 (16-29 Jun 2026) lands ex
 
    getPayPeriodStart() below is this function asked about today, plus an offset.
    Keep it that way — the anchor arithmetic used to exist only in the
-   today-relative form, so nothing could ask "which pay period is this date in?". */
+   today-relative form, which is why nothing could ask "which pay period is this
+   shift in?", the question request expiry is built on. */
 function payPeriodStartFor(dateStr){
   const toTuesday=d=>{const day=d.getDay();const diff=-(((day-2)+7)%7);return new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff);};
   const localDateStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -10056,10 +10072,19 @@ async function reqShowList(){
   if(!_reqEmployee) return;
   // Refresh requests, notifications and notes for this employee
   try{
-    const [reqs,notifs,notes]=await Promise.all([db.get('requests'),db.get('notifications'),db.get('notes')]);
+    // timesheet_finalizations is fetched here too: reqPeriodFinalised() decides
+    // whether a request is still answerable, and on this path the global was
+    // never populated — it stayed [] from its declaration, so every pay period
+    // looked open to every staff member. Same "global filled on only one path"
+    // shape as the v2.4 grace bug; fill it wherever the data is needed.
+    const [reqs,notifs,notes,finals]=await Promise.all([
+      db.get('requests'),db.get('notifications'),db.get('notes'),
+      db.get('timesheet_finalizations').catch(()=>null)
+    ]);
     _requests=reqs.map(normaliseRequest);
     _notifications=notifs.map(normaliseNotif);
     _notes=notes.map(normaliseNote);
+    if(finals) _timesheetFinalizations=finals;
   }catch(e){}
   renderRequestsList();
   document.getElementById('req-panel-auth').style.display='none';
@@ -10101,10 +10126,16 @@ function renderRequestsList(){
   // ── History ──
   const histNotes=_notes.filter(n=>n.employeeId===emp.id&&(n.status==='approved'||n.status==='flagged')&&n.staffAcknowledged&&n.staffAcknowledgedAt&&now-new Date(n.staffAcknowledgedAt).getTime()<FOURTEEN);
   const histNotifs=_notifications.filter(n=>n.employeeId===emp.id&&n.seenAt&&now-new Date(n.seenAt).getTime()<FOURTEEN).sort((a,b)=>new Date(b.seenAt)-new Date(a.seenAt));
+  // Closed-at, not manager-decided-at: reqExpirySweep writes only {status} and
+  // reqPeerRespond writes only the peer fields, so an expired or peer-declined
+  // request has no managerDecidedAt and used to fall out of BOTH tabs — staff
+  // watched those requests vanish rather than lapse, which is part of why none
+  // of them were ever chased up.
+  const _closedAt=r=>r.managerDecidedAt||r.peerResponseAt||r.expiresAt||r.createdAt;
   const histReqs=_requests
     .filter(r=>r.initiatorId===emp.id||r.colleagueId===emp.id)
-    .filter(r=>['approved','declined','expired'].includes(r.status)&&r.managerDecidedAt&&now-new Date(r.managerDecidedAt).getTime()<FOURTEEN)
-    .sort((a,b)=>new Date(b.managerDecidedAt)-new Date(a.managerDecidedAt));
+    .filter(r=>['approved','declined','expired'].includes(r.status)&&now-new Date(_closedAt(r)).getTime()<FOURTEEN)
+    .sort((a,b)=>new Date(_closedAt(b))-new Date(_closedAt(a)));
 
   const activeCount=activeNotes.length+activeNotifs.length+pendingReqs.length;
   const isHistory=_reqListTab==='history';
@@ -10133,8 +10164,9 @@ function renderRequestsList(){
 
   const _reqCard=(r,isHist=false)=>{
     const isInitiator=r.initiatorId===emp.id;
+    const _ds=reqDisplayStatus(r);
     return`<div class="req-status-card${isHist?' req-status-card-hist':''}" onclick="reqShowDetail('${r.id}')">
-      <span class="req-status-pill ${r.status}">${reqStatusLabel(r.status)}</span>
+      <span class="req-status-pill ${_ds}">${reqStatusLabel(_ds)}</span>
       <div class="req-status-title">${escHtml(reqTitle(r,isInitiator))}</div>
       <div class="req-status-sub">${escHtml(reqStatusSub(r,isInitiator))}</div>
     </div>`;
@@ -10231,7 +10263,9 @@ function reqStatusSub(r,isInitiator){
     if(SHOW_DECLINE_REASON&&r.managerReason) return `Declined: ${r.managerReason}`;
     return 'Request declined';
   }
-  if(r.status==='expired') return 'No response received — request expired';
+  // Must fit legacy rows too: the four requests expired under the pre-v2.7
+  // created_at+7 rule have nothing to do with a finalised period.
+  if(r.status==='expired') return 'Nobody responded in time';
   return `Submitted ${reqFmtDate(r.createdAt)}`;
 }
 
@@ -10259,6 +10293,7 @@ async function reqShowTimesheets(){
       db.get('entries',{employee_id:emp.id}),
       db.get('roster_shifts',{employee_id:emp.id})
     ]);
+    if(finals&&finals.length) _timesheetFinalizations=finals;  // keep one copy, not two
     _reqTsCache={shifts,entries:entriesRaw.map(normaliseEntry)};
     const periods=[-1,-2].map(offset=>{
       const fnStart=getPayPeriodStart(offset);
@@ -10323,9 +10358,11 @@ function reqShowDetail(requestId){
   const emp=_reqEmployee;
   const isInitiator=r.initiatorId===emp.id;
   const isPeer=r.colleagueId===emp.id;
-  const canRespond=isPeer&&r.status==='pending_peer';
+  const _lapsed=r.status==='pending_peer'&&reqIsLapsed(r);
+  const canRespond=isPeer&&r.status==='pending_peer'&&!_lapsed;
+  const _ds=reqDisplayStatus(r);
   let html=`<div style="margin-bottom:1rem;">
-    <span class="req-status-pill ${r.status}" style="display:inline-block;">${reqStatusLabel(r.status)}</span>
+    <span class="req-status-pill ${_ds}" style="display:inline-block;">${reqStatusLabel(_ds)}</span>
     <div style="font-family:'Lora',serif;font-size:1.05rem;font-weight:600;color:var(--charcoal);margin-top:0.5rem;">${escHtml(reqTitle(r,isInitiator))}</div>
     <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">Submitted ${reqFmtDate(r.createdAt)}</div>
   </div>`;
@@ -10386,6 +10423,12 @@ function reqShowDetail(requestId){
       <button class="req-accept-btn" onclick="reqPeerAcceptConfirm('${r.id}')">✓ Accept</button>
       <button class="req-decline-peer-btn" onclick="reqPeerDeclinePrompt('${r.id}')">✗ Decline</button>
     </div></div>`;
+  } else if(_lapsed&&isPeer){
+    // Say why the buttons are gone, rather than just not drawing them.
+    html+=`<div class="req-admin-shifts" style="border-left:3px solid var(--muted);">
+      This request is no longer yours to answer — ${escHtml(reqLapseReason(r))}.
+      ${reqPeriodFinalised(reqShiftDateOf(r))?'That pay period has already been paid.':'It has gone to your manager, who can still correct the roster.'}
+    </div>`;
   }
   document.getElementById('req-detail-content').innerHTML=html;
   document.getElementById('req-panel-auth').style.display='none';
@@ -10439,6 +10482,20 @@ function reqPeerAcceptConfirm(requestId){
 async function reqPeerRespond(requestId,response,reason=''){
   const r=_requests.find(x=>x.id===requestId);
   if(!r) return;
+  // This path had no guard of any kind: a colleague could accept a request from
+  // any point in the past, and the manager approval that follows runs
+  // applyRosterWriteback — which would edit a pay period that had already been
+  // exported and paid. Accepting AFTER the shift is deliberately still allowed
+  // (that is the point of the window); accepting after the window is not.
+  if(r.status!=='pending_peer'){
+    showToast('That request has already been answered');
+    await reqShowList(); return;
+  }
+  if(reqIsLapsed(r)){
+    showToast(`Too late to respond — ${reqLapseReason(r)}. Speak to your manager.`);
+    await reqExpirySweep();
+    await reqShowList(); return;
+  }
   const now=new Date().toISOString();
   const newStatus=response==='accepted'?'pending_manager':'declined';
   try{
@@ -10651,7 +10708,7 @@ async function reqSubmitSwap(){
   if(!canSwapWith(emp,colleague)){ showToast('Swaps can only be with staff of the same role or classification'); return; }
   const id='REQ'+Date.now();
   const now=new Date().toISOString();
-  const expiresAt=new Date(Date.now()+SWAP_EXPIRY_DAYS*86400000).toISOString();
+  const expiresAt=reqExpiryFor(myShift.date);
   try{
     await db.insert('requests',{id,type:'swap',status:'pending_peer',initiator_id:emp.id,initiator_name:emp.name,initiator_role:emp.role,initiator_shift_id:myShift.id,initiator_shift_date:myShift.date,initiator_shift_start:myShift.start_time,initiator_shift_end:myShift.end_time,colleague_id:colleague.id,colleague_name:colleague.name,colleague_shift_id:colShift.id,colleague_shift_date:colShift.date,colleague_shift_start:colShift.start_time,colleague_shift_end:colShift.end_time,reason:reason||null,created_at:now,expires_at:expiresAt});
     await reqCreateNotification(colleague.id,id,`${emp.name} wants to swap their ${reqFmtDate(myShift.date)} shift with your ${reqFmtDate(colShift.date)} shift`,'incoming_swap');
@@ -10677,7 +10734,7 @@ async function reqSubmitGiveaway(){
   if(!canSwapWith(emp,colleague)){ showToast('Can only give a shift to someone of the same role or classification'); return; }
   const id='REQ'+Date.now();
   const now=new Date().toISOString();
-  const expiresAt=new Date(Date.now()+SWAP_EXPIRY_DAYS*86400000).toISOString();
+  const expiresAt=reqExpiryFor(myShift.date);
   try{
     await db.insert('requests',{id,type:'giveaway',status:'pending_peer',initiator_id:emp.id,initiator_name:emp.name,initiator_role:emp.role,initiator_shift_id:myShift.id,initiator_shift_date:myShift.date,initiator_shift_start:myShift.start_time,initiator_shift_end:myShift.end_time,colleague_id:colleague.id,colleague_name:colleague.name,reason:reason||null,created_at:now,expires_at:expiresAt});
     await reqCreateNotification(colleague.id,id,`${emp.name} wants to give you their ${reqFmtDate(myShift.date)} shift (${myShift.start_time}–${myShift.end_time})`,'incoming_giveaway');
@@ -10753,7 +10810,10 @@ function reqSetRole(role, btn){
 }
 
 function renderRequests(){
-  const pending=_requests.filter(r=>r.status==='pending_manager'&&r.initiatorRole===reqRole).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  // Oldest first. Nothing expires on the manager side and nothing chased these,
+  // so they simply accumulated — a leave request for Christmas Day sat 55 days
+  // unanswered. Newest-first buried exactly the ones that needed attention.
+  const pending=_requests.filter(r=>r.status==='pending_manager'&&r.initiatorRole===reqRole).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
   const sevenDays=7*86400000;
   const recentlyClosed=_requests.filter(r=>['approved','declined'].includes(r.status)&&r.initiatorRole===reqRole&&r.managerDecidedAt&&Date.now()-new Date(r.managerDecidedAt).getTime()<sevenDays).sort((a,b)=>new Date(b.managerDecidedAt)-new Date(a.managerDecidedAt));
   const totalPending=_requests.filter(r=>r.status==='pending_manager').length;
@@ -10777,6 +10837,16 @@ function renderRequests(){
     html=`<div class="req-empty" style="padding:3rem 1rem;">✓ No pending requests</div>`;
   }
   document.getElementById('req-admin-content').innerHTML=html;
+}
+
+/* How long a request has been waiting on a manager. pending_manager never
+   expires — a leave decision has to be made, not time out — so the queue needs
+   to say its own age or nothing ever surfaces the stale ones. */
+function reqAgeHtml(r){
+  const days=Math.floor((Date.now()-new Date(r.createdAt).getTime())/86400000);
+  if(days<7) return '';
+  const colour=days>=28?'var(--burgundy)':'var(--warning)';
+  return ` · <span style="color:${colour};font-weight:800;">waiting ${days} days</span>`;
 }
 
 function buildReqAdminCard(r,isPending){
@@ -10832,7 +10902,8 @@ function buildReqAdminCard(r,isPending){
     <div class="req-admin-header">
       <div>
         <div class="req-admin-names">${escHtml(r.initiatorName)}${r.type!=='leave'&&r.type!=='pickup'?` ↔ ${escHtml(r.colleagueName||'')}`:''}</div>
-        <div class="req-admin-meta">Submitted ${reqFmtDate(r.createdAt)}</div>
+        <div class="req-admin-meta">Submitted ${reqFmtDate(r.createdAt)}${isPending?reqAgeHtml(r):''}</div>
+        ${isPending&&r.peerResponse==='none'?`<div class="req-admin-meta" style="color:var(--warning);font-weight:700;">${escHtml(r.colleagueName||'The colleague')} never responded — this came to you automatically</div>`:''}
       </div>
       <span class="req-admin-type-pill">${typeLabel}</span>
     </div>
@@ -10914,6 +10985,20 @@ function reqViewInRoster(requestId){
 async function managerApproveRequest(id){
   const r=_requests.find(x=>x.id===id);
   if(!r) return;
+  // Approving runs applyRosterWriteback. If the pay period has been finalised it
+  // has already gone to MYOB, so a writeback would silently rewrite paid history.
+  // Refusable rather than a warning: unfinalise the period first if it really
+  // does need changing, so the correction is deliberate and visible.
+  // Check every period the request touches, not just the first — a leave range
+  // can straddle two pay periods, and only one of them may be finalised.
+  const _dates=r.type==='leave'
+    ? [r.leaveStartDate,r.leaveEndDate].filter(Boolean)
+    : [reqShiftDateOf(r),r.colleagueShiftDate].filter(Boolean);
+  const _blocked=_dates.find(d=>reqPeriodFinalised(d));
+  if(_blocked){
+    alert(`${srFortnightLabel(payPeriodStartFor(_blocked))} has already been finalised and exported to MYOB.\n\nApproving this now would change a pay period that has been paid. If it genuinely needs correcting, un-push that period in Timesheets first, then approve.`);
+    return;
+  }
   const mgr=currentManager?.name||'Manager';
   const now=new Date().toISOString();
   // Warn BEFORE writing anything: leave will not be applied to blocks that already
@@ -11113,16 +11198,90 @@ async function applyRosterWriteback(req){
    REQUESTS — EXPIRY SWEEP
 ═══════════════════════════════════════════ */
 
+/* ── When a request lapses ───────────────────────────────────────────────────
+   The fuse used to be lit when the request was CREATED (created_at + 7 days),
+   which got the same rule wrong in both directions: a swap raised three weeks
+   ahead died a fortnight before its own shift, while a swap raised the day
+   before a shift outlived the shift by a week and "expired" long after the fact.
+   Live examples of both were sitting in the data.
+
+   It is now anchored to the SHIFT's pay period: a request stays usable until
+   that period has been reconciled — its last day (a Monday) plus
+   SWAP_EXPIRY_DAYS (2) = the Wednesday after. Up to that point a manager can
+   still approve it and let applyRosterWriteback fix the roster, instead of
+   editing the roster by hand. That window is the whole point: accepting a swap
+   AFTER the shift has been worked is legitimate and useful.
+
+   Finalising the period ends it early — once the timesheets are pushed and
+   exported, a writeback would be rewriting paid history.                      */
+function reqShiftDateOf(r){ return r.initiatorShiftDate||r.leaveStartDate||null; }
+
+function reqExpiryFor(shiftDate){
+  if(!shiftDate) return null;
+  const w=new Date(payPeriodEndFor(shiftDate)+'T12:00:00');
+  w.setDate(w.getDate()+SWAP_EXPIRY_DAYS);
+  w.setHours(23,59,59,999);   // the whole of that Wednesday counts
+  return w.toISOString();
+}
+
+function reqPeriodFinalised(shiftDate){
+  if(!shiftDate) return false;
+  return _timesheetFinalizations.some(f=>f.fn_start===payPeriodStartFor(shiftDate));
+}
+
+/* True once a request can no longer be acted on. Computed, never trusted from
+   `status` alone — the sweep only runs on admin login and on opening the
+   Requests tab, so between the real deadline and the next manager login the
+   stored status is stale. Treat `status` as a cache this refreshes. */
+function reqIsLapsed(r){
+  const sd=reqShiftDateOf(r);
+  if(!sd) return false;
+  if(reqPeriodFinalised(sd)) return true;
+  // Derive from the shift rather than trusting the stored column. Every row
+  // written before 26 Aug 2026 carries an expires_at from the old created_at+7
+  // rule, which bears no relation to its shift — a request raised well ahead of
+  // time has a stored deadline that already passed. Computing re-dates those
+  // rows onto the new rule instead of leaving them wrongly dead.
+  const exp=reqExpiryFor(sd)||r.expiresAt;
+  return !!exp&&new Date(exp)<=new Date();
+}
+
+/* What the request effectively IS right now, regardless of what the sweep has
+   got around to writing. Only the manager's browser runs reqExpirySweep, so a
+   staff member could otherwise sit looking at "Awaiting colleague" — with an
+   Accept button — on something whose deadline passed days ago. */
+function reqDisplayStatus(r){
+  if(r.status!=='pending_peer'||!reqIsLapsed(r)) return r.status;
+  return reqPeriodFinalised(reqShiftDateOf(r))?'expired':'pending_manager';
+}
+
+function reqLapseReason(r){
+  const sd=reqShiftDateOf(r);
+  if(sd&&reqPeriodFinalised(sd)) return 'that pay period has been finalised';
+  return 'the deadline for changing that pay period has passed';
+}
+
+/* No peer response no longer kills the request — it hands it to the manager,
+   who is the one who can still fix the roster. Only a request that is genuinely
+   too late (its period already finalised) becomes `expired`. */
 async function reqExpirySweep(){
   if(!_requests.length) return;
-  const now=new Date();
-  const expired=_requests.filter(r=>r.status==='pending_peer'&&r.expiresAt&&new Date(r.expiresAt)<=now);
-  for(const r of expired){
+  const stale=_requests.filter(r=>r.status==='pending_peer'&&reqIsLapsed(r));
+  for(const r of stale){
+    const tooLate=reqPeriodFinalised(reqShiftDateOf(r));
     try{
-      await db.update('requests',r.id,{status:'expired'});
-      r.status='expired';
-      await reqCreateNotification(r.initiatorId,r.id,`Your ${r.type} request expired — no response received from ${r.colleagueName}`,'request_expired');
-      if(r.colleagueId) await reqCreateNotification(r.colleagueId,r.id,`A ${r.type} request from ${r.initiatorName} has expired`,'request_expired');
+      if(tooLate){
+        await db.update('requests',r.id,{status:'expired'});
+        r.status='expired';
+        await reqCreateNotification(r.initiatorId,r.id,`Your ${r.type} request expired — no response from ${r.colleagueName}, and that pay period is now finalised`,'request_expired');
+        if(r.colleagueId) await reqCreateNotification(r.colleagueId,r.id,`A ${r.type} request from ${r.initiatorName} has expired`,'request_expired');
+      }else{
+        const now=new Date().toISOString();
+        await db.update('requests',r.id,{status:'pending_manager',peer_response:'none',peer_response_at:now});
+        r.status='pending_manager'; r.peerResponse='none'; r.peerResponseAt=now;
+        await reqCreateNotification(r.initiatorId,r.id,`No response from ${r.colleagueName} — your ${r.type} request has gone to your manager to decide`,'request_expired');
+        if(r.colleagueId) await reqCreateNotification(r.colleagueId,r.id,`You did not respond to ${r.initiatorName}'s ${r.type} request — it has gone to the manager`,'request_expired');
+      }
     }catch(e){ console.error('Expiry sweep error:',e); }
   }
 }
@@ -11143,7 +11302,8 @@ function renderRequestSettings(){
 }
 
 async function saveSwapExpiry(){
-  const days=parseInt(document.getElementById('swap-expiry-days').value)||7;
+  const days=parseInt(document.getElementById('swap-expiry-days').value);
+  if(!Number.isInteger(days)||days<0||days>14){ showToast('Enter a whole number of days between 0 and 14'); return; }
   try{
     const patch={swap_expiry_days:days};
     if(_rosterConfig) await db.update('roster_config','default',patch);
