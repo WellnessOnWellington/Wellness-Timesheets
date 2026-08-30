@@ -3288,13 +3288,31 @@ const SUPABASE_URL = 'https://vlpbyvxcurcdoxkadgwu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZscGJ5dnhjdXJjZG94a2FkZ3d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNDMwMDEsImV4cCI6MjA4ODcxOTAwMX0.9-h-VczU2Zy922qRGTwX7WcR0iHVm42yOn1SpSPQCt0';
 
 const db = {
+  /* Paged read. Two things here are load-bearing.
+
+     `order=id.asc` is not cosmetic. PostgREST runs each page as its own query
+     and Postgres promises no stable row order between them, so without an
+     explicit order a row written between two pages can come back in both or in
+     neither. Both large tables paginate today — entries passed 1000 rows and
+     roster_shifts passed 2000 — so this was live. Every table has an `id`.
+
+     Filters take two shapes:
+       {employee_id:'EMP1'}                -> employee_id=eq.EMP1   (as before)
+       {date:{gte:'2026-08-01',lte:'...'}} -> date=gte...&date=lte...
+     The second exists so repeating fetches can ask for a date window instead of
+     the whole history. Egress is charged on rows returned and these tables only
+     grow: an unfiltered read here cost 7.8KB in April and 134KB by late August,
+     which is what exhausted the Supabase egress allowance. Prefer a window. */
   async get(table, filters={}) {
     const PAGE = 1000;
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
     let all = [], offset = 0;
     while (true) {
-      let url = `${SUPABASE_URL}/rest/v1/${table}?select=*&limit=${PAGE}&offset=${offset}`;
-      Object.entries(filters).forEach(([k,v]) => url += `&${k}=eq.${encodeURIComponent(v)}`);
+      let url = `${SUPABASE_URL}/rest/v1/${table}?select=*&order=id.asc&limit=${PAGE}&offset=${offset}`;
+      Object.entries(filters).forEach(([k,v]) => {
+        if (v && typeof v === 'object') Object.entries(v).forEach(([op,val]) => url += `&${k}=${op}.${encodeURIComponent(val)}`);
+        else url += `&${k}=eq.${encodeURIComponent(v)}`;
+      });
       const r = await fetch(url, { headers });
       if (!r.ok) throw new Error(await r.text());
       const rows = await r.json();
@@ -3855,12 +3873,43 @@ function showView(v){
         if(cfg&&cfg[0]) applyRosterConfig(cfg[0]);
         renderKioskPresence();
       }).catch(()=>{});
+      /* The repeating refresh deliberately fetches far less than the initial
+         load above, which has already filled every global once.
+
+         Only two things genuinely go stale while the kiosk sits open: today's
+         roster shifts, because getScheduledTimes decides at clock-in whether
+         someone is rostered and shifts do get created the same day, and
+         roster_config, because GRACE_BY_ROLE is read from it. The presence
+         board is the one other consumer, and renderKioskPresence returns
+         immediately above 960px — so its data is fetched only when it will
+         actually be drawn. On the clinic's desktop kiosk this loop was pulling
+         the whole entries and roster_shifts tables — ~1.7MB — every minute to
+         render nothing at all, and was the largest single source of Supabase
+         egress.
+
+         Today's shifts are MERGED into _rosterShifts, never assigned over it.
+         A partial array here would be read as authoritative by isOnLeave(),
+         which reports "not on leave" for any date it cannot find rather than
+         reporting that it does not know — so a today-only global would quietly
+         show staff on approved leave as working on the Who's On board. */
       _kioskRefreshInterval=setInterval(()=>{
-        Promise.all([db.get('employees'),db.get('entries'),db.get('roster_shifts'),db.get('requests').catch(()=>[]),db.get('roster_config').catch(()=>null)]).then(([emps,entries,shifts,reqs,cfg])=>{
-          _emps=emps.filter(e=>e.active!==false); _entries=entries.map(normaliseEntry); _rosterShifts=shifts; _requests=reqs.map(normaliseRequest);
+        // Recomputed per tick: rwScheduleMidnight rolls the kiosk to the next
+        // day without a reload, so a date captured once here would go stale.
+        const today=rbDateKey(new Date());
+        const showsPresence=window.matchMedia('(max-width:960px)').matches;
+        const jobs=[db.get('roster_shifts',{date:today}),db.get('roster_config').catch(()=>null)];
+        if(showsPresence) jobs.push(db.get('employees'),db.get('entries',{date:today}),db.get('requests').catch(()=>[]));
+        Promise.all(jobs).then(([shifts,cfg,emps,entries,reqs])=>{
+          _rosterShifts=_rosterShifts.filter(s=>s.date!==today).concat(shifts);
           // Only when a row actually came back: passing null would reset grace to the
           // hardcoded 10 and reinstate the very bug this fetch exists to fix.
           if(cfg&&cfg[0]) applyRosterConfig(cfg[0]);
+          if(showsPresence){
+            _emps=emps.filter(e=>e.active!==false);
+            // Same merge rule as the shifts above, and for the same reason.
+            _entries=_entries.filter(e=>e.date!==today).concat(entries.map(normaliseEntry));
+            _requests=reqs.map(normaliseRequest);
+          }
           renderKioskPresence();
         }).catch(()=>{});
       },60000);
@@ -4038,6 +4087,17 @@ rwScheduleMidnight();
 const rfidEl=document.getElementById('rfid-input');
 let buf='',rfidT=null;
 let _kioskRefreshInterval=null, _srRefreshInterval=null, _srNowLineInterval=null, _preRFIDView=null, _tpNowInterval=null;
+
+/* How often the Who's On board re-reads the roster. Was 60s' worth of data
+   every 120s, which on an always-on wall display was ~96MB of Supabase egress
+   a day — second only to the kiosk loop, and both together exhausted the
+   monthly allowance in August 2026.
+
+   A published roster changes a few times a week, not every two minutes, so the
+   poll rate was never buying anything. The "now" marker is driven separately by
+   _srNowLineInterval every 60s, so the board still tracks the current time to
+   the minute; only the data behind it refreshes less often. */
+const SR_REFRESH_MS=10*60*1000;
 function focusRFID(){
   if(window.matchMedia('(pointer:coarse)').matches) return; // no RFID reader on touch devices
   if(document.activeElement===document.getElementById('test-rfid')) return;
@@ -4058,7 +4118,7 @@ function returnOrFocusRFID(){
           _emps=emps.filter(e=>e.active!==false); _rosterShifts=shifts; _rosterFortnights=fortnights; _publicHolidays=new Set((phs||[]).map(r=>r.date));
         }catch(e){}
         renderStaffRoster();
-      },120000);
+      },SR_REFRESH_MS);
     }
   } else {
     focusRFID();
@@ -7880,7 +7940,7 @@ async function showStaffRoster(){
       _emps=emps.filter(e=>e.active!==false); _rosterShifts=shifts; _rosterFortnights=fortnights; _publicHolidays=new Set((phs||[]).map(r=>r.date)); _entries=entries.map(normaliseEntry);
     }catch(e){}
     renderStaffRoster();
-  },120000);
+  },SR_REFRESH_MS);
 }
 
 function srNav(dir){
