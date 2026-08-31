@@ -12,6 +12,7 @@
 July 2026/
 Old Support Files/
 Recent Exports/
+Employee Agreements/
 
 # Safety net for payroll/staff data formats, so a new working folder can't be
 # committed by accident. Remove or narrow these if the repo ever needs to track
@@ -21,6 +22,8 @@ Recent Exports/
 *.csv
 *.HEIC
 *.heic
+*.pdf
+*.PDF
 EMPLOY.TXT
 *MYOB*.TXT
 *MYOB*.txt
