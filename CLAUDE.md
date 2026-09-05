@@ -77,9 +77,17 @@ else pushes normally.
   (`cycle_start_date`); pay periods are Tuesday-anchored (`PAY_PERIOD_ANCHOR`).
   `fn_start` in `roster_fortnights` is **not** comparable to `fn_start` in
   `timesheet_finalizations`. See the comment above `getFortnightStart()`.
-- **The MYOB export dedup key includes `shift_id`.** It will pay out duplicate
-  leave rows if any reappear — `rbCleanupLinkedEntryOnShiftDelete` is what
-  prevents that. Re-check for duplicates after any bulk roster rebuild.
+- **The MYOB export dedup key matches entries to a ROSTERED BLOCK by time**, and
+  keys on that block's id. It used to key on `shift_id`, which never worked for
+  worked time: only leave rows carry a `shift_id`, so the key collapsed to
+  (employee, date) and silently dropped the second block of every split shift.
+  Duplicate leave rows still collapse — they overlap the same block, so they land
+  on the same key — so `rbCleanupLinkedEntryOnShiftDelete` still matters. Re-check
+  for duplicates after any bulk roster rebuild.
+  Match on **largest overlap**, never first-match: blocks can be contiguous and
+  `_rosterShifts` is `push`-mutated in eight places, so first-match would make the
+  export order-dependent. Key on block **id**, not `start_time` — two blocks can
+  share a start time after a rebuild.
 - **No `pay_period_anchor` column exists.** The value is the `PAY_PERIOD_ANCHOR`
   constant; the Settings editor for it was removed because it always failed.
 

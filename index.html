@@ -6601,9 +6601,30 @@ function exportMYOBSelected(){
   // cleaned up on 2026-08-17, verified to zero across every date, which is what
   // unblocked this. If duplicate leave rows ever reappear, this key will pay them
   // out — so keep rbCleanupLinkedEntryOnShiftDelete working.
+  // Key on the ROSTERED BLOCK the entry's hours fall in, not on shiftId. Worked entries never
+  // carry a shift_id — only leave does (159 of 166 live) — so the shiftId key degraded to
+  // (employee, date) and silently dropped the second block of every split shift. Four staff
+  // were paid ~1h short for the 26 Aug evening meeting before this was found.
+  // Largest overlap, not the first match: blocks can be contiguous (13:30-16:30 + 16:30-20:30)
+  // and _rosterShifts is push-mutated in-session, so a first-match rule is order-dependent —
+  // the same export could pay two different amounts depending on what was clicked beforehand.
+  // Keyed on block id, not start_time: two blocks can share a start_time after a roster rebuild.
+  // Pure timeToMin string arithmetic — never Date or clock_in_iso, which DST would break.
+  const _blockKey=e=>{
+    const st=e.finalStart||e.clockIn, en=e.finalEnd||e.clockOut;
+    if(!st||!en) return '';
+    const S=timeToMin(st), E=timeToMin(en);
+    const blocks=_rosterShifts.filter(s=>s.employee_id===e.employeeId&&s.date===e.date&&!s.is_day_off&&s.start_time&&s.end_time);
+    let best=null, bestOv=0;
+    blocks.forEach(s=>{
+      const ov=Math.min(E,timeToMin(s.end_time))-Math.max(S,timeToMin(s.start_time));
+      if(ov>bestOv){best=s;bestOv=ov;}
+    });
+    return best?String(best.id):'';
+  };
   const dedupMap={};
   ready.forEach(e=>{
-    const key=`${e.employeeId}|${e.date}|${e.shiftId||''}`;
+    const key=`${e.employeeId}|${e.date}|${_blockKey(e)}`;
     if(!dedupMap[key]){dedupMap[key]=e;return;}
     const cur=dedupMap[key];
     if(!cur.locked&&e.locked){dedupMap[key]=e;return;}
