@@ -6611,16 +6611,8 @@ function exportMYOBSelected(){
   // Keyed on block id, not start_time: two blocks can share a start_time after a roster rebuild.
   // Pure timeToMin string arithmetic — never Date or clock_in_iso, which DST would break.
   const _blockKey=e=>{
-    const st=e.finalStart||e.clockIn, en=e.finalEnd||e.clockOut;
-    if(!st||!en) return '';
-    const S=timeToMin(st), E=timeToMin(en);
-    const blocks=_rosterShifts.filter(s=>s.employee_id===e.employeeId&&s.date===e.date&&!s.is_day_off&&s.start_time&&s.end_time);
-    let best=null, bestOv=0;
-    blocks.forEach(s=>{
-      const ov=Math.min(E,timeToMin(s.end_time))-Math.max(S,timeToMin(s.start_time));
-      if(ov>bestOv){best=s;bestOv=ov;}
-    });
-    return best?String(best.id):'';
+    const b=tsBlockForEntry(e,_rosterShifts.filter(s=>s.employee_id===e.employeeId&&s.date===e.date));
+    return b?String(b.id):'';
   };
   const dedupMap={};
   ready.forEach(e=>{
@@ -6796,6 +6788,25 @@ async function downloadTimesheetsPDFs(){
 // between Admin and the Portal in the same session can't silently narrow the admin's data.
 // Resolve an entry to its OWN rostered block. The PDF's per-date lookup uses .find(), which takes
 // the first block of a split day — wrong for the second half. Mirrors the MYOB export's resolution.
+// Which rostered block do these hours belong to? Largest time overlap wins.
+// Shared by the MYOB export's dedup key and the staff PDF so the payslip and the Fair Work
+// record cannot disagree about which block an entry is.
+// Largest overlap, never first-match: blocks can be contiguous (13:30-16:30 + 16:30-20:30) and
+// _rosterShifts is push-mutated in-session, so first-match would be order-dependent.
+// Pure timeToMin string arithmetic — never Date or clock_in_iso, which DST would break.
+function tsBlockForEntry(entry, blocks){
+  const st=entry?.finalStart||entry?.clockIn, en=entry?.finalEnd||entry?.clockOut;
+  if(!st||!en) return null;
+  const S=timeToMin(st), E=timeToMin(en);
+  let best=null, bestOv=0;
+  blocks.forEach(s=>{
+    if(s.is_day_off||!s.start_time||!s.end_time) return;
+    const ov=Math.min(E,timeToMin(s.end_time))-Math.max(S,timeToMin(s.start_time));
+    if(ov>bestOv){best=s;bestOv=ov;}
+  });
+  return best;
+}
+
 function _leaveShiftForRow(entry,dayShift,shiftsSrc){
   return (entry&&entry.shiftId&&shiftsSrc.find(s=>String(s.id)===String(entry.shiftId)))||dayShift;
 }
@@ -6868,10 +6879,41 @@ function dlTsGeneratePDF(emp,fnDays,fnLabel,jsPDF,logo,shiftsSrc=_rosterShifts,e
   // Use union of shift dates + entry dates so unrostered worked entries are included
   const activePdfDates=[...new Set([...empShifts.map(s=>s.date),...empEntries.filter(e=>e.clockIn||e.finalStart||e.leaveType).map(e=>e.date)])].sort();
 
+  // One row per rostered BLOCK, not per date. A day worked as two blocks — a shift plus an
+  // evening meeting, say — used to collapse into a single row via groupEntriesByDay, which sorts
+  // by clockIn: a manager-created entry with a null clock_in sorted FIRST, so its final times
+  // labelled the whole day while contributing no hours. 26 Aug printed "19:00-20:00, 1.00h" for
+  // an 8-hour day, and not marked provisional. These PDFs are the fortnightly Fair Work record.
+  // Entries are matched to blocks by tsBlockForEntry — the same rule the MYOB dedup key uses.
+  // Anything matching no block still gets a row: an unrostered stint or an open clock-in must
+  // never silently vanish from the record.
+  const pdfRows=[];
   activePdfDates.forEach(date=>{
-    const shift=empShifts.find(s=>s.date===date)||null;
+    const dayShifts=empShifts.filter(s=>s.date===date);
     const dayEntries=empEntries.filter(e=>e.date===date);
-    const entry=dayEntries.length?groupEntriesByDay(dayEntries)[0]:null;
+    if(dayShifts.length<=1){
+      pdfRows.push({date,shift:dayShifts[0]||null,entry:dayEntries.length?groupEntriesByDay(dayEntries)[0]:null});
+      return;
+    }
+    const claimed=new Set();
+    const dayRows=[];
+    dayShifts.forEach(seg=>{
+      const mine=dayEntries.filter(e=>!claimed.has(e.id)&&(
+        e.leaveType?String(e.shiftId)===String(seg.id):tsBlockForEntry(e,dayShifts)===seg));
+      mine.forEach(e=>claimed.add(e.id));
+      if(mine.length) dayRows.push({date,shift:seg,entry:groupEntriesByDay(mine)[0]});
+    });
+    const unmatched=dayEntries.filter(e=>!claimed.has(e.id));
+    if(unmatched.length) dayRows.push({date,shift:null,entry:groupEntriesByDay(unmatched)[0]});
+    // An EMPTY block on a day that has entries is not printed. 12 of the 25 multi-block days in
+    // the data are duplicate roster rows left by rebuilds, not real split shifts, and a phantom
+    // "Not yet finalised" line on a Fair Work record is worse than silence. A day with nothing
+    // recorded against any block still gets its single unfinalised row, as a one-block day does.
+    if(!dayRows.length) dayRows.push({date,shift:dayShifts[0]||null,entry:null});
+    dayRows.forEach(r=>pdfRows.push(r));
+  });
+
+  pdfRows.forEach(({date,shift,entry})=>{
     const dateObj=new Date(date+'T12:00:00');
     const [_y,_m,_d]=date.split('-');
     const dateStr=`${_d}/${_m}/${_y.slice(2)} `+dateObj.toLocaleDateString('en-AU',{weekday:'short'});
