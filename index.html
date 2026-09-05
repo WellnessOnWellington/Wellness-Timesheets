@@ -5151,9 +5151,7 @@ function tsEntryReadyCore(entry, emp, shift){
 // timesheet-finalize toggle readiness check so the two can't quietly diverge on what "ready" means.
 function tsIsEntryReady(e, rosterShiftsSrc=_rosterShifts, empsSrc=_emps){
   const emp=empsSrc.find(em=>em.id===e.employeeId);
-  const shift=(e.shiftId&&rosterShiftsSrc.find(s=>String(s.id)===String(e.shiftId)))
-    ||rosterShiftsSrc.find(s=>s.employee_id===e.employeeId&&s.date===e.date&&!s.is_day_off);
-  return tsEntryReadyCore(e,emp,shift);
+  return tsEntryReadyCore(e,emp,tsShiftForEntry(e,rosterShiftsSrc));
 }
 
 // Which of a period's rows are not finalised — the single source of truth for all three
@@ -6635,8 +6633,7 @@ function exportMYOBSelected(){
     // Resolve to the shift this entry actually belongs to, not just the day's first —
     // on a split shift the wrong block would otherwise set the rostered times that
     // drive snapping and the payroll category. Same lookup as tsIsEntryReady.
-    const shift=(entry.shiftId&&_rosterShifts.find(s=>String(s.id)===String(entry.shiftId)))
-      ||_rosterShifts.find(s=>s.employee_id===entry.employeeId&&s.date===entry.date&&!s.is_day_off)||null;
+    const shift=tsShiftForEntry(entry,_rosterShifts);
     const myobRows=calcMYOBRows(entry,emp,_publicHolidays?.has(entry.date)||false,shift);
     myobRows.forEach(({cat,hours})=>{
       const units=hours.toFixed(2);
@@ -6805,6 +6802,18 @@ function tsBlockForEntry(entry, blocks){
     if(ov>bestOv){best=s;bestOv=ov;}
   });
   return best;
+}
+
+// The rostered block that governs an entry: its own shift_id if it has one, else the block its
+// hours overlap, else the day's first block. Snapping, the payroll category and auto-approval all
+// hang off this, so on a split day the day's-first-block fallback graded a 19:00 meeting against
+// an 07:45 shift — the entry failed auto-approval and dropped out of the export unpaid, and if the
+// block order ever flipped a full day could snap to a 19:00 start and export as 0.00 hours.
+function tsShiftForEntry(entry, shiftsSrc){
+  const own=entry?.shiftId&&shiftsSrc.find(s=>String(s.id)===String(entry.shiftId));
+  if(own) return own;
+  const day=shiftsSrc.filter(s=>s.employee_id===entry.employeeId&&s.date===entry.date&&!s.is_day_off);
+  return tsBlockForEntry(entry,day)||day[0]||null;
 }
 
 function _leaveShiftForRow(entry,dayShift,shiftsSrc){
