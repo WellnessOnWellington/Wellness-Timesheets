@@ -2228,7 +2228,7 @@
           </div>
           <div class="table-wrap">
             <table class="timesheet-table">
-              <thead><tr><th>Date</th><th>Staff member</th><th>Role</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th></tr></thead>
+              <thead><tr><th>Date</th><th>Staff member</th><th>Role</th><th>Clock In</th><th>Clock Out</th><th title="Clock-out minus clock-in, as recorded. Not paid hours — no unpaid break is deducted and times are not snapped to the roster. See Timesheets for paid hours.">On site</th><th>Status</th></tr></thead>
               <tbody id="clock-audit-body"></tbody>
             </table>
           </div>
@@ -3831,6 +3831,13 @@ let SHOW_DECLINE_REASON = true;
 let GIVEAWAY_ENABLED = {Receptionist: true, Nurse: true, Manager: true};
 let reqRole = 'Receptionist';
 const ROUND_WINDOW = 5; // minutes — clock times within this window of rostered time are rounded to roster time on timesheets
+// Clocking in EARLY was previously unbounded: any amount early snapped silently to the rostered
+// start and auto-approved, so a 3-hour-early clock-in looked identical to a 3-minute one. That is
+// how Josephina TUT was paid 3.50h for a 7-hour day in July (clocked 09:00 against a 12:00 shift,
+// snapped to 12:00) and how a 09:00 clock-in on a 12:30 shift went unquestioned in August.
+// Beyond this many minutes early the kiosk asks the staff member why, and the entry stops
+// auto-approving so a manager has to look. Pay is unchanged — the snap still applies.
+const EARLY_REVIEW_MINS = 60;
 const LEAVE_TYPES = { annual_leave:'Annual Leave', personal_leave:'Personal Leave', public_holiday:'Public Holiday', unpaid_leave:'Unpaid Leave', compassionate_leave:'Compassionate Leave', long_service_leave:'Long Service Leave' };
 function formatLeaveType(lt){ return LEAVE_TYPES[lt]||'Worked'; }
 function formatGapLeaveType(gt){
@@ -4209,7 +4216,12 @@ async function processRFID(card){
   if(scheduled===null&&action==='in'){
     pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType:'Unrostered arrival'};
     showReasonPrompt(emp.name.split(' ')[0],action,null);
-  }else if(scheduledMin!==null&&diff>(GRACE_BY_ROLE[emp.role]??10)&&(action==='out'||isAfter)){
+  // A clock-in more than EARLY_REVIEW_MINS early asks for a reason too. The prompt used to fire
+  // only when LATE (isAfter) on a clock-in, so arriving hours early was accepted in silence — the
+  // one person who knew why was never asked. The 'before' wording below was already written for
+  // this case and simply never reached.
+  }else if(scheduledMin!==null&&((diff>(GRACE_BY_ROLE[emp.role]??10)&&(action==='out'||isAfter))
+        ||(action==='in'&&!isAfter&&diff>EARLY_REVIEW_MINS))){
     const label=diff+' min '+(isAfter?'after':'before')+' scheduled time';
     const noteType=action==='in'?'Arrival note':'Departure note';
     pending={emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,noteType};
@@ -4271,7 +4283,15 @@ async function commit(emp,action,timeStr,sheetTimeStr,isoNow,open,todayKey,reaso
       // Reason kept to the employee's own words only — expected/actual break figures are
       // shown structurally on the approval card, recomputed live rather than parsed from text.
       if(breakFlagged) await addNote(emp,'Break note',timeStr,breakNote||'No reason given',open.id,todayKey);
-      showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],'Checked out · '+timeStr+' · '+hoursStr+'h',_kioskFlashMsg(emp),emp);
+      // Shows the two clock times and time ON SITE — never a pay figure. It used to print a bare
+      // "8.03h", which is clock-out minus clock-in with no unpaid break taken off and no snapping
+      // to the rostered start. Staff read that as their pay: across 525 clock-outs it came to
+      // about 199 hours more than was actually paid. Paid hours cannot honestly be shown here
+      // anyway — the break may not be resolved yet and a manager may still adjust the times.
+      const _onSiteMins=Math.max(0,Math.round(hrs*60));
+      const _onSite=_onSiteMins>=60?Math.floor(_onSiteMins/60)+'h '+String(_onSiteMins%60).padStart(2,'0')+'m':_onSiteMins+'m';
+      showFlash('depart','🌸','See you next time,',emp.name.split(' ')[0],
+        open.clockIn+' – '+timeStr+' · '+_onSite+' on site',_kioskFlashMsg(emp),emp);
     }
   } catch(e) {
     let detail='Please try again';
@@ -5125,9 +5145,12 @@ function tsIsAutoApproved(entry, shift){
   const re=shift?.end_time||null;
   if(!fs||!fe||!rs||!re) return false;
   const _yt=GRACE_BY_ROLE[entry.role]??10;
-  // Early clock-in never blocks auto-approval — payroll always snaps to roster start
+  // A small early clock-in never blocks auto-approval — payroll snaps it to the rostered start,
+  // so there is nothing for a manager to decide. A LARGE one is a different event: it means the
+  // clock and the roster disagree about what day this person was working, and silently snapping
+  // it away is what hid a 3.5-hour underpayment and a shift paid to the wrong person.
   const inMin=timeToMin(fs)-timeToMin(rs);
-  const inOk=inMin<=0||inMin<_yt;
+  const inOk=inMin<=0?(-inMin)<=EARLY_REVIEW_MINS:inMin<_yt;
   if(!inOk||Math.abs(timeToMin(fe)-timeToMin(re))>=_yt) return false;
   // An unresolved short break must never silently ride through auto-approval —
   // it's the one condition a manager must actively decide on before this can go green.
@@ -5346,9 +5369,15 @@ function tsBuildRow(emp, date, shift, entry, splitSegment=false){
   const overrideKey=entryId?String(entryId):`${safeEmpId}_${date}`;
   const autoOverridden=effectiveAutoApproved&&_tsAutoOverride.has(overrideKey);
 
+  // The raw final span. Still needed to work out how long the shift was for break purposes —
+  // the expected unpaid break depends on shift length, which is the span BEFORE the break comes
+  // off, not after. Used by breakShiftHours below.
   const finalMins=(effectiveFinalStart&&effectiveFinalEnd)?timeToMin(effectiveFinalEnd)-timeToMin(effectiveFinalStart):0;
-  const billableMins=Math.max(0,finalMins-effectiveUnpaidBreakMins(entry,finalMins/60));
-  const hoursText=billableMins>0?`${(billableMins/60).toFixed(1)}h`:''; // paid hours after unpaid break deduction
+  // The hours cell states what payroll pays, via the one shared definition. It used to subtract
+  // the break from the row's own clamped times, which on a split segment produced a third figure
+  // that agreed with neither the MYOB preview beside it nor the export.
+  const billableMins=paidMinsFor(entry,shift,emp,_publicHolidays?.has(date)||false);
+  const hoursText=billableMins>0?`${(billableMins/60).toFixed(1)}h`:'';
 
   const PAYROLL_TYPES=[['','Worked'],['annual_leave','Annual Leave'],['personal_leave','Personal Leave'],['public_holiday','Public Holiday'],['compassionate_leave','Compassionate Leave'],['long_service_leave','Long Service Leave'],['unpaid_leave','Unpaid Leave']];
   const fmtH=h=>h===Math.round(h)?h+'h':h.toFixed(1)+'h';
@@ -5908,15 +5937,9 @@ function renderTimesheets(){
     const totalMins=activeDays.reduce((acc,date)=>{
       const dayShifts=empShifts.filter(s=>s.date===date);
       const dayEntries=empEntries.filter(e=>e.date===date);
-      return acc+tsResolveDayRows(date,dayShifts,dayEntries).reduce((a,{entry})=>{
-        if(!entry) return a;
-        const s=entry.finalStart||entry.clockIn;
-        const e2=entry.finalEnd||entry.clockOut;
-        if(!s||!e2) return a;
-        const rawMins=Math.max(0,timeToMin(e2)-timeToMin(s));
-        const unpaidMins=entry.unpaidBreakMins!=null?entry.unpaidBreakMins:0;
-        return a+Math.max(0,rawMins-unpaidMins);
-      },0);
+      const _isPH=_publicHolidays?.has(date)||false;
+      return acc+tsResolveDayRows(date,dayShifts,dayEntries)
+        .reduce((a,{seg,entry})=>a+paidMinsFor(entry,seg,emp,_isPH),0);
     },0);
 
     const allLocked=activeDays.length>0&&activeDays.every(date=>{
@@ -6592,7 +6615,18 @@ function exportMYOBSelected(){
     const cur=dedupMap[key];
     if(!cur.locked&&e.locked){dedupMap[key]=e;return;}
     if(cur.locked&&!e.locked)return;
-    if(parseFloat(e.hours||0)>parseFloat(cur.hours||0))dedupMap[key]=e;
+    // Tie-break on the span these two actually cover, not on entries.hours. That column is
+    // written seven different ways, is never break-deducted, and is not updated when a manager
+    // edits final times — it differs from paid hours on most rows in the data. It has not
+    // mis-paid anyone because the locked test above almost always settles it first, but a
+    // tiebreaker for a payroll row should not read a number with no agreed meaning.
+    // Measure the CLOCKED span, not the final one. The question here is which of two rows is the
+    // substantive record, and a manager may have patched finals onto a stray one-minute mis-tap so
+    // it spans the whole day — on 2026-08-04 that row would beat the real shift by a minute and
+    // pay 0.28h more, because the mis-tap carries no break and the real row does.
+    const _span=x=>{const a=x.clockIn||x.finalStart,b=x.clockOut||x.finalEnd;
+      return (a&&b)?Math.max(0,timeToMin(b)-timeToMin(a)):0;};
+    if(_span(e)>_span(cur))dedupMap[key]=e;
   });
   const deduped=Object.values(dedupMap);
 
@@ -6764,6 +6798,18 @@ async function downloadTimesheetsPDFs(){
 // Largest overlap, never first-match: blocks can be contiguous (13:30-16:30 + 16:30-20:30) and
 // _rosterShifts is push-mutated in-session, so first-match would be order-dependent.
 // Pure timeToMin string arithmetic — never Date or clock_in_iso, which DST would break.
+// What payroll actually pays for one entry, in minutes. Derived FROM calcMYOBRows rather than
+// recomputed alongside it, so the timesheet row and the fortnight total cannot drift from the
+// export the way they had: paid hours means snapped times MINUS the unpaid break PLUS any paid
+// leave-gap hours, and those were three separate things a caller had to remember to combine.
+// The header total remembered none of them and read 23.8 hours high across one fortnight; the
+// row remembered two of three and understated a day with a paid leave gap by 3 hours.
+function paidMinsFor(entry, shift, emp, isPH){
+  if(!entry) return 0;
+  const rows=calcMYOBRows(entry, emp, !!isPH, shift);
+  return rows.reduce((a,r)=>a+(Number(r.hours)||0),0)*60;
+}
+
 function tsBlockForEntry(entry, blocks){
   const st=entry?.finalStart||entry?.clockIn, en=entry?.finalEnd||entry?.clockOut;
   if(!st||!en) return null;
